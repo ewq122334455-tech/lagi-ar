@@ -1,2 +1,0 @@
-import{j as e,L as r}from"./index-DNEnW8pN.js";function s(){return e.jsxs("div",{className:"flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center",children:[e.jsx("p",{className:"eyebrow",children:"404"}),e.jsx("h1",{className:"text-2xl font-medium",children:"페이지를 찾을 수 없습니다"}),e.jsx(r,{to:"/",className:"eyebrow mt-2 border border-ink px-6 py-3 hover:bg-ink hover:text-paper focus-ring",children:"홈으로"})]})}export{s as default};
-//# sourceMappingURL=NotFound-laf-SqBl.js.map
