@@ -9,6 +9,7 @@ import { ProductViewer } from '@/three/ProductViewer';
 import { getAIProvider } from '@/ai/AIProvider';
 import { getThreeDGenerationProvider } from '@/ai/ThreeDGenerationProvider';
 import type { Observation } from '@/utils/contentStatus';
+import { modelFormatOf } from '@/utils/modelFile';
 
 const TABS = ['BASIC', 'IMAGES', '3D & AR', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
 type Tab = (typeof TABS)[number];
@@ -335,8 +336,15 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
   function handleModelUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const format = modelFormatOf(file);
+    if (!format) {
+      window.alert('.glb 또는 .gltf 파일만 업로드할 수 있습니다.');
+      e.target.value = '';
+      return;
+    }
     const url = URL.createObjectURL(file);
     update('model3D', url);
+    update('model3DAsset', { filename: file.name, format, mimeType: file.type || undefined, url });
     update('threeDAvailable', true);
   }
 
@@ -352,6 +360,9 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
     );
     if (result.modelUrl) {
       update('model3D', result.modelUrl);
+      // Generated via a URL, not a local File — clear any stale upload metadata so
+      // validation reads this URL's own extension instead of a previous upload's filename.
+      update('model3DAsset', undefined);
       update('threeDAvailable', true);
     }
   }
@@ -362,7 +373,13 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
         <div>
           <p className="eyebrow mb-2">3D MODEL (GLB)</p>
           <input type="file" accept=".glb,.gltf" onChange={handleModelUpload} className="text-sm" />
-          {product.model3D && <p className="mt-2 break-all text-xs text-stone">{product.model3D}</p>}
+          {product.model3DAsset ? (
+            <p className="mt-2 text-xs text-stone">
+              {product.model3DAsset.filename} · <span className="uppercase">{product.model3DAsset.format}</span>
+            </p>
+          ) : (
+            product.model3D && <p className="mt-2 break-all text-xs text-stone">{product.model3D}</p>
+          )}
         </div>
 
         <div className="border border-dashed border-line p-5">
