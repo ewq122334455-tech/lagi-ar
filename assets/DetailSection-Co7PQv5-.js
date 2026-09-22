@@ -1,2 +1,0 @@
-import{j as e}from"./index-CgF346m2.js";function i({eyebrow:a,title:s,children:t,className:x}){return e.jsx("section",{className:`border-t border-line px-6 py-20 lg:px-10 lg:py-28 ${x??""}`,children:e.jsxs("div",{className:"mx-auto max-w-canvas",children:[e.jsx("p",{className:"eyebrow",children:a}),s&&e.jsx("h2",{className:"mt-3 max-w-2xl text-3xl font-medium leading-tight lg:text-4xl",children:s}),e.jsx("div",{className:"mt-10",children:t})]})})}export{i as D};
-//# sourceMappingURL=DetailSection-Co7PQv5-.js.map

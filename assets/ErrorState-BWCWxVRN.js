@@ -1,0 +1,2 @@
+import{j as e}from"./index-DNEnW8pN.js";function a({title:t="문제가 발생했습니다",message:r,action:s}){return e.jsxs("div",{className:"flex min-h-[40vh] w-full flex-col items-center justify-center gap-3 py-24 text-center",role:"alert",children:[e.jsx("p",{className:"eyebrow",children:"오류"}),e.jsx("h2",{className:"text-xl font-medium",children:t}),e.jsx("p",{className:"max-w-md text-sm text-graphite",children:r}),s]})}export{a as E};
+//# sourceMappingURL=ErrorState-BWCWxVRN.js.map
