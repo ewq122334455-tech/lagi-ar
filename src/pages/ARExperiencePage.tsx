@@ -53,10 +53,11 @@ export default function ARExperiencePage() {
   if (!support.webgl) {
     return (
       <FullscreenMessage
-        eyebrow="WEBGL UNSUPPORTED"
+        eyebrow="AR IS NOT SUPPORTED ON THIS DEVICE"
         title="이 브라우저는 AR을 지원하지 않습니다"
-        message="최신 iPhone Safari 또는 Android Chrome에서 다시 시도해 주세요."
-        onExit={() => navigate(-1)}
+        message="최신 iPhone Safari 또는 Android Chrome에서 다시 시도해 주세요. 3D로는 계속 살펴보실 수 있습니다."
+        onExit={() => navigate(`/product/${product.id}`)}
+        exitLabel="VIEW IN 3D"
       />
     );
   }
@@ -64,10 +65,11 @@ export default function ARExperiencePage() {
   if (!support.camera) {
     return (
       <FullscreenMessage
-        eyebrow="CAMERA UNSUPPORTED"
+        eyebrow="AR IS NOT SUPPORTED ON THIS DEVICE"
         title="카메라를 사용할 수 없습니다"
-        message="이 기기 또는 브라우저는 카메라 접근을 지원하지 않습니다."
-        onExit={() => navigate(-1)}
+        message="이 기기 또는 브라우저는 카메라 접근을 지원하지 않습니다. 3D로는 계속 살펴보실 수 있습니다."
+        onExit={() => navigate(`/product/${product.id}`)}
+        exitLabel="VIEW IN 3D"
       />
     );
   }

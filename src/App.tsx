@@ -9,6 +9,7 @@ const Home = lazy(() => import('@/pages/Home'));
 const ProductCollection = lazy(() => import('@/pages/ProductCollection'));
 const ProductDetail = lazy(() => import('@/pages/ProductDetail'));
 const About = lazy(() => import('@/pages/About'));
+const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
 const ARLanding = lazy(() => import('@/pages/ARLanding'));
 const ARExperiencePage = lazy(() => import('@/pages/ARExperiencePage'));
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/products" element={<ProductCollection />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/about" element={<About />} />
+            <Route path="/materials" element={<Materials />} />
             <Route path="/story" element={<Story />} />
             <Route path="/ar" element={<ARLanding />} />
             <Route path="/workspace" element={<AssetWorkspace />} />

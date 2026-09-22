@@ -7,6 +7,9 @@ import { PlaceholderModel } from './PlaceholderModel';
 import { CameraRig, type CameraRigHandle, type ViewPreset } from './CameraRig';
 import { HotspotMarkers } from './HotspotMarkers';
 import { ViewerControls } from './ViewerControls';
+import { CanvasLoader } from './CanvasLoader';
+import { ModelErrorBoundary } from './ModelErrorBoundary';
+import { PLACEHOLDER_BOUNDS, type ModelBounds } from './bounds';
 
 interface ProductViewerProps {
   modelUrl: string;
@@ -31,6 +34,7 @@ export function ProductViewer({
 }: ProductViewerProps) {
   const rigRef = useRef<CameraRigHandle>(null);
   const [webglOk, setWebglOk] = useState(true);
+  const [bounds, setBounds] = useState<ModelBounds>(PLACEHOLDER_BOUNDS);
 
   useEffect(() => {
     try {
@@ -41,6 +45,12 @@ export function ProductViewer({
       setWebglOk(false);
     }
   }, []);
+
+  // Reset to the placeholder's known bounds whenever there's no model to measure
+  // (e.g. navigating to a different product with no verified GLB yet).
+  useEffect(() => {
+    if (!modelUrl) setBounds(PLACEHOLDER_BOUNDS);
+  }, [modelUrl]);
 
   useEffect(() => {
     const hotspot = hotspots.find((h) => h.id === selectedHotspotId);
@@ -70,26 +80,28 @@ export function ProductViewer({
 
   return (
     <div className={`relative bg-mist ${className ?? ''}`}>
-      <Canvas
-        camera={{ position: [1.8, 1.1, 2.2], fov: 40 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
-      >
-        <hemisphereLight args={['#f7f6f3', '#3a3a37', 0.6]} />
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[3, 4, 2]} intensity={1.3} castShadow />
-        <directionalLight position={[-3, 2, -2]} intensity={0.5} />
-        <Suspense fallback={null}>
-          {modelUrl ? (
-            <Model url={modelUrl} activeAnimation={activeAnimation} />
-          ) : (
-            <PlaceholderModel />
-          )}
-        </Suspense>
-        <ContactShadows position={[0, -0.9, 0]} opacity={0.35} scale={4} blur={2.4} far={2} />
-        <HotspotMarkers hotspots={hotspots} selectedId={selectedHotspotId} onSelect={onSelectHotspot} />
-        <CameraRig ref={rigRef} />
-      </Canvas>
+      <ModelErrorBoundary resetKey={modelUrl}>
+        <Canvas
+          camera={{ position: [1.8, 1.1, 2.2], fov: 40 }}
+          dpr={[1, 2]}
+          gl={{ antialias: true, preserveDrawingBuffer: true }}
+        >
+          <hemisphereLight args={['#f7f6f3', '#3a3a37', 0.6]} />
+          <ambientLight intensity={0.4} />
+          <directionalLight position={[3, 4, 2]} intensity={1.3} castShadow />
+          <directionalLight position={[-3, 2, -2]} intensity={0.5} />
+          <Suspense fallback={<CanvasLoader />}>
+            {modelUrl ? (
+              <Model url={modelUrl} activeAnimation={activeAnimation} onBounds={setBounds} />
+            ) : (
+              <PlaceholderModel />
+            )}
+          </Suspense>
+          <ContactShadows position={[0, bounds.center[1] - bounds.radius, 0]} opacity={0.35} scale={bounds.radius * 4} blur={2.4} far={bounds.radius * 2} />
+          <HotspotMarkers hotspots={hotspots} selectedId={selectedHotspotId} onSelect={onSelectHotspot} />
+          <CameraRig ref={rigRef} bounds={bounds} />
+        </Canvas>
+      </ModelErrorBoundary>
 
       <ViewerControls
         onView={(preset: ViewPreset) => rigRef.current?.goToView(preset)}

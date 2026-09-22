@@ -13,8 +13,9 @@ export function Footer() {
           <div>
             <p className="eyebrow mb-4">EXPLORE</p>
             <ul className="flex flex-col gap-2 text-sm text-graphite">
-              <li><Link to="/products" className="hover:text-ink focus-ring">Product</Link></li>
-              <li><Link to="/ar" className="hover:text-ink focus-ring">AR Experience</Link></li>
+              <li><Link to="/products" className="hover:text-ink focus-ring">Products</Link></li>
+              <li><Link to="/ar" className="hover:text-ink focus-ring">Look Closer (AR)</Link></li>
+              <li><Link to="/materials" className="hover:text-ink focus-ring">Materials</Link></li>
               <li><Link to="/story" className="hover:text-ink focus-ring">Story</Link></li>
               <li><Link to="/about" className="hover:text-ink focus-ring">About LAGI</Link></li>
             </ul>

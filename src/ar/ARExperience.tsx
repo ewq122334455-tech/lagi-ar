@@ -48,6 +48,11 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
 
   useEffect(() => () => { cleanup(); }, [cleanup]);
 
+  const handleExit = useCallback(async () => {
+    await cleanup();
+    onExit();
+  }, [cleanup, onExit]);
+
   const handleStart = useCallback(async () => {
     if (!containerRef.current) return;
     setState('requesting-camera');
@@ -143,10 +148,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
       {/* EXIT — always available */}
       <button
         type="button"
-        onClick={async () => {
-          await cleanup();
-          onExit();
-        }}
+        onClick={handleExit}
         className="absolute right-4 top-4 z-20 eyebrow border border-paper/40 bg-ink/60 px-4 py-2.5 backdrop-blur focus-ring"
       >
         EXIT
@@ -190,17 +192,25 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
           <p className="mt-3 max-w-xs text-sm text-mist/80">
             브라우저 설정에서 이 사이트의 카메라 권한을 허용한 뒤 다시 시도해 주세요.
           </p>
-          <button type="button" onClick={handleStart} className="eyebrow mt-8 border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
-            다시 시도
-          </button>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={handleStart} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
+              다시 시도
+            </button>
+            <button type="button" onClick={handleExit} className="eyebrow border border-paper/40 px-7 py-4 text-mist hover:border-paper hover:text-paper focus-ring">
+              VIEW IN 3D
+            </button>
+          </div>
         </Overlay>
       )}
 
       {state === 'camera-unavailable' && (
         <Overlay>
-          <p className="eyebrow text-mist">카메라 없음</p>
+          <p className="eyebrow text-mist">AR IS NOT SUPPORTED ON THIS DEVICE</p>
           <h2 className="mt-3 text-xl font-medium">사용 가능한 카메라를 찾을 수 없습니다</h2>
           <p className="mt-3 max-w-xs text-sm text-mist/80">카메라가 있는 모바일 기기의 브라우저에서 열어주세요.</p>
+          <button type="button" onClick={handleExit} className="eyebrow mt-8 border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
+            VIEW IN 3D
+          </button>
         </Overlay>
       )}
 
@@ -209,9 +219,14 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
           <p className="eyebrow text-mist">오류</p>
           <h2 className="mt-3 text-xl font-medium">AR을 시작하지 못했습니다</h2>
           <p className="mt-3 max-w-xs text-sm text-mist/80">{errorMessage ?? '알 수 없는 오류가 발생했습니다.'}</p>
-          <button type="button" onClick={handleStart} className="eyebrow mt-8 border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
-            다시 시도
-          </button>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={handleStart} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
+              다시 시도
+            </button>
+            <button type="button" onClick={handleExit} className="eyebrow border border-paper/40 px-7 py-4 text-mist hover:border-paper hover:text-paper focus-ring">
+              VIEW IN 3D
+            </button>
+          </div>
         </Overlay>
       )}
 
