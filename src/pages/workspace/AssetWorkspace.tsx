@@ -413,7 +413,7 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
           <TextInput
             value={product.arTarget}
             onChange={(e) => update('arTarget', e.target.value)}
-            placeholder={`/products/${product.id}/ar/target.mind`}
+            placeholder={`products/${product.id}/ar/target.mind`}
           />
           <p className="mt-2 text-xs text-stone">
             타겟 이미지를{' '}

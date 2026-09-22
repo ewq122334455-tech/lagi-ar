@@ -19,7 +19,7 @@
   "details": [],
   "story": { "value": null, "status": "CONTENT_REQUIRED" },
   "lagiSelectionReason": { "value": null, "status": "CONTENT_REQUIRED" },
-  "model3D": "/products/product-001/model/lagi-bag.glb",
+  "model3D": "products/product-001/model/lagi-bag.glb",
   "animations": [],
   "arTarget": "",
   "arSettings": {
