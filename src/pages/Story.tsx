@@ -14,7 +14,7 @@ export default function Story() {
       <section className="border-b border-line bg-ink px-6 py-24 text-paper lg:px-10 lg:py-32">
         <div className="mx-auto max-w-canvas">
           <p className="eyebrow text-mist">STORY</p>
-          <h1 className="mt-4 max-w-2xl text-4xl font-medium leading-tight lg:text-5xl">
+          <h1 className="mt-4 max-w-2xl font-display text-5xl leading-tight lg:text-6xl">
             제품마다 만들어진 이유가 있습니다.
           </h1>
         </div>

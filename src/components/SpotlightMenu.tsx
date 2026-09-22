@@ -20,14 +20,14 @@ export function SpotlightMenu({ hotspots, selectedId, onSelect }: SpotlightMenuP
           role="tab"
           aria-selected={h.id === selectedId}
           onClick={() => onSelect(h.id)}
-          className={`border px-4 py-2.5 text-left transition-colors focus-ring ${
+          className={`rounded-2xl border-2 px-4 py-2.5 text-left transition-colors focus-ring ${
             h.id === selectedId ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
           }`}
         >
           <p className="eyebrow" style={{ color: h.id === selectedId ? 'var(--lagi-mist)' : undefined }}>
             {h.category}
           </p>
-          <p className="mt-0.5 text-sm font-medium">{h.title}</p>
+          <p className="mt-0.5 font-heading text-sm font-extrabold">{h.title}</p>
         </button>
       ))}
     </div>

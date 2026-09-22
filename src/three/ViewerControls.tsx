@@ -21,13 +21,13 @@ interface ViewerControlsProps {
 export function ViewerControls({ onView, animations = [], activeAnimation, onSetAnimation }: ViewerControlsProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 p-4 lg:p-6">
-      <div className="pointer-events-auto flex flex-wrap gap-2">
+      <div className="pointer-events-auto flex gap-2 overflow-x-auto pb-1">
         {VIEWS.map((v) => (
           <button
             key={v.preset}
             type="button"
             onClick={() => onView(v.preset)}
-            className="eyebrow border border-line bg-paper/90 px-3 py-2 text-graphite backdrop-blur transition-colors hover:border-ink hover:text-ink focus-ring"
+            className="shrink-0 rounded-full border-2 border-line bg-paper/90 px-3 py-2 font-heading text-xs font-extrabold text-graphite backdrop-blur transition-colors hover:border-ink hover:text-ink focus-ring"
           >
             {v.label}
           </button>
@@ -41,7 +41,7 @@ export function ViewerControls({ onView, animations = [], activeAnimation, onSet
               key={a.id}
               type="button"
               onClick={() => onSetAnimation(activeAnimation === a.clipName ? null : a.clipName)}
-              className={`eyebrow border px-3 py-2 backdrop-blur focus-ring ${
+              className={`rounded-full border-2 px-3 py-2 font-heading text-xs font-extrabold backdrop-blur focus-ring ${
                 activeAnimation === a.clipName
                   ? 'border-ink bg-ink text-paper'
                   : 'border-line bg-paper/90 text-graphite hover:border-ink hover:text-ink'
