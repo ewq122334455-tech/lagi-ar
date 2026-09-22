@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --lagi-ink: #111110;
+  --lagi-paper: #f7f6f3;
+  --lagi-graphite: #3a3a37;
+  --lagi-stone: #8a8880;
+  --lagi-mist: #e7e5df;
+  --lagi-line: #d8d6cf;
+  --nav-height: 72px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--lagi-paper);
+  color: var(--lagi-ink);
+  font-feature-settings: 'tnum' 1;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--lagi-ink);
+  color: var(--lagi-paper);
+}
+
+.eyebrow {
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--lagi-stone);
+}
+
+.hairline {
+  border: none;
+  border-top: 1px solid var(--lagi-line);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--lagi-ink);
+  outline-offset: 3px;
+}
+
+/* Large-screen exhibition mode */
+.exhibition-mode {
+  --nav-height: 0px;
+}
+
+@media (min-width: 2560px) {
+  html {
+    font-size: 19px;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--lagi-ink);
+  color: var(--lagi-paper);
+  padding: 12px 20px;
+  z-index: 999;
+}
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
