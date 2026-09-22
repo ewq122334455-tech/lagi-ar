@@ -19,7 +19,7 @@
   "details": [],
   "story": { "value": null, "status": "CONTENT_REQUIRED" },
   "lagiSelectionReason": { "value": null, "status": "CONTENT_REQUIRED" },
-  "model3D": "",
+  "model3D": "/products/product-001/model/lagi-bag.glb",
   "animations": [],
   "arTarget": "",
   "arSettings": {
@@ -32,7 +32,7 @@
       "id": "zipper",
       "title": "ZIPPER DETAIL",
       "category": "DETAIL",
-      "position": { "x": -0.3, "y": 0.05, "z": 0.32 },
+      "position": { "x": 0.53, "y": 0.1, "z": 0.15 },
       "description": {
         "value": "Smooth operation. Everyday durability.",
         "status": "VERIFIED",
@@ -43,7 +43,7 @@
       "id": "handle",
       "title": "HANDLE DETAIL",
       "category": "DETAIL",
-      "position": { "x": 0, "y": 0.45, "z": 0 },
+      "position": { "x": -0.12, "y": 0.65, "z": 0 },
       "description": {
         "value": "Durable webbing. Comfortable grip.",
         "status": "VERIFIED",
@@ -54,7 +54,7 @@
       "id": "modular-zipper",
       "title": "MODULAR ZIPPER",
       "category": "FUNCTION",
-      "position": { "x": 0.32, "y": -0.1, "z": 0.28 },
+      "position": { "x": 0.53, "y": -0.3, "z": 0.15 },
       "description": {
         "value": "Changeable. Expandable system.",
         "status": "VERIFIED",
@@ -79,6 +79,14 @@
       {
         "level": "UNKNOWN",
         "label": "Actual product photograph, silhouette, proportions, color, and full construction are not present in the supplied asset."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "A reference photo was later supplied showing a structured box tote: cream/white body, blue top-edge trim, yellow piping down the left edge, a green zipper trim down the right edge, two red vertical webbing stripes on the front continuing up into a double-loop red handle, and a yellow cam-buckle adjuster on the handle webbing."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "model3D (lagi-bag.glb) is a hand-built low-poly approximation of that reference photo's visible silhouette and trim colors — not a photogrammetry scan or AI reconstruction, and no internal/hidden construction was inferred or modeled."
       }
     ],
     "imageRef": "legacy-prototype/LAGI.png"
@@ -90,6 +98,6 @@
   },
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
-  "threeDAvailable": false,
+  "threeDAvailable": true,
   "featured": true
 }
