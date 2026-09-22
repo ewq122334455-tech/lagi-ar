@@ -1,0 +1,95 @@
+{
+  "id": "product-001",
+  "name": { "value": null, "status": "CONTENT_REQUIRED" },
+  "category": {
+    "value": "Bag (inferred — not brand-confirmed)",
+    "status": "UNKNOWN",
+    "source": "Inferred from callout labels (zipper, handle, modular zipper) in the supplied LAGI graphic. Not confirmed by brand."
+  },
+  "price": { "value": null, "status": "CONTENT_REQUIRED" },
+  "currency": "KRW",
+  "shortDescription": { "value": null, "status": "CONTENT_REQUIRED" },
+  "description": { "value": null, "status": "CONTENT_REQUIRED" },
+  "images": [],
+  "gallery": [],
+  "colors": [],
+  "dimensions": {},
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": { "value": null, "status": "CONTENT_REQUIRED" },
+  "lagiSelectionReason": { "value": null, "status": "CONTENT_REQUIRED" },
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": { "x": 0, "y": 0, "z": 0 },
+    "rotation": { "x": 0, "y": 0, "z": 0 }
+  },
+  "hotspots": [
+    {
+      "id": "zipper",
+      "title": "ZIPPER DETAIL",
+      "category": "DETAIL",
+      "position": { "x": -0.3, "y": 0.05, "z": 0.32 },
+      "description": {
+        "value": "Smooth operation. Everyday durability.",
+        "status": "VERIFIED",
+        "source": "Supplied LAGI brand graphic (legacy-prototype/LAGI.png)"
+      }
+    },
+    {
+      "id": "handle",
+      "title": "HANDLE DETAIL",
+      "category": "DETAIL",
+      "position": { "x": 0, "y": 0.45, "z": 0 },
+      "description": {
+        "value": "Durable webbing. Comfortable grip.",
+        "status": "VERIFIED",
+        "source": "Supplied LAGI brand graphic (legacy-prototype/LAGI.png)"
+      }
+    },
+    {
+      "id": "modular-zipper",
+      "title": "MODULAR ZIPPER",
+      "category": "FUNCTION",
+      "position": { "x": 0.32, "y": -0.1, "z": 0.28 },
+      "description": {
+        "value": "Changeable. Expandable system.",
+        "status": "VERIFIED",
+        "source": "Supplied LAGI brand graphic (legacy-prototype/LAGI.png)"
+      }
+    }
+  ],
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "Supplied asset is a callout/label graphic (\"LAGI — LOOK CLOSER\") with three annotation markers, not a product photograph."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "Callout labels read: \"ZIPPER DETAIL — smooth operation, everyday durability\", \"HANDLE DETAIL — durable webbing, comfortable grip\", \"MODULAR ZIPPER — changeable, expandable system\"."
+      },
+      {
+        "level": "INFERRED",
+        "label": "Product referenced is a bag-type item with a zipper closure, a webbing handle, and a modular/expandable zipper system."
+      },
+      {
+        "level": "UNKNOWN",
+        "label": "Actual product photograph, silhouette, proportions, color, and full construction are not present in the supplied asset."
+      }
+    ],
+    "imageRef": "legacy-prototype/LAGI.png"
+  },
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": true
+}
