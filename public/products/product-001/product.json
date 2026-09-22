@@ -32,7 +32,7 @@
       "id": "zipper",
       "title": "ZIPPER DETAIL",
       "category": "DETAIL",
-      "position": { "x": 0.28, "y": 1.0, "z": 0.2 },
+      "position": { "x": 0.1, "y": 0.945, "z": 0.03 },
       "description": {
         "value": "Smooth operation. Everyday durability.",
         "status": "VERIFIED",
@@ -43,7 +43,7 @@
       "id": "handle",
       "title": "HANDLE DETAIL",
       "category": "DETAIL",
-      "position": { "x": -0.19, "y": 1.08, "z": 0 },
+      "position": { "x": -0.148, "y": 1.03, "z": 0.075 },
       "description": {
         "value": "Durable webbing. Comfortable grip.",
         "status": "VERIFIED",
@@ -54,7 +54,7 @@
       "id": "modular-zipper",
       "title": "MODULAR ZIPPER",
       "category": "FUNCTION",
-      "position": { "x": 0.5, "y": 0.35, "z": 0.1 },
+      "position": { "x": 0.515, "y": 0.42, "z": 0.05 },
       "description": {
         "value": "Changeable. Expandable system.",
         "status": "VERIFIED",
@@ -103,6 +103,14 @@
       {
         "level": "UNKNOWN",
         "label": "This is still a hand-authored approximation, not a photogrammetry scan or AI 3D reconstruction (no such tool is available in this environment) — no true cloth simulation/draping, no exact zipper-coil profile, and no baked brand wordmark. Textures are procedural (generated code), not derived from pixels of the reference photos."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "Proportions and part placement were measured directly off the reference sheet's orthographic views by sampling its pixels: body 206w x 183h with a 68 deep side (W:H:D = 1 : 0.889 : 0.330), constant width top to bottom, handle apex 41% of body height above the top edge, webbing 10.7% of the width at centres +-16.6%, front pocket seams at 23.5% and 54.6% of body height from the top, and a corner build-up reading green tape / yellow piping / blue tape / ivory face from the outside in."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "model3D (lagi-bag.glb) was rebuilt a fourth time against those measurements, replacing the primitive-assembly approach: the shell is a single lofted super-ellipse surface, the webbing is a flat ribbon swept along a 3D path as one continuous run (front face, over the top, handle arch, back face) that is then split into named parts, the trims are strips taken off the same lofted surface, and the front pocket is a fabric shell following the body's curvature with the webbing passing behind it as in the reference. Node groups: MainBody, FrontPocket, LeftSidePanel, RightSidePanel, Straps, Handles, Zipper, Zipper_Slider, OpeningTop, InteriorLining, InnerPocket, Hardware, Piping, Stitching. The top narrows to a zipper line so an opening animation can be added later; no animation is authored yet."
       }
     ],
     "imageRef": "legacy-prototype/LAGI.png"
