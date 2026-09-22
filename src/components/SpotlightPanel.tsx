@@ -13,18 +13,18 @@ export function SpotlightPanel({ hotspot, onClose }: SpotlightPanelProps) {
     <div
       role="dialog"
       aria-label={hotspot.title}
-      className="absolute right-4 top-4 z-10 w-[calc(100%-2rem)] max-w-sm border border-line bg-paper/95 p-6 shadow-lg backdrop-blur lg:right-6 lg:top-6"
+      className="absolute right-4 top-4 z-10 w-[calc(100%-2rem)] max-w-sm rounded-2xl border-2 border-ink bg-paper/95 p-6 shadow-lg backdrop-blur lg:right-6 lg:top-6"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow text-stone">{hotspot.category}</p>
-          <h3 className="mt-1 text-lg font-medium">{hotspot.title}</h3>
+          <h3 className="mt-1 font-heading text-lg font-extrabold">{hotspot.title}</h3>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="닫기"
-          className="shrink-0 border border-line px-2.5 py-1 text-sm hover:border-ink focus-ring"
+          className="shrink-0 rounded-full border-2 border-line px-2.5 py-1 text-sm hover:border-ink focus-ring"
         >
           ✕
         </button>

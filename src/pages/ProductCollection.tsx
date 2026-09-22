@@ -38,7 +38,7 @@ export default function ProductCollection() {
     <div className="px-6 py-20 lg:px-10 lg:py-28">
       <div className="mx-auto max-w-canvas">
         <p className="eyebrow">PRODUCT</p>
-        <h1 className="mt-3 text-4xl font-medium lg:text-5xl">Collection</h1>
+        <h1 className="mt-3 font-display text-5xl lg:text-6xl">COLLECTION</h1>
         {query && (
           <p className="mt-3 text-sm text-stone">
             "{searchParams.get('q')}" 검색 결과 {products.length}건
@@ -52,7 +52,7 @@ export default function ProductCollection() {
                 key={c}
                 type="button"
                 onClick={() => setCategory(c)}
-                className={`eyebrow border px-4 py-2 focus-ring ${
+                className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-extrabold focus-ring ${
                   category === c ? 'border-ink bg-ink text-paper' : 'border-line text-graphite hover:border-ink'
                 }`}
               >

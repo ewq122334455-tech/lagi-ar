@@ -20,6 +20,8 @@ interface ProductViewerProps {
   activeAnimation?: string | null;
   onSetAnimation?: (clipName: string | null) => void;
   className?: string;
+  /** Hide the FRONT/BACK/... preset buttons — used for lightweight brand-moment embeds (e.g. the homepage hero). */
+  showControls?: boolean;
 }
 
 export function ProductViewer({
@@ -31,6 +33,7 @@ export function ProductViewer({
   activeAnimation = null,
   onSetAnimation,
   className,
+  showControls = true,
 }: ProductViewerProps) {
   const rigRef = useRef<CameraRigHandle>(null);
   const [webglOk, setWebglOk] = useState(true);
@@ -86,7 +89,7 @@ export function ProductViewer({
           dpr={[1, 2]}
           gl={{ antialias: true, preserveDrawingBuffer: true }}
         >
-          <hemisphereLight args={['#f7f6f3', '#3a3a37', 0.6]} />
+          <hemisphereLight args={['#ffffff', '#3a3a3a', 0.6]} />
           <ambientLight intensity={0.4} />
           <directionalLight position={[3, 4, 2]} intensity={1.3} castShadow />
           <directionalLight position={[-3, 2, -2]} intensity={0.5} />
@@ -103,12 +106,14 @@ export function ProductViewer({
         </Canvas>
       </ModelErrorBoundary>
 
-      <ViewerControls
-        onView={(preset: ViewPreset) => rigRef.current?.goToView(preset)}
-        animations={animations}
-        activeAnimation={activeAnimation}
-        onSetAnimation={onSetAnimation}
-      />
+      {showControls && (
+        <ViewerControls
+          onView={(preset: ViewPreset) => rigRef.current?.goToView(preset)}
+          animations={animations}
+          activeAnimation={activeAnimation}
+          onSetAnimation={onSetAnimation}
+        />
+      )}
     </div>
   );
 }
