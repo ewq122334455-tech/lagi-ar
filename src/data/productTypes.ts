@@ -1,4 +1,5 @@
 import type { VerifiableField, Observation } from '@/utils/contentStatus';
+import type { ModelFormat } from '@/utils/modelFile';
 
 export type HotspotCategory =
   | 'MATERIAL'
@@ -56,6 +57,14 @@ export interface ProductAnimation {
   clipName: string;
 }
 
+/** Original-file identity of an uploaded 3D model, independent of the (possibly blob:) URL used to render it. */
+export interface ModelAssetInfo {
+  filename: string;
+  format: ModelFormat;
+  mimeType?: string;
+  url: string;
+}
+
 export interface ARSettings {
   scale: number;
   position: Vector3Like;
@@ -96,6 +105,12 @@ export interface Product {
 
   /** Empty string = no verified 3D asset yet; viewer falls back to a labeled placeholder. */
   model3D: string;
+  /**
+   * Original-file metadata for model3D, captured at upload time. Needed because model3D is
+   * often a browser `blob:` URL during editing — a random UUID with no filename or extension
+   * of its own — so extension/format validation must read this instead of the URL string.
+   */
+  model3DAsset?: ModelAssetInfo;
   animations: ProductAnimation[];
 
   /** Empty string = AR not yet configured for this product. */

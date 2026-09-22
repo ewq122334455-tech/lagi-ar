@@ -1,4 +1,5 @@
 import type { Product } from '@/data/productTypes';
+import { formatFromFilename, formatFromMimeType, isBlobUrl } from '@/utils/modelFile';
 
 export interface ValidationIssue {
   level: 'error' | 'warning';
@@ -18,8 +19,22 @@ export function validateProduct(product: Product): ValidationIssue[] {
   if (product.threeDAvailable && !product.model3D) {
     issues.push({ level: 'error', message: '3D 사용 가능으로 표시되었지만 모델(GLB) 경로가 없습니다.' });
   }
-  if (product.model3D && !/\.(glb|gltf)$/i.test(product.model3D)) {
-    issues.push({ level: 'warning', message: '모델 경로가 .glb 또는 .gltf로 끝나지 않습니다.' });
+  if (product.model3D) {
+    if (isBlobUrl(product.model3D)) {
+      // blob: URLs are random UUIDs with no filename/extension of their own — validate
+      // against the uploaded File's original name/MIME type instead (see model3DAsset).
+      const asset = product.model3DAsset;
+      const validByName = asset ? formatFromFilename(asset.filename) !== null : false;
+      const validByMime = asset ? formatFromMimeType(asset.mimeType) !== null : false;
+      if (!asset || (!validByName && !validByMime)) {
+        issues.push({
+          level: 'warning',
+          message: '업로드된 3D 모델 파일이 .glb 또는 .gltf 형식인지 확인할 수 없습니다. 워크스페이스에서 파일을 다시 업로드해 주세요.',
+        });
+      }
+    } else if (formatFromFilename(product.model3D) === null) {
+      issues.push({ level: 'warning', message: '모델 경로가 .glb 또는 .gltf로 끝나지 않습니다.' });
+    }
   }
 
   if (product.arAvailable) {
