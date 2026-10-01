@@ -31,7 +31,8 @@ export function ColorBlockLink({ index, eyebrow, title, subtitle, ctaLabel, to, 
         )}
       </div>
       <div>
-        <p className="eyebrow opacity-70">{eyebrow}</p>
+        {/* Raw utilities, not `.eyebrow`: that class forces a grey that disappears on a colour block. */}
+        <p className="text-xs font-bold uppercase tracking-[0.24em] opacity-75">{eyebrow}</p>
         <h3 className="mt-2 font-display text-4xl leading-none lg:text-5xl">{title}</h3>
         <p className="mt-4 max-w-xs text-sm opacity-90">{subtitle}</p>
         <p className="mt-6 font-heading text-sm font-extrabold underline-offset-4 group-hover:underline">

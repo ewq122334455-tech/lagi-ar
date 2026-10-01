@@ -124,7 +124,8 @@ export default function Home() {
                     to={`/product/${heroProduct.id}?hotspot=${h.id}`}
                     className={`group flex min-h-[16rem] flex-col justify-between p-7 transition-transform hover:-translate-y-1 focus-ring ${HOTSPOT_COLORS[i % HOTSPOT_COLORS.length]}`}
                   >
-                    <p className="eyebrow opacity-70">{h.category}</p>
+                    {/* Raw utilities, not `.eyebrow`: that class forces a grey that disappears on a colour block. */}
+                    <p className="text-xs font-bold uppercase tracking-[0.24em] opacity-75">{h.category}</p>
                     <div>
                       <h3 className="font-heading text-2xl font-extrabold">{h.title}</h3>
                       {h.description.value && <p className="mt-3 text-sm opacity-90">{h.description.value}</p>}

@@ -20,11 +20,12 @@ export default {
         mist: '#f5f5f5',
         line: '#e5e5e5',
         accent: '#111111',
-        // New brand accents (spec: used for large graphic blocks / CTAs / hotspots,
-        // never flooded across the whole screen).
-        blue: '#155EEF',
-        orange: '#FF5A1F',
-        lime: '#C8FF00',
+        // Brand accents, taken from the LAGI logo colourways. Used for large graphic
+        // blocks / CTAs / hotspots, never flooded across the whole screen.
+        // `blue` is the lead colour; the others are points.
+        blue: '#2E55A3',
+        orange: '#C2662C',
+        lime: '#DEB457',
       },
       fontFamily: {
         // Body copy: legible at length in both scripts, still soft/rounded terminals.
