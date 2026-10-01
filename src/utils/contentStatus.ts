@@ -43,8 +43,8 @@ export function isDisplayable<T>(f: VerifiableField<T> | undefined | null): f is
 }
 
 export const STATUS_LABEL: Record<ContentStatus, string> = {
-  VERIFIED: 'VERIFIED',
-  AI_DRAFT: 'AI DRAFT',
-  UNKNOWN: 'UNVERIFIED',
-  CONTENT_REQUIRED: 'CONTENT REQUIRED',
+  VERIFIED: '확인됨',
+  AI_DRAFT: 'AI 초안',
+  UNKNOWN: '미확인',
+  CONTENT_REQUIRED: '정보 미등록',
 };

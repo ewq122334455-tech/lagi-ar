@@ -3,10 +3,11 @@ import { useProducts } from '@/hooks/useProducts';
 import { Loading } from '@/components/Loading';
 import { ErrorState } from '@/components/ErrorState';
 import { QRCodeImage } from '@/components/QRCode';
+import { canUseAR } from '@/utils/arAvailability';
 
 export default function ARLanding() {
   const state = useProducts();
-  const arProducts = state.status === 'ready' ? state.data.filter((p) => p.arAvailable) : [];
+  const arProducts = state.status === 'ready' ? state.data.filter((p) => canUseAR(p)) : [];
 
   return (
     <div>

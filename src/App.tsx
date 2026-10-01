@@ -4,6 +4,8 @@ import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { Loading } from '@/components/Loading';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { CartDrawer } from '@/components/CartDrawer';
+import { CartProvider } from '@/commerce/CartContext';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ProductCollection = lazy(() => import('@/pages/ProductCollection'));
@@ -14,6 +16,8 @@ const Story = lazy(() => import('@/pages/Story'));
 const ARLanding = lazy(() => import('@/pages/ARLanding'));
 const ARExperiencePage = lazy(() => import('@/pages/ARExperiencePage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
+const Cart = lazy(() => import('@/pages/Cart'));
+const Checkout = lazy(() => import('@/pages/Checkout'));
 const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -26,6 +30,7 @@ function SiteLayout() {
         <Outlet />
       </main>
       <Footer />
+      <CartDrawer />
     </div>
   );
 }
@@ -33,12 +38,15 @@ function SiteLayout() {
 export default function App() {
   return (
     <ErrorBoundary>
+      <CartProvider>
       <Suspense fallback={<Loading label="LAGI" />}>
         <Routes>
           <Route element={<SiteLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<ProductCollection />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/about" element={<About />} />
             <Route path="/materials" element={<Materials />} />
             <Route path="/story" element={<Story />} />
@@ -50,6 +58,7 @@ export default function App() {
           <Route path="/exhibition" element={<Exhibition />} />
         </Routes>
       </Suspense>
+      </CartProvider>
     </ErrorBoundary>
   );
 }

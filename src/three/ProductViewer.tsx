@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows } from '@react-three/drei';
+import { ACESFilmicToneMapping } from 'three';
+import { StudioEnvironment } from './StudioEnvironment';
 import type { Hotspot, ProductAnimation } from '@/data/productTypes';
 import { Model } from './Model';
 import { PlaceholderModel } from './PlaceholderModel';
@@ -87,12 +89,18 @@ export function ProductViewer({
         <Canvas
           camera={{ position: [1.8, 1.1, 2.2], fov: 40 }}
           dpr={[1, 2]}
-          gl={{ antialias: true, preserveDrawingBuffer: true }}
+          gl={{
+            antialias: true,
+            preserveDrawingBuffer: true,
+            toneMapping: ACESFilmicToneMapping,
+            toneMappingExposure: 0.95,
+          }}
         >
-          <hemisphereLight args={['#ffffff', '#3a3a3a', 0.6]} />
-          <ambientLight intensity={0.4} />
-          <directionalLight position={[3, 4, 2]} intensity={1.3} castShadow />
-          <directionalLight position={[-3, 2, -2]} intensity={0.5} />
+          <StudioEnvironment />
+          <ambientLight intensity={0.18} />
+          <directionalLight position={[2.2, 3.4, 2.6]} intensity={1.5} color="#fff6ea" />
+          <directionalLight position={[-2.6, 1.4, 1.8]} intensity={0.38} color="#eaf0ff" />
+          <directionalLight position={[-1.2, 2.0, -2.8]} intensity={0.5} />
           <Suspense fallback={<CanvasLoader />}>
             {modelUrl ? (
               <Model url={modelUrl} activeAnimation={activeAnimation} onBounds={setBounds} />
@@ -100,7 +108,14 @@ export function ProductViewer({
               <PlaceholderModel />
             )}
           </Suspense>
-          <ContactShadows position={[0, bounds.center[1] - bounds.radius, 0]} opacity={0.35} scale={bounds.radius * 4} blur={2.4} far={bounds.radius * 2} />
+          <ContactShadows
+            position={[0, bounds.minY + 0.001, 0]}
+            opacity={0.45}
+            scale={bounds.radius * 2.6}
+            blur={2.2}
+            far={bounds.radius * 0.8}
+            resolution={1024}
+          />
           <HotspotMarkers hotspots={hotspots} selectedId={selectedHotspotId} onSelect={onSelectHotspot} />
           <CameraRig ref={rigRef} bounds={bounds} />
         </Canvas>

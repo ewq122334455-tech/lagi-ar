@@ -36,12 +36,16 @@ export const CameraRig = forwardRef<CameraRigHandle, CameraRigProps>(({ bounds }
   const targetLook = useRef(new Vector3());
   const boundsRef = useRef(bounds);
   boundsRef.current = bounds;
+  /** Only true while a preset/hotspot move is playing. Otherwise the rig must leave the
+   *  camera alone, or it fights OrbitControls and drags slip out of the user's hand. */
+  const animating = useRef(false);
 
   function applyView(direction: Vector3) {
     const { center, radius } = boundsRef.current;
     const c = new Vector3(center[0], center[1], center[2]);
     targetLook.current.copy(c);
     targetPos.current.copy(c).addScaledVector(direction, radius * DISTANCE_FACTOR);
+    animating.current = true;
   }
 
   useImperativeHandle(ref, () => ({
@@ -51,6 +55,7 @@ export const CameraRig = forwardRef<CameraRigHandle, CameraRigProps>(({ bounds }
     flyTo(position, lookAt) {
       targetPos.current.set(...position);
       targetLook.current.set(...lookAt);
+      animating.current = true;
     },
   }));
 
@@ -62,10 +67,19 @@ export const CameraRig = forwardRef<CameraRigHandle, CameraRigProps>(({ bounds }
   }, [bounds.center[0], bounds.center[1], bounds.center[2], bounds.radius]);
 
   useFrame(() => {
+    if (!animating.current) return;
     camera.position.lerp(targetPos.current, 0.08);
     if (controls.current) {
       controls.current.target.lerp(targetLook.current, 0.08);
       controls.current.update();
+    }
+    // Hand control back once the move has essentially arrived, so damping and user input take over.
+    const settle = Math.max(boundsRef.current.radius * 0.004, 0.001);
+    if (
+      camera.position.distanceTo(targetPos.current) < settle &&
+      (!controls.current || controls.current.target.distanceTo(targetLook.current) < settle)
+    ) {
+      animating.current = false;
     }
   });
 
@@ -73,9 +87,13 @@ export const CameraRig = forwardRef<CameraRigHandle, CameraRigProps>(({ bounds }
     <OrbitControls
       ref={controls}
       enableDamping
-      dampingFactor={0.08}
+      dampingFactor={0.15}
       minDistance={Math.max(bounds.radius * 0.6, 0.05)}
       maxDistance={bounds.radius * 6}
+      // Any touch/drag cancels an in-flight move — the user's hand wins over the rig.
+      onStart={() => {
+        animating.current = false;
+      }}
       makeDefault
     />
   );

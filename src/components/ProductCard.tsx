@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { ContentBadge } from '@/components/ContentBadge';
+import { canUseAR } from '@/utils/arAvailability';
 
 export function ProductCard({ product }: { product: Product }) {
   const displayName = product.name.value ?? `Product ${product.id.replace('product-', '#')}`;
@@ -24,7 +25,7 @@ export function ProductCard({ product }: { product: Product }) {
         )}
 
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-          {product.arAvailable && (
+          {canUseAR(product) && (
             <span className="rounded-full bg-blue px-2.5 py-1 font-heading text-[0.65rem] font-extrabold text-paper">
               AR
             </span>
@@ -54,7 +55,7 @@ export function ProductCard({ product }: { product: Product }) {
         {product.shortDescription.value && (
           <p className="mt-1 line-clamp-1 text-sm text-graphite">{product.shortDescription.value}</p>
         )}
-        <p className="mt-3 font-heading text-sm font-extrabold text-ink group-hover:text-blue">VIEW PRODUCT →</p>
+        <p className="mt-3 font-heading text-sm font-extrabold text-ink group-hover:text-blue">제품 보기 →</p>
       </div>
     </Link>
   );

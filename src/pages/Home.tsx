@@ -7,6 +7,7 @@ import { ColorBlockLink } from '@/components/ColorBlockLink';
 import { PhoneMockup } from '@/components/PhoneMockup';
 import { ContentBadge } from '@/components/ContentBadge';
 import { ProductViewer } from '@/three/ProductViewer';
+import { canUseAR } from '@/utils/arAvailability';
 
 const HOTSPOT_COLORS = ['bg-lime text-ink', 'bg-orange text-paper', 'bg-blue text-paper'] as const;
 
@@ -17,7 +18,7 @@ export default function Home() {
   // The hero always shows a real product's visuals, but its own name/id is never the
   // page's primary heading — the heading is always the fixed "LOOK CLOSER" wordmark.
   const heroProduct = featured[0] ?? products[0] ?? null;
-  const arUrl = heroProduct?.arAvailable
+  const arUrl = heroProduct && canUseAR(heroProduct)
     ? `${window.location.origin}${window.location.pathname}#/ar/${heroProduct.id}`
     : null;
 
@@ -43,7 +44,7 @@ export default function Home() {
               to="/products"
               className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-4 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
             >
-              EXPLORE PRODUCTS →
+              제품 보러 가기 →
             </Link>
             {arUrl && (
               <Link
@@ -88,7 +89,7 @@ export default function Home() {
           <div className="flex items-end justify-between gap-6">
             <h2 className="font-display text-4xl lg:text-6xl">FEATURED PRODUCTS</h2>
             <Link to="/products" className="hidden shrink-0 font-heading text-sm font-extrabold hover:text-blue focus-ring lg:block">
-              VIEW ALL →
+              전체 보기 →
             </Link>
           </div>
 
@@ -124,7 +125,8 @@ export default function Home() {
                     to={`/product/${heroProduct.id}?hotspot=${h.id}`}
                     className={`group flex min-h-[16rem] flex-col justify-between p-7 transition-transform hover:-translate-y-1 focus-ring ${HOTSPOT_COLORS[i % HOTSPOT_COLORS.length]}`}
                   >
-                    <p className="eyebrow opacity-70">{h.category}</p>
+                    {/* Raw utilities, not `.eyebrow`: that class forces a grey that disappears on a colour block. */}
+                    <p className="text-xs font-bold uppercase tracking-[0.24em] opacity-75">{h.category}</p>
                     <div>
                       <h3 className="font-heading text-2xl font-extrabold">{h.title}</h3>
                       {h.description.value && <p className="mt-3 text-sm opacity-90">{h.description.value}</p>}
@@ -209,7 +211,7 @@ export default function Home() {
         >
           <p className="eyebrow text-stone group-hover:text-paper/70">FOLLOW</p>
           <p className="font-heading text-2xl font-extrabold">@lagi.official</p>
-          <p className="font-heading text-sm font-extrabold">INSTAGRAM →</p>
+          <p className="font-heading text-sm font-extrabold">인스타그램 →</p>
         </a>
         <a
           href="https://smartstore.naver.com/lagi_official"
@@ -219,7 +221,7 @@ export default function Home() {
         >
           <p className="eyebrow text-stone group-hover:text-paper/70">SHOP</p>
           <p className="font-heading text-2xl font-extrabold">LAGI Smart Store</p>
-          <p className="font-heading text-sm font-extrabold">SHOP NOW →</p>
+          <p className="font-heading text-sm font-extrabold">스토어 가기 →</p>
         </a>
       </section>
     </div>
