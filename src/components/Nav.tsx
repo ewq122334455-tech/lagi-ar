@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useCart } from '@/commerce/CartContext';
 
 const LINKS = [
-  { to: '/products', label: 'PRODUCTS' },
+  { to: '/products', label: '제품' },
   { to: '/ar', label: 'LOOK CLOSER' },
-  { to: '/materials', label: 'MATERIALS' },
-  { to: '/about', label: 'ABOUT' },
+  { to: '/materials', label: '소재' },
+  { to: '/about', label: '브랜드' },
 ];
 
 export function Nav() {
@@ -13,6 +14,7 @@ export function Nav() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
+  const { count, open: openCart } = useCart();
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +52,7 @@ export function Nav() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onBlur={() => !query && setSearchOpen(false)}
-              placeholder="SEARCH"
+              placeholder="검색"
               aria-label="제품 검색"
               className="w-32 bg-transparent font-heading text-sm font-bold placeholder:text-stone focus:outline-none"
             />
@@ -66,17 +68,11 @@ export function Nav() {
           </button>
         )}
 
-        <a
-          href="https://smartstore.naver.com/lagi_official"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full bg-ink px-5 py-2 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
-        >
-          SHOP
-        </a>
+        <CartButton onOpen={openCart} count={count} />
       </nav>
 
-      <div className="flex items-center gap-4 lg:hidden">
+      <div className="flex items-center gap-2 lg:hidden">
+        <CartButton onOpen={openCart} count={count} />
         <button type="button" onClick={() => setOpen((v) => !v)} aria-label={open ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={open} className="flex flex-col gap-1.5 p-2 focus-ring">
           <span className={`h-0.5 w-6 rounded-full bg-ink transition-transform ${open ? 'translate-y-[3px] rotate-45' : ''}`} />
           <span className={`h-0.5 w-6 rounded-full bg-ink transition-transform ${open ? '-translate-y-[3px] -rotate-45' : ''}`} />
@@ -91,7 +87,7 @@ export function Nav() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="SEARCH PRODUCTS"
+              placeholder="제품 검색"
               aria-label="제품 검색"
               className="w-full bg-transparent font-heading text-sm font-bold placeholder:text-stone focus:outline-none"
             />
@@ -101,17 +97,37 @@ export function Nav() {
               {l.label}
             </NavLink>
           ))}
-          <a
-            href="https://smartstore.naver.com/lagi_official"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              openCart();
+            }}
             className="w-fit rounded-full bg-ink px-6 py-3 font-heading text-sm font-extrabold text-paper focus-ring"
           >
-            SHOP
-          </a>
+            장바구니 {count > 0 && `(${count})`}
+          </button>
         </div>
       )}
     </header>
+  );
+}
+
+function CartButton({ onOpen, count }: { onOpen: () => void; count: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`장바구니 열기, ${count}개 담김`}
+      className="relative rounded-full bg-ink px-5 py-2 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+    >
+      장바구니
+      {count > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1 text-[0.7rem] font-extrabold text-paper">
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 

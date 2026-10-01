@@ -74,12 +74,14 @@ export default function ARExperiencePage() {
     );
   }
 
-  if (!product.arAvailable || !product.arTarget || !product.model3D) {
+  // A 3D model is the one hard requirement. An image target is optional: without it the
+  // experience runs markerless, placing the product by hand instead of tracking a picture.
+  if (!product.model3D) {
     return (
       <FullscreenMessage
-        eyebrow="AR — CONTENT REQUIRED"
+        eyebrow="AR — 준비 중"
         title="이 제품은 아직 AR로 준비되지 않았습니다"
-        message="AR 타겟 이미지와 3D 모델이 등록되면 이 제품의 AR 경험을 이용할 수 있습니다. 아키텍처는 이미 준비되어 있습니다."
+        message="3D 모델이 등록되면 AR로 볼 수 있습니다."
         onExit={() => navigate(`/product/${product.id}`)}
         exitLabel="제품 페이지로"
       />

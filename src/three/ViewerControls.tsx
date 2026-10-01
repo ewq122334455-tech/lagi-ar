@@ -2,13 +2,13 @@ import type { ProductAnimation } from '@/data/productTypes';
 import type { ViewPreset } from './CameraRig';
 
 const VIEWS: { preset: ViewPreset; label: string }[] = [
-  { preset: 'front', label: 'FRONT' },
-  { preset: 'back', label: 'BACK' },
-  { preset: 'left', label: 'LEFT' },
-  { preset: 'right', label: 'RIGHT' },
-  { preset: 'top', label: 'TOP' },
-  { preset: 'bottom', label: 'BOTTOM' },
-  { preset: 'reset', label: 'RESET' },
+  { preset: 'front', label: '앞' },
+  { preset: 'back', label: '뒤' },
+  { preset: 'left', label: '왼쪽' },
+  { preset: 'right', label: '오른쪽' },
+  { preset: 'top', label: '위' },
+  { preset: 'bottom', label: '아래' },
+  { preset: 'reset', label: '처음으로' },
 ];
 
 interface ViewerControlsProps {
@@ -54,7 +54,7 @@ export function ViewerControls({ onView, animations = [], activeAnimation, onSet
       )}
 
       <p className="pointer-events-none text-[0.65rem] tracking-widest text-stone">
-        DRAG TO ROTATE · SCROLL TO ZOOM
+        드래그해서 돌리기 · 스크롤로 확대
       </p>
     </div>
   );

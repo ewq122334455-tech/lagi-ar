@@ -71,6 +71,15 @@ export interface ARSettings {
   rotation: Vector3Like;
 }
 
+/** One buyable combination. Sizes/colours a product does not have are simply null. */
+export interface ProductVariant {
+  id: string;
+  size: string | null;
+  color: string | null;
+  /** null = stock not tracked. 0 = sold out. */
+  stock: number | null;
+}
+
 export interface ProductDimensions {
   widthCm?: number;
   heightCm?: number;
@@ -96,6 +105,8 @@ export interface Product {
   images: string[];
   gallery: string[];
   colors: string[];
+  /** Optional: products published before variants existed simply have none. */
+  variants?: ProductVariant[];
   dimensions: ProductDimensions;
   materials: MaterialEntry[];
   process: ProcessStep[];

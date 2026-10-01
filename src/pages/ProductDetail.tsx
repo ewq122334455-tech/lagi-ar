@@ -9,7 +9,9 @@ import { DetailSection } from '@/components/DetailSection';
 import { SpotlightMenu } from '@/components/SpotlightMenu';
 import { SpotlightPanel } from '@/components/SpotlightPanel';
 import { PhoneMockup } from '@/components/PhoneMockup';
+import { BuyPanel } from '@/components/BuyPanel';
 import { ProductViewer } from '@/three/ProductViewer';
+import { canUseAR } from '@/utils/arAvailability';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +36,7 @@ export default function ProductDetail() {
 function ProductDetailView({ product }: { product: import('@/data/productTypes').Product }) {
   const { selected, selectedId, select, clear } = useSpotlight(product.hotspots);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
-  const arUrl = product.arAvailable
+  const arUrl = canUseAR(product)
     ? `${window.location.origin}${window.location.pathname}#/ar/${product.id}`
     : null;
 
@@ -100,35 +102,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
             </div>
           )}
 
-          <div className="mt-10 flex flex-wrap gap-3">
-            {product.arAvailable ? (
-              <Link
-                to={`/ar/${product.id}`}
-                className="inline-flex items-center gap-2 rounded-full bg-ink px-7 py-4 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
-              >
-                VIEW IN AR
-              </Link>
-            ) : (
-              <span className="rounded-full border-2 border-dashed border-line px-7 py-4 font-heading text-sm font-bold text-stone">
-                AR — CONTENT REQUIRED
-              </span>
-            )}
-
-            {product.shopUrl.value ? (
-              <a
-                href={product.shopUrl.value}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border-2 border-ink px-7 py-4 font-heading text-sm font-extrabold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
-              >
-                BUY PRODUCT →
-              </a>
-            ) : (
-              <span className="rounded-full border-2 border-dashed border-line px-7 py-4 font-heading text-sm font-bold text-stone">
-                SHOP URL — CONTENT REQUIRED
-              </span>
-            )}
-          </div>
+          <BuyPanel product={product} />
 
           {product.hotspots.length > 0 && (
             <div className="mt-12">
@@ -240,7 +214,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-2 rounded-full bg-lime px-8 py-4 font-heading text-sm font-extrabold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
             >
-              SHOP NOW →
+              구매하러 가기 →
             </a>
           ) : (
             <span className="mt-2 rounded-full border-2 border-dashed border-paper/30 px-8 py-4 font-heading text-sm font-bold text-mist">

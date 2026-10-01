@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimationMixer, Clock, Raycaster, Vector2 } from 'three';
+import { AnimationMixer, Box3, Clock, Raycaster, Vector2, Vector3 } from 'three';
 import type { AnimationAction } from 'three';
 import type { Product } from '@/data/productTypes';
 import { MindARProvider } from './MindARProvider';
+import { PlacementARProvider } from './PlacementARProvider';
 import { ARStartError } from './ARProvider';
+import type { ARProvider } from './ARProvider';
 import { loadARModel } from './arModelLoader';
 import { buildHotspotMarkers, findHotspotId } from './arHotspotMarkers';
 import { SpotlightPanel } from '@/components/SpotlightPanel';
@@ -26,7 +28,7 @@ interface ARExperienceProps {
 
 export function ARExperience({ product, onExit }: ARExperienceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const providerRef = useRef<MindARProvider | null>(null);
+  const providerRef = useRef<ARProvider | null>(null);
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Record<string, AnimationAction>>({});
   const markersRef = useRef<ReturnType<typeof buildHotspotMarkers> | null>(null);
@@ -35,6 +37,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
   const [state, setState] = useState<ARState>('ready-to-start');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
+  const markerless = !product.arTarget;
 
   const cleanup = useCallback(async () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -58,7 +61,9 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
     setState('requesting-camera');
     setErrorMessage(null);
 
-    const provider = new MindARProvider();
+    // Image tracking needs a compiled .mind target. Without one, fall back to markerless
+    // placement so the camera still opens and the product can be seen in the room.
+    const provider: ARProvider = markerless ? new PlacementARProvider() : new MindARProvider();
     providerRef.current = provider;
 
     try {
@@ -67,6 +72,17 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
       setState('model-loading');
       const { scene, animations } = await loadARModel(product.model3D, product.arSettings);
       group.add(scene);
+
+      if (markerless) {
+        // The GLB's units are arbitrary, so size it against the product's real width when that
+        // is recorded, and otherwise to a comfortable on-screen default the user can pinch from.
+        const size = new Box3().setFromObject(scene).getSize(new Vector3());
+        const largest = Math.max(size.x, size.y, size.z);
+        if (largest > 0) {
+          const targetMetres = product.dimensions.widthCm ? product.dimensions.widthCm / 100 : 0.4;
+          group.scale.setScalar(targetMetres / largest);
+        }
+      }
 
       if (animations.length > 0) {
         const mixer = new AnimationMixer(scene);
@@ -85,7 +101,8 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
       provider.onTargetFound(() => setState('found'));
       provider.onTargetLost(() => setState('scanning'));
 
-      setState('scanning');
+      // Markerless placement has nothing to scan for — the product is already in view.
+      setState(markerless ? 'found' : 'scanning');
 
       const clock = new Clock();
       const loop = () => {
@@ -108,7 +125,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
         setErrorMessage('3D 모델을 불러오지 못했습니다.');
       }
     }
-  }, [product]);
+  }, [product, markerless]);
 
   const handleTap = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -231,16 +248,24 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
       )}
 
       {state === 'scanning' && (
-        <div className="pointer-events-none absolute inset-x-0 top-1/3 z-10 flex flex-col items-center gap-3 text-center">
-          <div className="h-48 w-48 rounded-full border border-paper/50" />
-          <p className="eyebrow">SCAN THE PRODUCT</p>
+        <div className="pointer-events-none absolute inset-x-0 top-1/3 z-10 flex flex-col items-center gap-3 px-8 text-center">
+          {markerless ? (
+            <p className="rounded-full bg-ink/70 px-5 py-3 text-sm text-paper">
+              카메라를 비추면 제품이 나타납니다
+            </p>
+          ) : (
+            <>
+              <div className="h-48 w-48 rounded-full border border-paper/50" />
+              <p className="eyebrow">타겟 이미지를 비춰 주세요</p>
+            </>
+          )}
         </div>
       )}
 
       {state === 'found' && (
         <>
-          <p className="absolute left-1/2 top-6 z-10 -translate-x-1/2 eyebrow bg-paper px-3 py-1.5 text-ink">
-            PRODUCT FOUND
+          <p className="absolute left-1/2 top-6 z-10 -translate-x-1/2 rounded-full bg-paper px-4 py-2 text-xs font-bold text-ink">
+            {markerless ? '끌어서 이동 · 두 손가락으로 크기와 회전' : '제품을 인식했습니다'}
           </p>
 
           <SpotlightPanel hotspot={selectedHotspot} onClose={() => setSelectedHotspotId(null)} />
