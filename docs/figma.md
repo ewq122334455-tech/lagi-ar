@@ -14,7 +14,7 @@
 
 | 프레임 | 대응하는 코드 |
 | --- | --- |
-| `Home / Desktop 1440` | `src/pages/Home.tsx` |
+| `Home / Desktop 1440` | `src/pages/Home.tsx` — 띠(Band) 구조 |
 | `Collection / Desktop 1440` | `src/pages/ProductCollection.tsx` |
 | `Product Detail / Desktop 1440` | `src/pages/ProductDetail.tsx` + `src/components/BuyPanel.tsx` |
 | `Cart / Desktop 1440` | `src/pages/Cart.tsx` |
@@ -39,6 +39,13 @@ Figma 컬렉션 `LAGI / Color`의 변수 이름은 `tailwind.config.js`의 색�
 | blue | `VariableID:2:9` | `blue` | `#2E55A3` |
 | orange | `VariableID:2:10` | `orange` | `#C2662C` |
 | lime | `VariableID:2:11` | `lime` | `#DEB457` |
+| sand | `VariableID:23:2` | `sand` | `#EFEADF` |
+| haze | `VariableID:23:3` | `haze` | `#E6EAF4` |
+| limePale | `VariableID:23:4` | `limePale` | `#F7ECD5` |
+
+`sand` / `haze` / `limePale`은 DESIGN.md의 띠(Band) 표면입니다. Wise에서 가져온 값이 아니라
+LAGI의 라임·블루를 섞어 만든 값이고, 섞은 비율은 `tailwind.config.js` 주석과 Foundations
+페이지의 `BAND SURFACES` 행에 적혀 있습니다.
 
 컬렉션 `LAGI / Space`(`space-2` … `space-32`)는 4px 배수 간격 스케일입니다.
 
@@ -57,14 +64,15 @@ Jua(디스플레이), Nunito(헤딩·버튼), Gothic A1(본문). 세 가지 모�
 파일에는 화면 외에 두 페이지가 더 있습니다.
 
 ### `Foundations` 페이지
-색상 견본 9종과 텍스트 스타일 ramp 11종의 실물 견본. 각 색 아래에 Tailwind 키와
+색상 견본 12종, 텍스트 스타일 ramp 11종, 띠 표면 3종의 실물 견본. 각 색 아래에 Tailwind 키와
 CSS 변수명이 함께 적혀 있습니다.
 
 ### `Components` 페이지 — 컴포넌트 9종
 
 | Figma 컴포넌트 | 변형 | 대응 코드 |
 | --- | --- | --- |
-| `Button` | Solid / Outline / Blue | `src/components/BuyPanel.tsx`, `src/pages/Home.tsx` (인라인 패턴) |
+| `Button` | Primary / Secondary / Tertiary / Dark | `src/components/ui/Button.tsx` |
+| `Card` | White / Lime / Cool / Soft / Dark | `src/components/ui/Card.tsx` |
 | `Chip` | Default / Active / Strong | `src/pages/ProductCollection.tsx`, `ProductDetail.tsx` (인라인 패턴) |
 | `Badge` | AR / 3D | `src/components/ProductCard.tsx` |
 | `ContentBadge` | AI_DRAFT / UNKNOWN / CONTENT_REQUIRED | `src/components/ContentBadge.tsx` |
