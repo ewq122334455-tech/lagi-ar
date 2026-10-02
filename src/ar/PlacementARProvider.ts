@@ -134,32 +134,57 @@ export class PlacementARProvider implements ARProvider {
     return { group: content };
   }
 
-  /** Drag to move, pinch to scale, twist with two fingers to rotate. */
+  /**
+   * One finger turns the product so every side can be seen; two fingers pinch to zoom,
+   * and also pan and twist so it can still be positioned in the room.
+   */
   private attachGestures(el: HTMLElement, content: Group) {
+    // Yaw before pitch, so dragging reads as a turntable rather than tumbling the model.
+    content.rotation.order = 'YXZ';
+
     const pointers = new Map<number, { x: number; y: number }>();
     let startDistance = 0;
     let startAngle = 0;
     let startScale = 1;
     let startRotation = 0;
+    let startMid: { x: number; y: number } | null = null;
 
+    const YAW_PER_PX = 0.008;
+    const PITCH_PER_PX = 0.006;
+    const MAX_PITCH = Math.PI / 3; // keep the product upright-ish instead of flipping over
+
+    const two = () => [...pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
     const spread = () => {
-      const [a, b] = [...pointers.values()];
+      const [a, b] = two();
       return Math.hypot(b.x - a.x, b.y - a.y);
     };
     const angle = () => {
-      const [a, b] = [...pointers.values()];
+      const [a, b] = two();
       return Math.atan2(b.y - a.y, b.x - a.x);
+    };
+    const midpoint = () => {
+      const [a, b] = two();
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+
+    const beginPinch = () => {
+      startDistance = spread();
+      startAngle = angle();
+      startScale = content.scale.x;
+      startRotation = content.rotation.y;
+      startMid = midpoint();
     };
 
     const onDown = (e: PointerEvent) => {
-      el.setPointerCapture(e.pointerId);
+      // Register first: capture is an optimisation, and if it throws (stale or synthetic
+      // pointer id) the finger must still drive the gesture.
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointers.size === 2) {
-        startDistance = spread();
-        startAngle = angle();
-        startScale = content.scale.x;
-        startRotation = content.rotation.y;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // Capture unavailable for this pointer; pointermove still fires on the element.
       }
+      if (pointers.size === 2) beginPinch();
     };
 
     const onMove = (e: PointerEvent) => {
@@ -169,20 +194,31 @@ export class PlacementARProvider implements ARProvider {
       pointers.set(e.pointerId, next);
 
       if (pointers.size === 1) {
-        // Move in the plane facing the camera. The divisor maps screen pixels to metres
-        // at the model's default distance, which keeps dragging feeling one-to-one.
-        content.position.x += (next.x - prev.x) / 340;
-        content.position.y -= (next.y - prev.y) / 340;
-      } else if (pointers.size === 2 && startDistance > 0) {
+        // Turn the product in place: sideways drag spins it, vertical drag tips it.
+        content.rotation.y += (next.x - prev.x) * YAW_PER_PX;
+        content.rotation.x = Math.max(
+          -MAX_PITCH,
+          Math.min(MAX_PITCH, content.rotation.x + (next.y - prev.y) * PITCH_PER_PX),
+        );
+      } else if (pointers.size === 2 && startDistance > 0 && startMid) {
         const scale = Math.min(6, Math.max(0.15, startScale * (spread() / startDistance)));
         content.scale.setScalar(scale);
         content.rotation.y = startRotation + (angle() - startAngle);
+
+        // Move with the midpoint so the product can still be placed in the room.
+        const mid = midpoint();
+        content.position.x += (mid.x - startMid.x) / 340;
+        content.position.y -= (mid.y - startMid.y) / 340;
+        startMid = mid;
       }
     };
 
     const onUp = (e: PointerEvent) => {
       pointers.delete(e.pointerId);
-      if (pointers.size < 2) startDistance = 0;
+      if (pointers.size < 2) {
+        startDistance = 0;
+        startMid = null;
+      }
     };
 
     el.addEventListener('pointerdown', onDown);
