@@ -264,13 +264,13 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
 
       {state === 'found' && (
         <>
-          <p className="absolute left-1/2 top-6 z-10 -translate-x-1/2 rounded-full bg-paper px-4 py-2 text-xs font-bold text-ink">
-            {markerless ? '한 손가락으로 돌려보기 · 두 손가락으로 확대' : '제품을 인식했습니다'}
+          <p className="pointer-events-none absolute left-1/2 top-6 z-10 -translate-x-1/2 rounded-full bg-paper px-4 py-2 text-xs font-bold text-ink">
+            {markerless ? '한 손가락 회전 · 두 손가락 확대 · 꾹 눌러 이동' : '제품을 인식했습니다'}
           </p>
 
           <SpotlightPanel hotspot={selectedHotspot} onClose={() => setSelectedHotspotId(null)} />
 
-          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-wrap justify-center gap-2 p-4">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap justify-center gap-2 p-4">
             {product.hotspots.length > 0 && (
               <>
                 {['MATERIAL', 'DETAIL', 'PROCESS'].map((cat) => {
@@ -281,7 +281,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
                       key={cat}
                       type="button"
                       onClick={() => setSelectedHotspotId(match.id)}
-                      className="eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
+                      className="pointer-events-auto eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
                     >
                       {cat}
                     </button>
@@ -293,7 +293,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
               <button
                 type="button"
                 onClick={() => runAnimation(product.animations.find((a) => a.id === 'open')!.clipName)}
-                className="eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
+                className="pointer-events-auto eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
               >
                 OPEN
               </button>
@@ -302,7 +302,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
               <button
                 type="button"
                 onClick={() => runAnimation(product.animations.find((a) => a.id === 'close')!.clipName)}
-                className="eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
+                className="pointer-events-auto eyebrow border border-paper/50 bg-ink/60 px-4 py-3 backdrop-blur hover:border-paper focus-ring"
               >
                 CLOSE
               </button>
