@@ -265,7 +265,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
       {state === 'found' && (
         <>
           <p className="absolute left-1/2 top-6 z-10 -translate-x-1/2 rounded-full bg-paper px-4 py-2 text-xs font-bold text-ink">
-            {markerless ? '끌어서 이동 · 두 손가락으로 크기와 회전' : '제품을 인식했습니다'}
+            {markerless ? '한 손가락으로 돌려보기 · 두 손가락으로 확대' : '제품을 인식했습니다'}
           </p>
 
           <SpotlightPanel hotspot={selectedHotspot} onClose={() => setSelectedHotspotId(null)} />
