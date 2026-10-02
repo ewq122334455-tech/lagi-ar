@@ -31,7 +31,7 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           )}
           {product.threeDAvailable && (
-            <span className="rounded-full bg-lime px-2.5 py-1 font-heading text-[0.65rem] font-extrabold text-ink">
+            <span className="rounded-full bg-ochre px-2.5 py-1 font-heading text-[0.65rem] font-extrabold text-ink">
               3D
             </span>
           )}

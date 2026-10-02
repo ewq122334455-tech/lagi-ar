@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 type Variant = 'primary' | 'secondary' | 'tertiary' | 'dark';
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-blue text-paper hover:bg-[#27488a]',
-  secondary: 'bg-sand text-ink hover:bg-[#e6dfd0]',
+  primary: 'bg-blue text-paper hover:bg-blueDeep',
+  secondary: 'bg-sand text-ink hover:bg-[#E2DDD1]',
   tertiary: 'bg-paper text-ink border border-ink hover:bg-mist',
   dark: 'bg-ink text-paper hover:bg-graphite',
 };

@@ -5,19 +5,25 @@ description: LAGI's design language — the structural system of Wise's marketin
 derivedFrom: getdesign "wise" template — see docs/design-reference-wise.md for the untouched original.
 
 colors:
-  # ─── LAGI brand (unchanged; these are the identity) ───
-  primary: "#2E55A3"          # blue — the lead brand colour and the primary CTA fill
+  # ─── LAGI brand. Every value below was sampled pixel-by-pixel from the LAGI
+  # logo and the supplied colour-chip artwork, not estimated by eye. ───
+  primary: "#3278BA"          # blue — 45% of the logo's non-white pixels; the lead colour
+  primary-deep: "#2A669E"     # blue x0.85, hover / pressed
   on-primary: "#ffffff"
-  accent-lime: "#DEB457"
-  accent-orange: "#C2662C"
+  ochre: "#C1A252"
+  terracotta: "#B76C58"
+  sage: "#6BA576"
+  mauve: "#AC7B8A"
+  slate: "#4E79A2"            # the star mark in the chip artwork
+  clay: "#844E3F"             # terracotta darkened so it can carry text on white
   ink: "#111111"
   graphite: "#3a3a3a"
   mute: "#8a8a8a"
   canvas: "#ffffff"
-  # ─── Surface tints, derived from the brand colours above ───
-  canvas-soft: "#EFEADF"      # lime at 12% over #F2F2F2 — the warm band surface
-  canvas-cool: "#E6EAF4"      # blue at 12% over white — the cool alternate band
-  surface-lime: "#F7ECD5"     # lime at 25% over white — soft feature-card tint
+  # ─── Surface tints, mixed from the palette above ───
+  canvas-soft: "#ECE8DF"      # ochre at 12% over #f2f2f2 — the warm band
+  canvas-cool: "#E6EFF7"      # blue at 12% over white — the cool band
+  surface-ochre: "#F0E8D4"    # ochre at 25% over white — soft feature-card fill
   neutral: "#f5f5f5"
   line: "#e5e5e5"
 
@@ -113,15 +119,22 @@ LAGI does not use sharp corners on UI chrome.
 ## Colours
 
 ### Brand
-- **Blue** `primary` `#2E55A3` — every primary button, every link hover, the brand's lead.
-- **Lime** `accent-lime` `#DEB457` and **Orange** `accent-orange` `#C2662C` — card accents only.
+- **Blue** `primary` `#3278BA` — every primary button, every link hover, the brand's lead. It is
+  the logo's own blue, read straight off the artwork.
+- **Ochre** `#C1A252`, **Terracotta** `#B76C58`, **Sage** `#6BA576`, **Mauve** `#AC7B8A` and
+  **Slate** `#4E79A2` — the chip palette. Card and detail accents only; never the primary action.
+
+### Contrast rules that follow from the palette
+- Blue carries white text at 4.70:1 — above AA, so primary buttons are safe.
+- Terracotta carries white at only 3.99:1, so **terracotta surfaces take ink text**, not white.
+- Sage carries white at 2.9:1 — ink text only.
+- For terracotta-coloured *text* on white, use `clay` `#844E3F` (6.6:1) instead.
 
 ### Surfaces
 - **Canvas** `#ffffff` — card interiors, and plain content bands.
-- **Canvas soft** `#EFEADF` — the warm band. Derived by mixing lime into a light neutral at 12%,
-  so it belongs to the LAGI palette rather than being an imported sage.
-- **Canvas cool** `#E6EAF4` — the cool band, blue at 12% over white.
-- **Surface lime** `#F7ECD5` — soft feature-card fill.
+- **Canvas soft** `#ECE8DF` — the warm band, ochre mixed into a light neutral at 12%.
+- **Canvas cool** `#E6EFF7` — the cool band, the logo blue at 12% over white.
+- **Surface ochre** `#F0E8D4` — soft feature-card fill, ochre at 25% over white.
 - **Ink** `#111111` — the dark band and the footer.
 
 ### Text
@@ -163,6 +176,7 @@ supplied rather than inventing one.
 
 ### Don't
 - Don't import Wise's lime `#9fe870` or sage `#e8ebe6`. The structure is borrowed; the colour is not.
+- Don't put white text on terracotta or sage — both fall below AA. Ink text, or `clay` on white.
 - Don't add drop shadows to lift cards.
 - Don't put more than one dark band on a page.
 - Don't fabricate a price, material, dimension or review to fill a layout.

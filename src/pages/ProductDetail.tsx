@@ -126,7 +126,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
       )}
 
       {/* MATERIALS */}
-      <DetailSection id="materials" eyebrow="MATERIALS" title="소재" accent="lime">
+      <DetailSection id="materials" eyebrow="MATERIALS" title="소재" accent="ochre">
         {product.materials.length === 0 ? (
           <ContentBadge status="CONTENT_REQUIRED" />
         ) : (
@@ -143,7 +143,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
       </DetailSection>
 
       {/* PROCESS */}
-      <DetailSection id="process" eyebrow="PROCESS" title="공정" accent="orange">
+      <DetailSection id="process" eyebrow="PROCESS" title="공정" accent="terracotta">
         {product.process.length === 0 ? (
           <ContentBadge status="CONTENT_REQUIRED" />
         ) : (
@@ -212,7 +212,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               href={product.shopUrl.value}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-2 rounded-full bg-lime px-8 py-4 font-heading text-sm font-extrabold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
+              className="mt-2 inline-flex items-center gap-2 rounded-full bg-ochre px-8 py-4 font-heading text-sm font-extrabold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
             >
               구매하러 가기 →
             </a>

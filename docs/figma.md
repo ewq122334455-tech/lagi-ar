@@ -28,24 +28,32 @@
 Figma 컬렉션 `LAGI / Color`의 변수 이름은 `tailwind.config.js`의 색상 키와 1:1로 같습니다.
 한쪽을 바꾸면 다른 쪽도 같은 이름으로 바꿔 주세요.
 
-| Figma 변수 | Variable ID | Tailwind 키 | 값 |
+| Figma 변수 | Tailwind 키 | 값 | 출처 |
 | --- | --- | --- | --- |
-| paper | `VariableID:2:3` | `paper` | `#ffffff` |
-| ink | `VariableID:2:4` | `ink` | `#111111` |
-| graphite | `VariableID:2:5` | `graphite` | `#3a3a3a` |
-| stone | `VariableID:2:6` | `stone` | `#8a8a8a` |
-| mist | `VariableID:2:7` | `mist` | `#f5f5f5` |
-| line | `VariableID:2:8` | `line` | `#e5e5e5` |
-| blue | `VariableID:2:9` | `blue` | `#2E55A3` |
-| orange | `VariableID:2:10` | `orange` | `#C2662C` |
-| lime | `VariableID:2:11` | `lime` | `#DEB457` |
-| sand | `VariableID:23:2` | `sand` | `#EFEADF` |
-| haze | `VariableID:23:3` | `haze` | `#E6EAF4` |
-| limePale | `VariableID:23:4` | `limePale` | `#F7ECD5` |
+| blue | `blue` | `#3278BA` | 로고 — 비백색 픽셀의 45% |
+| blueDeep | `blueDeep` | `#2A669E` | blue × 0.85 (hover) |
+| ochre | `ochre` | `#C1A252` | 칩 아트워크 |
+| terracotta | `terracotta` | `#B76C58` | 칩 아트워크 |
+| sage | `sage` | `#6BA576` | 칩 아트워크 |
+| mauve | `mauve` | `#AC7B8A` | 칩 아트워크 |
+| slate | `slate` | `#4E79A2` | 칩 아트워크의 별 모양 |
+| clay | `clay` | `#844E3F` | terracotta 어둡게 — 흰 배경 글자용 |
+| sand | `sand` | `#ECE8DF` | ochre 12% + 중성 회색 |
+| haze | `haze` | `#E6EFF7` | blue 12% + 흰색 |
+| ochrePale | `ochrePale` | `#F0E8D4` | ochre 25% + 흰색 |
+| paper / ink / graphite / stone / mist / line | 동일 | 변경 없음 | — |
 
-`sand` / `haze` / `limePale`은 DESIGN.md의 띠(Band) 표면입니다. Wise에서 가져온 값이 아니라
-LAGI의 라임·블루를 섞어 만든 값이고, 섞은 비율은 `tailwind.config.js` 주석과 Foundations
-페이지의 `BAND SURFACES` 행에 적혀 있습니다.
+**메인은 blue입니다.** 모든 주요 행동 버튼이 이 색이고, 나머지는 카드와 디테일 강조에만 씁니다.
+
+### 대비 (측정값)
+
+| 조합 | 비율 | 판정 |
+| --- | --- | --- |
+| blue + 흰 글자 | 4.70:1 | AA 통과 |
+| terracotta + 흰 글자 | 3.99:1 | **미달 — 잉크 글자 사용** |
+| sage + 흰 글자 | 2.90:1 | **미달 — 잉크 글자 사용** |
+| clay + 흰 배경 | 6.62:1 | 통과 |
+| ochre + 잉크 글자 | 7.69:1 | 통과 |
 
 컬렉션 `LAGI / Space`(`space-2` … `space-32`)는 4px 배수 간격 스케일입니다.
 

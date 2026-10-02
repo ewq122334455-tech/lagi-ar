@@ -1,12 +1,12 @@
 const ACCENT_BORDER = {
-  lime: 'border-lime',
-  orange: 'border-orange',
+  ochre: 'border-ochre',
+  terracotta: 'border-terracotta',
   blue: 'border-blue',
 } as const;
 
 const ACCENT_TEXT = {
-  lime: 'text-ink',
-  orange: 'text-orange',
+  ochre: 'text-ink',
+  terracotta: 'text-clay',
   blue: 'text-blue',
 } as const;
 

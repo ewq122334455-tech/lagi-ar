@@ -9,12 +9,17 @@
   --lagi-stone: #8a8a8a;
   --lagi-mist: #f5f5f5;
   --lagi-line: #e5e5e5;
-  --lagi-blue: #2e55a3;
-  --lagi-orange: #c2662c;
-  --lagi-lime: #deb457;
-  --lagi-sand: #efeadf;
-  --lagi-haze: #e6eaf4;
-  --lagi-lime-pale: #f7ecd5;
+  --lagi-blue: #3278ba;
+  --lagi-blue-deep: #2a669e;
+  --lagi-ochre: #c1a252;
+  --lagi-terracotta: #b76c58;
+  --lagi-sage: #6ba576;
+  --lagi-mauve: #ac7b8a;
+  --lagi-slate: #4e79a2;
+  --lagi-clay: #844e3f;
+  --lagi-sand: #ece8df;
+  --lagi-haze: #e6eff7;
+  --lagi-ochre-pale: #f0e8d4;
   --nav-height: 72px;
 }
 
@@ -47,7 +52,7 @@ button {
 }
 
 ::selection {
-  background: var(--lagi-lime);
+  background: var(--lagi-ochre);
   color: var(--lagi-ink);
 }
 

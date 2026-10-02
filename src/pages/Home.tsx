@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { ButtonLink } from '@/components/ui/Button';
 import { canUseAR } from '@/utils/arAvailability';
 
-const HOTSPOT_TONES = ['lime', 'white', 'dark'] as const;
+const HOTSPOT_TONES = ['ochre', 'white', 'dark'] as const;
 
 export default function Home() {
   const state = useProducts();
@@ -179,8 +179,8 @@ export default function Home() {
       <Band tone="dark">
         <div className="flex flex-col items-center gap-12 lg:flex-row lg:justify-between lg:gap-16">
           <div className="text-center lg:text-left">
-            <p className="eyebrow !text-lime">AR EXPERIENCE</p>
-            <h2 className="mt-3 font-display text-4xl text-lime lg:text-6xl">EXPERIENCE IN AR</h2>
+            <p className="eyebrow !text-ochre">AR EXPERIENCE</p>
+            <h2 className="mt-3 font-display text-4xl text-ochre lg:text-6xl">EXPERIENCE IN AR</h2>
             <p className="mt-5 max-w-md text-lg font-medium leading-relaxed text-mist">
               지금, 당신의 공간에서
               <br />
@@ -281,7 +281,7 @@ export default function Home() {
           </Card>
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6">
             <div>
-              <p className="eyebrow !text-lime">SHOP</p>
+              <p className="eyebrow !text-ochre">SHOP</p>
               <p className="mt-2 font-heading text-2xl font-extrabold">LAGI Smart Store</p>
               <p className="mt-2 text-sm text-mist">실제 주문과 결제는 공식 스토어에서 이루어집니다.</p>
             </div>

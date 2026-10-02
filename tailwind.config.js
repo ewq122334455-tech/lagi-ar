@@ -20,18 +20,23 @@ export default {
         mist: '#f5f5f5',
         line: '#e5e5e5',
         accent: '#111111',
-        // Brand accents, taken from the LAGI logo colourways. Used for large graphic
-        // blocks / CTAs / hotspots, never flooded across the whole screen.
-        // `blue` is the lead colour; the others are points.
-        blue: '#2E55A3',
-        orange: '#C2662C',
-        lime: '#DEB457',
-        // Band surfaces, mixed from the brand accents above rather than imported:
-        // sand = lime at 12% over #f2f2f2, haze = blue at 12% over white,
-        // limePale = lime at 25% over white. See DESIGN.md.
-        sand: '#EFEADF',
-        haze: '#E6EAF4',
-        limePale: '#F7ECD5',
+        // Brand palette, sampled pixel-by-pixel from the LAGI logo and the
+        // supplied colour-chip artwork — not estimated by eye.
+        // blue is the lead: it is 45% of the logo's non-white pixels.
+        blue: '#3278BA',
+        blueDeep: '#2A669E',   // blue x0.85, for hover/pressed
+        ochre: '#C1A252',
+        terracotta: '#B76C58',
+        sage: '#6BA576',
+        mauve: '#AC7B8A',
+        slate: '#4E79A2',      // the star mark in the chip artwork
+        clay: '#844E3F',       // terracotta darkened for text on white (AA)
+        // Band surfaces, mixed from the palette above rather than imported:
+        // sand = ochre at 12% over #f2f2f2, haze = blue at 12% over white,
+        // ochrePale = ochre at 25% over white. See DESIGN.md.
+        sand: '#ECE8DF',
+        haze: '#E6EFF7',
+        ochrePale: '#F0E8D4',
       },
       fontFamily: {
         // Body copy: legible at length in both scripts, still soft/rounded terminals.

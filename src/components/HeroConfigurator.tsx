@@ -171,7 +171,7 @@ export function HeroConfigurator({ product }: { product: Product }) {
         </div>
       </div>
 
-      {error && <p className="mt-3 text-sm text-orange">{error}</p>}
+      {error && <p className="mt-3 text-sm text-clay">{error}</p>}
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Button

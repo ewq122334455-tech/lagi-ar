@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 
 const COLOR_CLASSES = {
-  lime: 'bg-lime text-ink',
-  orange: 'bg-orange text-paper',
+  ochre: 'bg-ochre text-ink',
+  terracotta: 'bg-terracotta text-ink',
   blue: 'bg-blue text-paper',
 } as const;
 

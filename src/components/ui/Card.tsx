@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 
-type Tone = 'white' | 'lime' | 'cool' | 'soft' | 'dark';
+type Tone = 'white' | 'ochre' | 'cool' | 'soft' | 'dark';
 
 const TONE: Record<Tone, string> = {
   white: 'bg-paper text-ink',
-  lime: 'bg-limePale text-ink',
+  ochre: 'bg-ochrePale text-ink',
   cool: 'bg-haze text-ink',
   soft: 'bg-sand text-ink',
   dark: 'bg-ink text-paper',

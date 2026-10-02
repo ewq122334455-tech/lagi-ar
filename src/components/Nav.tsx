@@ -123,7 +123,7 @@ function CartButton({ onOpen, count }: { onOpen: () => void; count: number }) {
     >
       장바구니
       {count > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1 text-[0.7rem] font-extrabold text-paper">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue px-1 text-[0.7rem] font-extrabold text-paper">
           {count}
         </span>
       )}

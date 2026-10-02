@@ -151,7 +151,7 @@ export function BuyPanel({ product }: { product: Product }) {
         </div>
       </div>
 
-      {error && <p className="mb-4 text-sm text-orange">{error}</p>}
+      {error && <p className="mb-4 text-sm text-clay">{error}</p>}
 
       <div className="flex flex-wrap gap-3">
         <button
