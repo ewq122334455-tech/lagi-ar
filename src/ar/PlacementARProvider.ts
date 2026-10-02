@@ -29,6 +29,7 @@ export class PlacementARProvider implements ARProvider {
   private container: HTMLElement | null = null;
   private foundCb: (() => void) | null = null;
   private live = false;
+  private moveHint: HTMLElement | null = null;
   private detach: (() => void) | null = null;
   private onResize: (() => void) | null = null;
 
@@ -115,6 +116,28 @@ export class PlacementARProvider implements ARProvider {
     scene.add(content);
     this.content = content;
 
+    // Shown only while a long press has put the product into move mode, so the gesture
+    // is discoverable instead of being a hidden trick.
+    const hint = document.createElement('div');
+    hint.textContent = '이동 모드 — 끌어서 옮기세요';
+    Object.assign(hint.style, {
+      position: 'absolute',
+      left: '50%',
+      bottom: '18%',
+      transform: 'translateX(-50%)',
+      padding: '8px 16px',
+      borderRadius: '999px',
+      background: 'rgba(17,17,17,0.72)',
+      color: '#fff',
+      font: '600 13px/1 system-ui, sans-serif',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      opacity: '0',
+      transition: 'opacity 120ms ease',
+    } satisfies Partial<CSSStyleDeclaration>);
+    container.appendChild(hint);
+    this.moveHint = hint;
+
     this.attachGestures(renderer.domElement, content);
 
     this.onResize = () => {
@@ -135,44 +158,43 @@ export class PlacementARProvider implements ARProvider {
   }
 
   /**
-   * One finger turns the product so every side can be seen; two fingers pinch to zoom,
-   * and also pan and twist so it can still be positioned in the room.
+   * Gestures: one finger turns the product, a long press then drag moves it, and two
+   * fingers pinch to zoom. The long press is what separates moving from turning, so a
+   * normal drag never shifts the product out from under the user by accident.
    */
   private attachGestures(el: HTMLElement, content: Group) {
     // Yaw before pitch, so dragging reads as a turntable rather than tumbling the model.
     content.rotation.order = 'YXZ';
 
+    type Mode = 'idle' | 'rotate' | 'move' | 'pinch';
     const pointers = new Map<number, { x: number; y: number }>();
+    let mode: Mode = 'idle';
     let startDistance = 0;
-    let startAngle = 0;
     let startScale = 1;
-    let startRotation = 0;
-    let startMid: { x: number; y: number } | null = null;
+    let downAt: { x: number; y: number } | null = null;
+    let holdTimer: ReturnType<typeof setTimeout> | null = null;
 
     const YAW_PER_PX = 0.008;
     const PITCH_PER_PX = 0.006;
     const MAX_PITCH = Math.PI / 3; // keep the product upright-ish instead of flipping over
+    const HOLD_MS = 420;
+    const SLOP_PX = 10; // movement allowed before a press stops counting as "held"
 
     const two = () => [...pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
     const spread = () => {
       const [a, b] = two();
       return Math.hypot(b.x - a.x, b.y - a.y);
     };
-    const angle = () => {
-      const [a, b] = two();
-      return Math.atan2(b.y - a.y, b.x - a.x);
-    };
-    const midpoint = () => {
-      const [a, b] = two();
-      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+    const clearHold = () => {
+      if (holdTimer !== null) clearTimeout(holdTimer);
+      holdTimer = null;
     };
 
-    const beginPinch = () => {
-      startDistance = spread();
-      startAngle = angle();
-      startScale = content.scale.x;
-      startRotation = content.rotation.y;
-      startMid = midpoint();
+    const setMoveMode = (on: boolean) => {
+      mode = on ? 'move' : mode;
+      this.setMoveHint(on);
+      if (on) navigator.vibrate?.(15);
     };
 
     const onDown = (e: PointerEvent) => {
@@ -184,7 +206,21 @@ export class PlacementARProvider implements ARProvider {
       } catch {
         // Capture unavailable for this pointer; pointermove still fires on the element.
       }
-      if (pointers.size === 2) beginPinch();
+
+      if (pointers.size === 1) {
+        downAt = { x: e.clientX, y: e.clientY };
+        mode = 'idle';
+        clearHold();
+        holdTimer = setTimeout(() => {
+          if (pointers.size === 1 && mode === 'idle') setMoveMode(true);
+        }, HOLD_MS);
+      } else if (pointers.size === 2) {
+        clearHold();
+        setMoveMode(false);
+        mode = 'pinch';
+        startDistance = spread();
+        startScale = content.scale.x;
+      }
     };
 
     const onMove = (e: PointerEvent) => {
@@ -194,30 +230,39 @@ export class PlacementARProvider implements ARProvider {
       pointers.set(e.pointerId, next);
 
       if (pointers.size === 1) {
-        // Turn the product in place: sideways drag spins it, vertical drag tips it.
-        content.rotation.y += (next.x - prev.x) * YAW_PER_PX;
-        content.rotation.x = Math.max(
-          -MAX_PITCH,
-          Math.min(MAX_PITCH, content.rotation.x + (next.y - prev.y) * PITCH_PER_PX),
-        );
-      } else if (pointers.size === 2 && startDistance > 0 && startMid) {
+        // A press that travels before the hold fires is a turn, not a move.
+        if (mode === 'idle' && downAt) {
+          if (Math.hypot(next.x - downAt.x, next.y - downAt.y) > SLOP_PX) {
+            clearHold();
+            mode = 'rotate';
+          }
+        }
+
+        if (mode === 'rotate') {
+          content.rotation.y += (next.x - prev.x) * YAW_PER_PX;
+          content.rotation.x = Math.max(
+            -MAX_PITCH,
+            Math.min(MAX_PITCH, content.rotation.x + (next.y - prev.y) * PITCH_PER_PX),
+          );
+        } else if (mode === 'move') {
+          // The divisor maps screen pixels to metres at the model's default distance.
+          content.position.x += (next.x - prev.x) / 340;
+          content.position.y -= (next.y - prev.y) / 340;
+        }
+      } else if (pointers.size === 2 && mode === 'pinch' && startDistance > 0) {
         const scale = Math.min(6, Math.max(0.15, startScale * (spread() / startDistance)));
         content.scale.setScalar(scale);
-        content.rotation.y = startRotation + (angle() - startAngle);
-
-        // Move with the midpoint so the product can still be placed in the room.
-        const mid = midpoint();
-        content.position.x += (mid.x - startMid.x) / 340;
-        content.position.y -= (mid.y - startMid.y) / 340;
-        startMid = mid;
       }
     };
 
     const onUp = (e: PointerEvent) => {
       pointers.delete(e.pointerId);
-      if (pointers.size < 2) {
-        startDistance = 0;
-        startMid = null;
+      if (pointers.size < 2) startDistance = 0;
+      if (pointers.size === 0) {
+        clearHold();
+        this.setMoveHint(false);
+        mode = 'idle';
+        downAt = null;
       }
     };
 
@@ -233,6 +278,10 @@ export class PlacementARProvider implements ARProvider {
     };
   }
 
+  private setMoveHint(on: boolean) {
+    if (this.moveHint) this.moveHint.style.opacity = on ? '1' : '0';
+  }
+
   async stop() {
     this.detach?.();
     this.detach = null;
@@ -242,6 +291,8 @@ export class PlacementARProvider implements ARProvider {
     this.stream = null;
     this.video?.remove();
     this.video = null;
+    this.moveHint?.remove();
+    this.moveHint = null;
     this.renderer?.dispose();
     this.renderer?.domElement.remove();
     this.renderer = null;
