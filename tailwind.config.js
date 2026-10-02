@@ -26,6 +26,12 @@ export default {
         blue: '#2E55A3',
         orange: '#C2662C',
         lime: '#DEB457',
+        // Band surfaces, mixed from the brand accents above rather than imported:
+        // sand = lime at 12% over #f2f2f2, haze = blue at 12% over white,
+        // limePale = lime at 25% over white. See DESIGN.md.
+        sand: '#EFEADF',
+        haze: '#E6EAF4',
+        limePale: '#F7ECD5',
       },
       fontFamily: {
         // Body copy: legible at length in both scripts, still soft/rounded terminals.
@@ -41,6 +47,15 @@ export default {
       },
       maxWidth: {
         canvas: '2560px',
+        band: '1280px',
+      },
+      borderRadius: {
+        // One radius carries cards, buttons and inputs (DESIGN.md → rounded.card).
+        card: '24px',
+        input: '12px',
+      },
+      spacing: {
+        band: '96px',
       },
     },
   },

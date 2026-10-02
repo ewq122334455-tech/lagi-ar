@@ -9,7 +9,7 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link to={`/product/${product.id}`} className="group focus-ring block" aria-label={`${displayName} 상세보기`}>
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-mist">
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-card bg-mist">
         {cover ? (
           <img
             src={cover}
