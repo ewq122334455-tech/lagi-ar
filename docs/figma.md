@@ -52,6 +52,51 @@ Figma 컬렉션 `LAGI / Color`의 변수 이름은 `tailwind.config.js`의 색�
 Jua(디스플레이), Nunito(헤딩·버튼), Gothic A1(본문). 세 가지 모두 Figma에서 사용 가능한 것을
 확인했으며 코드의 `fontFamily` 설정과 같습니다.
 
+## 디자인 시스템 (피그마가 LAGI를 인식하는 방식)
+
+파일에는 화면 외에 두 페이지가 더 있습니다.
+
+### `Foundations` 페이지
+색상 견본 9종과 텍스트 스타일 ramp 11종의 실물 견본. 각 색 아래에 Tailwind 키와
+CSS 변수명이 함께 적혀 있습니다.
+
+### `Components` 페이지 — 컴포넌트 9종
+
+| Figma 컴포넌트 | 변형 | 대응 코드 |
+| --- | --- | --- |
+| `Button` | Solid / Outline / Blue | `src/components/BuyPanel.tsx`, `src/pages/Home.tsx` (인라인 패턴) |
+| `Chip` | Default / Active / Strong | `src/pages/ProductCollection.tsx`, `ProductDetail.tsx` (인라인 패턴) |
+| `Badge` | AR / 3D | `src/components/ProductCard.tsx` |
+| `ContentBadge` | AI_DRAFT / UNKNOWN / CONTENT_REQUIRED | `src/components/ContentBadge.tsx` |
+| `QuantityStepper` | — | `src/components/BuyPanel.tsx`, `src/pages/Cart.tsx` |
+| `ProductCard` | — | `src/components/ProductCard.tsx` |
+| `ColorBlockLink` | Lime / Orange / Blue | `src/components/ColorBlockLink.tsx` |
+| `HotspotCard` | Lime / Orange / Blue | `src/pages/Home.tsx` |
+| `PhoneMockup` | — | `src/components/PhoneMockup.tsx` |
+
+`VERIFIED`는 코드에서 아무것도 렌더링하지 않으므로 `ContentBadge`에 변형이 없습니다.
+
+### 텍스트 스타일
+
+`Display/XL · L · M`(Jua), `Heading/L · M · S`와 `Label/Button`(Nunito ExtraBold),
+`Body/L · M · S`(Gothic A1), `Eyebrow`(Nunito Bold + tracking). 코드의 `font-display` /
+`font-heading` / `font-sans` 설정과 같습니다.
+
+### 변수 코드 구문
+
+모든 색 변수에 WEB 코드 구문이 붙어 있어 피그마 Dev Mode가 `var(--lagi-ink)` 같은
+실제 CSS 변수명을 그대로 보여줍니다(`src/index.css`의 `:root`와 동일). 간격 변수는
+Tailwind 스텝 값(`space-6` → `1.5` → `p-6`)을 보여줍니다.
+
+## 알려진 문제 — Code Connect
+
+Figma Code Connect(컴포넌트 ↔ 코드 자동 연결)는 **Organization / Enterprise 플랜 전용**이라
+현재 student 플랜에서는 쓸 수 없습니다. 대신 각 컴포넌트의 `description`에 대응 코드 경로와
+저장소/브랜치를 적어 두었습니다. 피그마에서 컴포넌트를 선택하면 바로 보입니다.
+
+`Button` / `Chip` / `HotspotCard`는 아직 코드에서 독립 컴포넌트가 아니라 인라인 Tailwind
+패턴입니다. 이들을 실제 컴포넌트로 추출하면 코드와 피그마가 1:1로 맞아떨어집니다.
+
 ## 알려진 문제 — 쓰기 권한
 
 처음 만든 파일 `a0MB9fxF0uUJgY4Ol3RMsV`는 팀 플랜이 starter에서 student로 바뀐 뒤
