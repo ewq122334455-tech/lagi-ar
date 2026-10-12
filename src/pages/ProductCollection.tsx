@@ -91,7 +91,7 @@ export default function ProductCollection() {
                     type="button"
                     onClick={() => setCategory(c)}
                     aria-pressed={category === c}
-                    className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-extrabold focus-ring ${
+                    className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-semibold focus-ring ${
                       category === c
                         ? 'border-ink bg-ink text-paper'
                         : 'border-line text-graphite hover:border-ink'

@@ -23,7 +23,7 @@ export default function ProductDetail() {
       <ErrorState
         message={state.message}
         action={
-          <Link to="/products" className="inline-block rounded-full bg-ink px-6 py-3 font-heading text-sm font-extrabold text-paper focus-ring">
+          <Link to="/products" className="inline-block rounded-full bg-ink px-6 py-3 font-heading text-sm font-semibold text-paper focus-ring">
             제품 목록으로
           </Link>
         }
@@ -70,7 +70,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
 
           <div className="mt-5 flex items-center gap-3">
             {product.price.value != null ? (
-              <p className="font-heading text-2xl font-extrabold">{product.price.value.toLocaleString('ko-KR')}원</p>
+              <p className="font-heading text-2xl font-semibold">{product.price.value.toLocaleString('ko-KR')}원</p>
             ) : (
               <ContentBadge status={product.price.status} />
             )}
@@ -133,7 +133,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
           <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
             {product.materials.map((m, i) => (
               <div key={i} className="border-t-2 border-ink pt-5">
-                <p className="font-heading text-lg font-extrabold">{m.name.value ?? <ContentBadge status={m.name.status} />}</p>
+                <p className="font-heading text-lg font-semibold">{m.name.value ?? <ContentBadge status={m.name.status} />}</p>
                 {m.characteristics.value && <p className="mt-2 text-sm text-graphite">{m.characteristics.value}</p>}
                 {m.reasonForUse.value && <p className="mt-2 text-sm text-stone">{m.reasonForUse.value}</p>}
               </div>
@@ -154,7 +154,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               .map((step) => (
                 <li key={step.order} className="border-t-2 border-ink pt-5">
                   <p className="font-heading text-xs font-bold text-stone">0{step.order}</p>
-                  <p className="mt-2 font-heading text-lg font-extrabold">{step.title}</p>
+                  <p className="mt-2 font-heading text-lg font-semibold">{step.title}</p>
                   {step.description.value && <p className="mt-2 text-sm text-graphite">{step.description.value}</p>}
                 </li>
               ))}
@@ -205,14 +205,14 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
             <ContentBadge status={product.name.status} />
           )}
           {product.price.value != null && (
-            <p className="font-heading text-2xl font-extrabold">{product.price.value.toLocaleString('ko-KR')}원</p>
+            <p className="font-heading text-2xl font-semibold">{product.price.value.toLocaleString('ko-KR')}원</p>
           )}
           {product.shopUrl.value ? (
             <a
               href={product.shopUrl.value}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-2 rounded-full bg-ochre px-8 py-4 font-heading text-sm font-extrabold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
+              className="mt-2 inline-flex items-center gap-2 rounded-full bg-ochre px-8 py-4 font-heading text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 focus-ring"
             >
               구매하러 가기 →
             </a>

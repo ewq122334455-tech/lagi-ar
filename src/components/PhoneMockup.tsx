@@ -14,7 +14,7 @@ export function PhoneMockup({ arUrl, label = 'SCAN TO SEE IN AR' }: PhoneMockupP
         {arUrl ? (
           <>
             <QRCodeImage value={arUrl} size={140} />
-            <p className="text-center font-heading text-xs font-extrabold uppercase tracking-wide text-ink">{label}</p>
+            <p className="text-center font-heading text-xs font-semibold uppercase tracking-wide text-ink">{label}</p>
           </>
         ) : (
           <p className="eyebrow text-center text-stone">AR — CONTENT REQUIRED</p>

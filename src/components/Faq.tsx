@@ -44,7 +44,7 @@ export function Faq() {
               aria-expanded={isOpen}
               className="flex w-full items-center justify-between gap-4 py-5 text-left focus-ring"
             >
-              <span className="font-heading text-base font-extrabold lg:text-lg">{e.q}</span>
+              <span className="font-heading text-base font-semibold lg:text-lg">{e.q}</span>
               <span
                 aria-hidden
                 className={`shrink-0 text-xl transition-transform ${isOpen ? 'rotate-45' : ''}`}

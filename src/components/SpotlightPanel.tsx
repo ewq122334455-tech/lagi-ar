@@ -18,7 +18,7 @@ export function SpotlightPanel({ hotspot, onClose }: SpotlightPanelProps) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow text-stone">{hotspot.category}</p>
-          <h3 className="mt-1 font-heading text-lg font-extrabold">{hotspot.title}</h3>
+          <h3 className="mt-1 font-heading text-lg font-semibold">{hotspot.title}</h3>
         </div>
         <button
           type="button"

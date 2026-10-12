@@ -39,13 +39,13 @@ export default {
         ochrePale: '#F0E8D4',
       },
       fontFamily: {
-        // Body copy: legible at length in both scripts, still soft/rounded terminals.
-        sans: ['"Gothic A1"', '"Nunito"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        // Product names, nav, buttons, numbers: bold rounded grotesk (KO+EN).
-        heading: ['"Nunito"', '"Gothic A1"', '-apple-system', 'sans-serif'],
-        // Reserved for the handful of major display titles (LOOK CLOSER, FEATURED
-        // PRODUCTS, MATERIALS, PROCESS, STORY) — a genuinely rounded bubble face.
-        display: ['"Jua"', '"Nunito"', '"Gothic A1"', 'sans-serif'],
+        // One neutral grotesque carries every piece of UI and body copy, in both
+        // scripts — IBM Plex Sans KR ships Latin and Hangul drawn together.
+        sans: ['"IBM Plex Sans KR"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        heading: ['"IBM Plex Sans KR"', '-apple-system', 'sans-serif'],
+        // Display only: a high-contrast Latin serif with a Korean myeongjo behind it.
+        // Never used below ~28px — the contrast collapses at text sizes.
+        display: ['"Instrument Serif"', '"Noto Serif KR"', 'Georgia', 'serif'],
       },
       letterSpacing: {
         widest2: '0.28em',
@@ -55,12 +55,15 @@ export default {
         band: '1280px',
       },
       borderRadius: {
-        // One radius carries cards, buttons and inputs (DESIGN.md → rounded.card).
-        card: '24px',
-        input: '12px',
+        // Near-sharp. The soft 24px radius read as friendly rather than considered,
+        // so chrome is squared off and the edges do the work instead.
+        card: '2px',
+        input: '2px',
       },
       spacing: {
-        band: '96px',
+        // More air than the 96px the band system started with: the serif display
+        // needs room around it or the page reads cramped.
+        band: '120px',
       },
     },
   },

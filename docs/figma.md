@@ -94,9 +94,21 @@ CSS 변수명이 함께 적혀 있습니다.
 
 ### 텍스트 스타일
 
-`Display/XL · L · M`(Jua), `Heading/L · M · S`와 `Label/Button`(Nunito ExtraBold),
-`Body/L · M · S`(Gothic A1), `Eyebrow`(Nunito Bold + tracking). 코드의 `font-display` /
-`font-heading` / `font-sans` 설정과 같습니다.
+| 스타일 | 서체 |
+| --- | --- |
+| `Display/XL · L · M` | Instrument Serif (라틴 제목) |
+| `Display/XL KO · L KO · M KO` | Noto Serif KR (한글 제목) |
+| `Heading/L · M · S`, `Label/Button` | IBM Plex Sans KR Medium |
+| `Body/L · M · S` | IBM Plex Sans KR Regular |
+| `Eyebrow` | IBM Plex Sans KR Medium · 자간 0.3em · 대문자 |
+
+**Instrument Serif에는 한글이 없습니다.** 브라우저는 CSS 폰트 스택으로 Noto Serif KR에
+자동으로 넘어가지만 피그마는 그렇지 않아서, 한글 제목용 `KO` 스타일을 따로 둡니다.
+한글 제목에는 반드시 `KO` 스타일을 쓰세요.
+
+### 모서리
+
+전부 **2px**입니다. 디바이스 목업(34 / 44px)만 예외입니다.
 
 ### 변수 코드 구문
 

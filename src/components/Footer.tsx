@@ -11,7 +11,7 @@ export function Footer() {
 
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
           <div>
-            <p className="mb-4 font-heading text-xs font-extrabold uppercase tracking-[0.2em] text-stone">EXPLORE</p>
+            <p className="mb-4 font-heading text-xs font-semibold uppercase tracking-[0.2em] text-stone">EXPLORE</p>
             <ul className="flex flex-col gap-2 text-sm text-mist">
               <li><Link to="/products" className="hover:text-ochre focus-ring">Products</Link></li>
               <li><Link to="/ar" className="hover:text-ochre focus-ring">Look Closer (AR)</Link></li>
@@ -21,7 +21,7 @@ export function Footer() {
             </ul>
           </div>
           <div>
-            <p className="mb-4 font-heading text-xs font-extrabold uppercase tracking-[0.2em] text-stone">CONNECT</p>
+            <p className="mb-4 font-heading text-xs font-semibold uppercase tracking-[0.2em] text-stone">CONNECT</p>
             <ul className="flex flex-col gap-2 text-sm text-mist">
               <li>
                 <a href="https://www.instagram.com/lagi.official/" target="_blank" rel="noopener noreferrer" className="hover:text-ochre focus-ring">
@@ -36,7 +36,7 @@ export function Footer() {
             </ul>
           </div>
           <div>
-            <p className="mb-4 font-heading text-xs font-extrabold uppercase tracking-[0.2em] text-stone">DISPLAY</p>
+            <p className="mb-4 font-heading text-xs font-semibold uppercase tracking-[0.2em] text-stone">DISPLAY</p>
             <ul className="flex flex-col gap-2 text-sm text-mist">
               <li><Link to="/exhibition" className="hover:text-ochre focus-ring">Exhibition Mode</Link></li>
               <li><Link to="/workspace" className="hover:text-ochre focus-ring">Product Workspace</Link></li>

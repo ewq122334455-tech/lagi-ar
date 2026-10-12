@@ -36,10 +36,15 @@ body {
   margin: 0;
   background: var(--lagi-paper);
   color: var(--lagi-ink);
-  font-family: 'Gothic A1', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.003em;
   font-feature-settings: 'tnum' 1;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  /* Korean must not break mid-word: without this, "만들어졌는지" splits across lines. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 img {
@@ -57,11 +62,18 @@ button {
 }
 
 .eyebrow {
-  letter-spacing: 0.24em;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.65rem;
+  font-weight: 500;
   color: var(--lagi-stone);
+}
+
+/* Display type is set loose and light; the serif carries the weight, not the stroke. */
+.display {
+  font-family: 'Instrument Serif', 'Noto Serif KR', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 .hairline {

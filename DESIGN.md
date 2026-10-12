@@ -28,56 +28,65 @@ colors:
   line: "#e5e5e5"
 
 typography:
+  # Display is the serif; everything else is one neutral grotesque. The old pairing
+  # (Jua + Nunito) was two rounded faces, which is what made the site read as young.
   display-mega:
-    fontFamily: Jua, Nunito, sans-serif
-    fontSize: 112px
-    lineHeight: 0.86
+    fontFamily: Instrument Serif, Noto Serif KR, Georgia, serif
+    fontSize: 108px
+    lineHeight: 0.94
+    letterSpacing: -0.025em
   display-xl:
-    fontFamily: Jua, Nunito, sans-serif
-    fontSize: 72px
-    lineHeight: 0.9
+    fontFamily: Instrument Serif, Noto Serif KR, serif
+    fontSize: 67px
+    lineHeight: 1.04
+    letterSpacing: -0.015em
   display-lg:
-    fontFamily: Jua, Nunito, sans-serif
-    fontSize: 48px
-    lineHeight: 1.05
+    fontFamily: Instrument Serif, Noto Serif KR, serif
+    fontSize: 42px
+    lineHeight: 1.04
+  display-md:
+    fontFamily: Instrument Serif, Noto Serif KR, serif
+    fontSize: 27px
+    lineHeight: 1.25
   heading-lg:
-    fontFamily: Nunito, Gothic A1, sans-serif
-    fontSize: 24px
-    fontWeight: 800
-  heading-md:
-    fontFamily: Nunito, Gothic A1, sans-serif
+    fontFamily: IBM Plex Sans KR, sans-serif
     fontSize: 20px
-    fontWeight: 800
+    fontWeight: 500
+  heading-md:
+    fontFamily: IBM Plex Sans KR, sans-serif
+    fontSize: 15px
+    fontWeight: 500
   body-lg:
-    fontFamily: Gothic A1, Nunito, sans-serif
-    fontSize: 18px
-    lineHeight: 1.65
+    fontFamily: IBM Plex Sans KR, sans-serif
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.85
   body-md:
-    fontFamily: Gothic A1, Nunito, sans-serif
+    fontFamily: IBM Plex Sans KR, sans-serif
     fontSize: 15px
     lineHeight: 1.6
   body-sm:
-    fontFamily: Gothic A1, Nunito, sans-serif
+    fontFamily: IBM Plex Sans KR, sans-serif
     fontSize: 13px
     lineHeight: 1.55
   button:
-    fontFamily: Nunito, sans-serif
-    fontSize: 15px
-    fontWeight: 800
+    fontFamily: IBM Plex Sans KR, sans-serif
+    fontSize: 12.5px
+    fontWeight: 500
+    letterSpacing: 0.14em
+    textTransform: uppercase
   eyebrow:
-    fontFamily: Nunito, sans-serif
-    fontSize: 11px
-    fontWeight: 700
-    letterSpacing: 0.24em
+    fontFamily: IBM Plex Sans KR, sans-serif
+    fontSize: 10.4px
+    fontWeight: 500
+    letterSpacing: 0.3em
     textTransform: uppercase
 
 rounded:
   none: 0px
-  sm: 8px
-  input: 12px
-  lg: 16px
-  card: 24px      # the canonical card + button radius
-  pill: 9999px
+  card: 2px       # near-sharp; the canonical card + button radius
+  input: 2px
+  pill: 9999px    # reserved for the 3D viewer's round controls only
 
 spacing:
   xs: 4px
@@ -87,7 +96,7 @@ spacing:
   xl: 24px
   2xl: 32px
   3xl: 48px
-  band: 96px      # vertical padding on a full-width band
+  band: 120px     # vertical padding on a full-width band
 ---
 
 ## Overview
@@ -97,14 +106,18 @@ surfaces — warm `canvas-soft`, cool `canvas-cool`, plain `canvas`, or the pola
 `ink` — and white rounded cards sit inside the tinted ones. The contrast between a tinted band
 and the white cards on it *is* the elevation; LAGI does not use drop shadows to lift a card.
 
-Display type is the second voice. **Jua** carries every hero and section headline at large
-sizes; **Nunito ExtraBold** carries sub-headings, product names and all button labels; **Gothic
-A1** carries Korean body copy. The jump from Jua's round display to Nunito's tighter grotesk is
-the typographic story, and it mirrors how Wise pairs a chunky proprietary face with a neutral
-one.
+Display type is the second voice, and it is a **serif**: Instrument Serif for Latin with
+**Noto Serif KR** behind it for Hangul. Everything else — buttons, labels, product names, body
+copy, in both scripts — is **IBM Plex Sans KR** at 400/500. One serif voice for the headline,
+one quiet grotesque for everything you operate.
 
-`rounded.card` (24px) is the one radius that matters — cards, buttons and inputs all take it.
-LAGI does not use sharp corners on UI chrome.
+The serif is display-only. Below about 28px its contrast collapses and it reads as decoration,
+so headings inside cards drop to the grotesque instead.
+
+`rounded.card` is **2px** — near-sharp. The edge, not a soft corner, is what makes the page look
+considered; the 24px radius this system started with read as friendly rather than refined.
+
+Korean body copy sets with `word-break: keep-all`, so a word never splits across lines.
 
 **Key characteristics**
 - One primary CTA colour: `primary` blue `#2E55A3`. Lime and orange are accents on cards and
@@ -171,7 +184,8 @@ supplied rather than inventing one.
 ### Do
 - Put white cards on tinted bands; let surface contrast carry the depth.
 - Keep one blue CTA per view as the obvious next action.
-- Use Jua only at display sizes — it loses legibility as body copy, especially in Korean.
+- Keep the serif above ~28px and let the grotesque carry everything smaller.
+- Set button and label text in uppercase with 0.14em tracking; nothing shouts in bold.
 - Show `정보 미등록` where the brand has supplied nothing.
 
 ### Don't

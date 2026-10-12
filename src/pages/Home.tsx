@@ -40,17 +40,17 @@ export default function Home() {
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div>
             <p className="eyebrow">LAGI DIGITAL EXPERIENCE</p>
-            <h1 className="mt-4 font-display text-[16vw] leading-[0.86] tracking-tight lg:text-[7vw]">
+            <h1 className="mt-4 font-display text-[15vw] leading-[0.94] tracking-[-0.025em] lg:text-[7.5vw]">
               LOOK
               <br />
               CLOSER
             </h1>
-            <p className="mt-6 max-w-md text-lg font-medium leading-relaxed text-graphite">
+            <p className="mt-7 max-w-sm text-[1.02rem] font-normal leading-[1.85] text-graphite">
               평범한 것도, 조금 더 가까이 보면
               <br />
               새로운 이야기가 시작됩니다.
             </p>
-            <p className="mt-2 max-w-md text-sm text-stone">
+            <p className="mt-3 max-w-sm text-[0.82rem] leading-relaxed text-stone">
               Everyday objects, a closer perspective.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -88,7 +88,7 @@ export default function Home() {
             <div key={s.label}>
               <dt className="sr-only">{s.label}</dt>
               <dd>
-                <span className="block font-display text-4xl leading-none lg:text-5xl">
+                <span className="block font-display text-[2.4rem] leading-none lg:text-[3.2rem]">
                   {s.value}
                 </span>
                 <span className="mt-2 block text-xs text-stone lg:text-sm">{s.label}</span>
@@ -101,10 +101,10 @@ export default function Home() {
       {/* ───────── FEATURED PRODUCTS ───────── */}
       <Band tone="plain" className="pt-0">
         <div className="flex items-end justify-between gap-6">
-          <h2 className="font-display text-4xl lg:text-6xl">FEATURED PRODUCTS</h2>
+          <h2 className="font-display text-[2.6rem] leading-[1.04] tracking-[-0.015em] lg:text-[4.2rem]">FEATURED PRODUCTS</h2>
           <Link
             to="/products"
-            className="hidden shrink-0 font-heading text-sm font-extrabold hover:text-blue focus-ring lg:block"
+            className="hidden shrink-0 font-heading text-sm font-semibold hover:text-blue focus-ring lg:block"
           >
             전체 보기 →
           </Link>
@@ -128,7 +128,7 @@ export default function Home() {
 
       {/* ───────── LOOK CLOSER ───────── */}
       <Band tone="soft">
-        <h2 className="font-display text-4xl lg:text-6xl">LOOK CLOSER</h2>
+        <h2 className="font-display text-[2.6rem] leading-[1.04] tracking-[-0.015em] lg:text-[4.2rem]">LOOK CLOSER</h2>
         <p className="mt-3 max-w-md text-graphite">Same object, a new angle.</p>
 
         <div className="mt-10 lg:mt-14">
@@ -147,7 +147,7 @@ export default function Home() {
                         {h.category}
                       </p>
                       <div>
-                        <h3 className="font-heading text-xl font-extrabold lg:text-2xl">
+                        <h3 className="font-heading text-lg font-medium tracking-[-0.01em] lg:text-xl">
                           {h.title}
                         </h3>
                         {h.description.value && (
@@ -155,7 +155,7 @@ export default function Home() {
                             {h.description.value}
                           </p>
                         )}
-                        <p className="mt-5 font-heading text-sm font-extrabold group-hover:underline">
+                        <p className="mt-5 font-heading text-sm font-semibold group-hover:underline">
                           자세히 보기 →
                         </p>
                       </div>
@@ -180,8 +180,8 @@ export default function Home() {
         <div className="flex flex-col items-center gap-12 lg:flex-row lg:justify-between lg:gap-16">
           <div className="text-center lg:text-left">
             <p className="eyebrow !text-ochre">AR EXPERIENCE</p>
-            <h2 className="mt-3 font-display text-4xl text-ochre lg:text-6xl">EXPERIENCE IN AR</h2>
-            <p className="mt-5 max-w-md text-lg font-medium leading-relaxed text-mist">
+            <h2 className="mt-3 font-display text-[2.6rem] leading-[1.04] tracking-[-0.015em] lg:text-[4.2rem] text-ochre">EXPERIENCE IN AR</h2>
+            <p className="mt-5 max-w-sm text-[1.02rem] font-normal leading-[1.85] text-mist">
               지금, 당신의 공간에서
               <br />
               LAGI를 직접 만나보세요.
@@ -235,9 +235,9 @@ export default function Home() {
                 <p className="text-xs font-bold tracking-[0.2em] text-stone">{b.index}</p>
                 <div>
                   <p className="eyebrow">{b.eyebrow}</p>
-                  <h3 className="mt-2 font-display text-2xl leading-snug lg:text-3xl">{b.title}</h3>
+                  <h3 className="mt-2 font-display text-[1.7rem] leading-[1.25] lg:text-[2rem]">{b.title}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-graphite">{b.subtitle}</p>
-                  <p className="mt-5 font-heading text-sm font-extrabold group-hover:text-blue">
+                  <p className="mt-5 font-heading text-sm font-semibold group-hover:text-blue">
                     {b.cta} →
                   </p>
                 </div>
@@ -252,7 +252,7 @@ export default function Home() {
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <div>
             <p className="eyebrow">SUPPORT</p>
-            <h2 className="mt-3 font-display text-4xl lg:text-5xl">자주 묻는 질문</h2>
+            <h2 className="mt-3 font-display text-[2.4rem] leading-[1.06] tracking-[-0.015em] lg:text-[3.4rem]">자주 묻는 질문</h2>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-graphite">
               사이트 사용에 대한 답은 여기에서 확인하실 수 있습니다. 브랜드 정책에 대한 답변은
               아직 등록되지 않았습니다.
@@ -268,7 +268,7 @@ export default function Home() {
           <Card className="flex flex-col items-start justify-between gap-6">
             <div>
               <p className="eyebrow">FOLLOW</p>
-              <p className="mt-2 font-heading text-2xl font-extrabold">@lagi.official</p>
+              <p className="mt-2 font-heading text-2xl font-semibold">@lagi.official</p>
               <p className="mt-2 text-sm text-graphite">새 제품과 소식을 가장 먼저 만나보세요.</p>
             </div>
             <ButtonLink
@@ -282,7 +282,7 @@ export default function Home() {
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6">
             <div>
               <p className="eyebrow !text-ochre">SHOP</p>
-              <p className="mt-2 font-heading text-2xl font-extrabold">LAGI Smart Store</p>
+              <p className="mt-2 font-heading text-2xl font-semibold">LAGI Smart Store</p>
               <p className="mt-2 text-sm text-mist">실제 주문과 결제는 공식 스토어에서 이루어집니다.</p>
             </div>
             <ButtonLink

@@ -26,7 +26,7 @@ export function Nav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--nav-height)] items-center justify-between border-b border-line bg-paper px-6 lg:px-10">
-      <NavLink to="/" className="font-display text-2xl focus-ring" aria-label="LAGI 홈">
+      <NavLink to="/" className="font-display text-[1.6rem] tracking-[0.04em] focus-ring" aria-label="LAGI 홈">
         LAGI
       </NavLink>
 
@@ -36,7 +36,7 @@ export function Nav() {
             key={l.to}
             to={l.to}
             className={({ isActive }) =>
-              `font-heading text-sm font-extrabold focus-ring transition-colors hover:text-blue ${isActive ? 'text-ink' : 'text-graphite'}`
+              `font-heading text-[0.72rem] font-medium uppercase tracking-[0.16em] focus-ring transition-colors hover:text-blue ${isActive ? 'text-ink' : 'text-graphite'}`
             }
           >
             {l.label}
@@ -93,7 +93,7 @@ export function Nav() {
             />
           </form>
           {LINKS.map((l) => (
-            <NavLink key={l.to} to={l.to} onClick={() => setOpen(false)} className="font-heading text-lg font-extrabold text-ink focus-ring">
+            <NavLink key={l.to} to={l.to} onClick={() => setOpen(false)} className="font-heading text-lg font-semibold text-ink focus-ring">
               {l.label}
             </NavLink>
           ))}
@@ -103,7 +103,7 @@ export function Nav() {
               setOpen(false);
               openCart();
             }}
-            className="w-fit rounded-full bg-ink px-6 py-3 font-heading text-sm font-extrabold text-paper focus-ring"
+            className="w-fit bg-ink px-6 py-3 font-heading text-[0.72rem] font-medium uppercase tracking-[0.16em] text-paper focus-ring"
           >
             장바구니 {count > 0 && `(${count})`}
           </button>
@@ -119,11 +119,11 @@ function CartButton({ onOpen, count }: { onOpen: () => void; count: number }) {
       type="button"
       onClick={onOpen}
       aria-label={`장바구니 열기, ${count}개 담김`}
-      className="relative rounded-full bg-ink px-5 py-2 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+      className="relative bg-ink px-5 py-2.5 font-heading text-[0.72rem] font-medium uppercase tracking-[0.16em] text-paper transition-colors hover:bg-graphite focus-ring"
     >
       장바구니
       {count > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue px-1 text-[0.7rem] font-extrabold text-paper">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue px-1 text-[0.7rem] font-semibold text-paper">
           {count}
         </span>
       )}

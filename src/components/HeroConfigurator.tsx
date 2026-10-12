@@ -93,11 +93,11 @@ export function HeroConfigurator({ product }: { product: Product }) {
       <div className="mt-5 flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow">{product.category.value ?? 'LAGI'}</p>
-          <p className="mt-1 font-heading text-xl font-extrabold">
+          <p className="mt-1 font-heading text-xl font-semibold">
             {product.name.value ?? <span className="text-stone">이름 미등록</span>}
           </p>
         </div>
-        <p className="shrink-0 text-right font-heading text-lg font-extrabold">
+        <p className="shrink-0 text-right font-heading text-lg font-semibold">
           {product.price.value != null ? (
             `${product.price.value.toLocaleString('ko-KR')}원`
           ) : (
@@ -116,7 +116,7 @@ export function HeroConfigurator({ product }: { product: Product }) {
                 type="button"
                 onClick={() => setColor(c)}
                 aria-pressed={color === c}
-                className={`rounded-input border px-4 py-2 font-heading text-sm font-extrabold focus-ring ${
+                className={`rounded-input border px-4 py-2 font-heading text-sm font-semibold focus-ring ${
                   color === c ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                 }`}
               >
@@ -137,7 +137,7 @@ export function HeroConfigurator({ product }: { product: Product }) {
                 type="button"
                 onClick={() => setSize(s)}
                 aria-pressed={size === s}
-                className={`rounded-input border px-4 py-2 font-heading text-sm font-extrabold focus-ring ${
+                className={`rounded-input border px-4 py-2 font-heading text-sm font-semibold focus-ring ${
                   size === s ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                 }`}
               >
@@ -159,7 +159,7 @@ export function HeroConfigurator({ product }: { product: Product }) {
           >
             −
           </button>
-          <span className="min-w-8 text-center font-heading font-extrabold">{quantity}</span>
+          <span className="min-w-8 text-center font-heading font-semibold">{quantity}</span>
           <button
             type="button"
             aria-label="수량 늘리기"
