@@ -27,7 +27,7 @@ export function ViewerControls({ onView, animations = [], activeAnimation, onSet
             key={v.preset}
             type="button"
             onClick={() => onView(v.preset)}
-            className="shrink-0 rounded-full border-2 border-line bg-paper/90 px-3 py-2 font-heading text-xs font-extrabold text-graphite backdrop-blur transition-colors hover:border-ink hover:text-ink focus-ring"
+            className="shrink-0 rounded-full border border-line bg-paper/90 px-3 py-2 font-heading text-xs font-semibold text-graphite backdrop-blur transition-colors hover:border-ink hover:text-ink focus-ring"
           >
             {v.label}
           </button>
@@ -41,7 +41,7 @@ export function ViewerControls({ onView, animations = [], activeAnimation, onSet
               key={a.id}
               type="button"
               onClick={() => onSetAnimation(activeAnimation === a.clipName ? null : a.clipName)}
-              className={`rounded-full border-2 px-3 py-2 font-heading text-xs font-extrabold backdrop-blur focus-ring ${
+              className={`rounded-full border-2 px-3 py-2 font-heading text-xs font-semibold backdrop-blur focus-ring ${
                 activeAnimation === a.clipName
                   ? 'border-ink bg-ink text-paper'
                   : 'border-line bg-paper/90 text-graphite hover:border-ink hover:text-ink'

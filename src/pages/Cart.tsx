@@ -15,7 +15,7 @@ export default function Cart() {
           <p className="text-graphite">장바구니가 비어 있습니다.</p>
           <Link
             to="/products"
-            className="mt-6 inline-block rounded-full bg-ink px-8 py-4 font-heading text-sm font-extrabold text-paper focus-ring"
+            className="mt-6 inline-block rounded-full bg-ink px-8 py-4 font-heading text-sm font-semibold text-paper focus-ring"
           >
             제품 보러 가기
           </Link>
@@ -39,7 +39,7 @@ export default function Cart() {
                   <div className="min-w-0 flex-1">
                     <Link
                       to={`/product/${line.productId}`}
-                      className="font-heading font-extrabold hover:text-blue"
+                      className="font-heading font-semibold hover:text-blue"
                     >
                       {line.name ?? '이름 미등록 제품'}
                     </Link>
@@ -89,8 +89,8 @@ export default function Cart() {
             })}
           </ul>
 
-          <aside className="h-fit rounded-3xl border-2 border-ink p-7">
-            <h2 className="font-heading text-lg font-extrabold">주문 요약</h2>
+          <aside className="h-fit rounded-3xl border border-ink p-7">
+            <h2 className="font-heading text-lg font-semibold">주문 요약</h2>
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-graphite">상품 수</dt>
@@ -98,7 +98,7 @@ export default function Cart() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-graphite">주문금액</dt>
-                <dd className="font-heading font-extrabold">{formatKRW(subtotal.amount)}</dd>
+                <dd className="font-heading font-semibold">{formatKRW(subtotal.amount)}</dd>
               </div>
             </dl>
             {!subtotal.complete && (
@@ -109,7 +109,7 @@ export default function Cart() {
             )}
             <Link
               to="/checkout"
-              className="mt-6 block rounded-full bg-ink px-6 py-4 text-center font-heading text-sm font-extrabold text-paper focus-ring"
+              className="mt-6 block rounded-full bg-ink px-6 py-4 text-center font-heading text-sm font-semibold text-paper focus-ring"
             >
               주문하기
             </Link>

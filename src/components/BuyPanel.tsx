@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { useCart } from '@/commerce/CartContext';
 import { canUseAR } from '@/utils/arAvailability';
+import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 function uniq(values: (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => !!v))];
@@ -89,7 +90,7 @@ export function BuyPanel({ product }: { product: Product }) {
                 type="button"
                 onClick={() => setColor(c)}
                 aria-pressed={color === c}
-                className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-extrabold focus-ring ${
+                className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-semibold focus-ring ${
                   color === c ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                 }`}
               >
@@ -116,7 +117,7 @@ export function BuyPanel({ product }: { product: Product }) {
                   type="button"
                   onClick={() => setSize(s)}
                   aria-pressed={size === s}
-                  className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-extrabold focus-ring ${
+                  className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-semibold focus-ring ${
                     size === s ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                   } ${out ? 'text-stone line-through' : ''}`}
                 >
@@ -130,7 +131,7 @@ export function BuyPanel({ product }: { product: Product }) {
 
       <div className="mb-6">
         <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-stone">수량</p>
-        <div className="flex w-fit items-center rounded-full border-2 border-line">
+        <div className="flex w-fit items-center rounded-full border border-line">
           <button
             type="button"
             aria-label="수량 줄이기"
@@ -139,7 +140,7 @@ export function BuyPanel({ product }: { product: Product }) {
           >
             −
           </button>
-          <span className="min-w-10 text-center font-heading font-extrabold">{quantity}</span>
+          <span className="min-w-10 text-center font-heading font-semibold">{quantity}</span>
           <button
             type="button"
             aria-label="수량 늘리기"
@@ -158,7 +159,7 @@ export function BuyPanel({ product }: { product: Product }) {
           type="button"
           onClick={buyNow}
           disabled={soldOut}
-          className="inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 font-heading text-sm font-semibold text-paper transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
         >
           {soldOut ? '품절' : '바로 구매'}
         </button>
@@ -166,16 +167,24 @@ export function BuyPanel({ product }: { product: Product }) {
           type="button"
           onClick={addToCart}
           disabled={soldOut}
-          className="inline-flex items-center gap-2 rounded-full border-2 border-ink px-8 py-4 font-heading text-sm font-extrabold transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-full border border-ink px-8 py-4 font-heading text-sm font-semibold transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
         >
           장바구니
         </button>
         {canUseAR(product) && (
           <Link
             to={`/ar/${product.id}`}
-            className="inline-flex items-center gap-2 rounded-full border-2 border-blue px-8 py-4 font-heading text-sm font-extrabold text-blue transition-transform hover:-translate-y-0.5 focus-ring"
+            className="inline-flex items-center gap-2 rounded-full border border-blue px-8 py-4 font-heading text-sm font-semibold text-blue transition-transform hover:-translate-y-0.5 focus-ring"
           >
             AR로 보기
+          </Link>
+        )}
+        {canUseTryOn(product) && (
+          <Link
+            to={`/try-on/${product.id}`}
+            className="inline-flex items-center gap-2 rounded-full bg-blue px-8 py-4 font-heading text-sm font-semibold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+          >
+            가상으로 입어보기
           </Link>
         )}
       </div>

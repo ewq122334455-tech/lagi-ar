@@ -15,6 +15,8 @@ const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
 const ARLanding = lazy(() => import('@/pages/ARLanding'));
 const ARExperiencePage = lazy(() => import('@/pages/ARExperiencePage'));
+const Again = lazy(() => import('@/pages/Again'));
+const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
 const Checkout = lazy(() => import('@/pages/Checkout'));
@@ -51,10 +53,12 @@ export default function App() {
             <Route path="/materials" element={<Materials />} />
             <Route path="/story" element={<Story />} />
             <Route path="/ar" element={<ARLanding />} />
+            <Route path="/again" element={<Again />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="/ar/:id" element={<ARExperiencePage />} />
+          <Route path="/try-on/:id" element={<TryOnPage />} />
           <Route path="/exhibition" element={<Exhibition />} />
         </Routes>
       </Suspense>

@@ -27,7 +27,7 @@ export function SpotlightMenu({ hotspots, selectedId, onSelect }: SpotlightMenuP
           <p className="eyebrow" style={{ color: h.id === selectedId ? 'var(--lagi-mist)' : undefined }}>
             {h.category}
           </p>
-          <p className="mt-0.5 font-heading text-sm font-extrabold">{h.title}</p>
+          <p className="mt-0.5 font-heading text-sm font-semibold">{h.title}</p>
         </button>
       ))}
     </div>

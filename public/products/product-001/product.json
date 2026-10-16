@@ -1,15 +1,27 @@
 {
   "id": "product-001",
-  "name": { "value": null, "status": "CONTENT_REQUIRED" },
+  "name": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
   "category": {
     "value": "Bag (inferred — not brand-confirmed)",
     "status": "UNKNOWN",
     "source": "Inferred from callout labels (zipper, handle, modular zipper) in the supplied LAGI graphic. Not confirmed by brand."
   },
-  "price": { "value": null, "status": "CONTENT_REQUIRED" },
+  "price": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
   "currency": "KRW",
-  "shortDescription": { "value": null, "status": "CONTENT_REQUIRED" },
-  "description": { "value": null, "status": "CONTENT_REQUIRED" },
+  "shortDescription": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
   "images": [],
   "gallery": [],
   "colors": [],
@@ -17,22 +29,40 @@
   "materials": [],
   "process": [],
   "details": [],
-  "story": { "value": null, "status": "CONTENT_REQUIRED" },
-  "lagiSelectionReason": { "value": null, "status": "CONTENT_REQUIRED" },
-  "model3D": "products/product-001/model/lagi-bag.glb",
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "model3D": "products/product-001/model/modular-zipper-bag.glb",
   "animations": [],
-  "arTarget": "",
+  "arTarget": "products/product-001/ar/targets.mind",
   "arSettings": {
     "scale": 1,
-    "position": { "x": 0, "y": 0, "z": 0 },
-    "rotation": { "x": 0, "y": 0, "z": 0 }
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
   },
   "hotspots": [
     {
       "id": "zipper",
       "title": "ZIPPER DETAIL",
       "category": "DETAIL",
-      "position": { "x": 0.1, "y": 0.945, "z": 0.03 },
+      "position": {
+        "x": 0.3,
+        "y": 0.7,
+        "z": 0.18
+      },
       "description": {
         "value": "Smooth operation. Everyday durability.",
         "status": "VERIFIED",
@@ -43,7 +73,11 @@
       "id": "handle",
       "title": "HANDLE DETAIL",
       "category": "DETAIL",
-      "position": { "x": -0.148, "y": 1.03, "z": 0.075 },
+      "position": {
+        "x": -0.079,
+        "y": 0.835,
+        "z": 0.11
+      },
       "description": {
         "value": "Durable webbing. Comfortable grip.",
         "status": "VERIFIED",
@@ -54,7 +88,11 @@
       "id": "modular-zipper",
       "title": "MODULAR ZIPPER",
       "category": "FUNCTION",
-      "position": { "x": 0.515, "y": 0.42, "z": 0.05 },
+      "position": {
+        "x": 0.41,
+        "y": 0.35,
+        "z": 0.0
+      },
       "description": {
         "value": "Changeable. Expandable system.",
         "status": "VERIFIED",
@@ -111,6 +149,14 @@
       {
         "level": "OBSERVED",
         "label": "model3D (lagi-bag.glb) was rebuilt a fourth time against those measurements, replacing the primitive-assembly approach: the shell is a single lofted super-ellipse surface, the webbing is a flat ribbon swept along a 3D path as one continuous run (front face, over the top, handle arch, back face) that is then split into named parts, the trims are strips taken off the same lofted surface, and the front pocket is a fabric shell following the body's curvature with the webbing passing behind it as in the reference. Node groups: MainBody, FrontPocket, LeftSidePanel, RightSidePanel, Straps, Handles, Zipper, Zipper_Slider, OpeningTop, InteriorLining, InnerPocket, Hardware, Piping, Stitching. The top narrows to a zipper line so an opening animation can be added later; no animation is authored yet."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "model3D was replaced with a brand-supplied GLB (modular-zipper-bag.glb, generated with Tripo: one fused textured mesh). It was optimised for the web (22.1MB → 5.9MB: mesh simplified ~322k → ~139k vertices, textures 2048px WebP, quantised). The earlier hand-built, part-separated lagi-bag.glb is kept only as remixModel for the /again colour remix, which needs separately named parts."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "arTarget is a brand-supplied compiled MindAR target (ar/targets.mind). The source image it was compiled from was not supplied alongside it."
       }
     ],
     "imageRef": "legacy-prototype/LAGI.png"
@@ -121,7 +167,25 @@
     "source": "Official LAGI Smart Store"
   },
   "instagramUrl": "https://www.instagram.com/lagi.official/",
-  "arAvailable": false,
+  "tryOn": {
+    "garmentImage": "products/product-001/tryon/bag.png",
+    "garmentType": "BAG",
+    "anchorLeft": {
+      "x": 0.504,
+      "y": 0.031
+    },
+    "anchorRight": {
+      "x": 0.547,
+      "y": 0.031
+    },
+    "fit": 1,
+    "offsetY": 0,
+    "carry": "SHOULDER",
+    "strapColor": "#c9434f"
+  },
+  "tryOnAvailable": true,
+  "arAvailable": true,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "remixModel": "products/product-001/model/lagi-bag.glb"
 }

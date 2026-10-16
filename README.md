@@ -88,6 +88,34 @@ architecture are fully built and exercised by `product-001`. What's
 Once both exist for a product, set `threeDAvailable` / `arAvailable: true`
 and the 3D and AR experiences activate immediately — no code changes.
 
+## Virtual try-on (가상 피팅)
+
+`/#/try-on/<id>` lets a visitor wear a garment through their camera, the way
+try-on apps such as Anywear do. MediaPipe Pose Landmarker (`src/tryon/`)
+tracks the wearer's shoulders (tops, outerwear, dresses), hips (bottoms) or
+hands and shoulders (bags) every frame and draws the product's flat cut-out
+onto the body, following tilt and distance. Bags can be worn three ways —
+in the hand, on the shoulder, or cross-body (a strap is drawn across the
+chest) — and visitors can switch style and side in the try-on itself. A full-body photo can be used instead of the
+camera, and the result can be captured and saved/shared. Everything runs in
+the browser — no video or photo leaves the device. The pose model and WASM
+runtime are fetched from Google's / jsDelivr's CDNs on first use.
+
+To enable it for a product, open the workspace's **TRY-ON** tab:
+
+1. Upload a front-facing PNG of the garment with a transparent background
+   (no model/mannequin), then put the file at
+   `public/products/<id>/tryon/garment.png` and enter that path.
+   For a bag that already has a GLB, "3D 모델로 가방 이미지 만들기" renders
+   the model from the front onto a transparent background — download that
+   PNG instead of shooting one.
+2. Pick the garment type and click the two calibration points — the shoulder
+   seams, the two ends of the waistband (bottoms), or the tops of the
+   handles / strap ends (bags). For bags, also enter the real width in cm so
+   the bag is sized correctly against the wearer.
+3. Tick "가상 피팅 사용 가능으로 게시". The product page then shows a
+   "가상으로 입어보기" button and a try-on QR code, and `/#/ar` lists it.
+
 ## AI provider & 3D generation provider
 
 `src/ai/AIProvider.ts` and `src/ai/ThreeDGenerationProvider.ts` define

@@ -71,6 +71,45 @@ export interface ARSettings {
   rotation: Vector3Like;
 }
 
+/** What part of the body a try-on garment is worn on — decides which pose landmarks it anchors to. */
+export type GarmentType = 'TOP' | 'OUTER' | 'DRESS' | 'BOTTOM' | 'BAG';
+
+/** How a BAG is worn. Visitors can switch between these in the try-on itself. */
+export type CarryStyle = 'HAND' | 'SHOULDER' | 'CROSSBODY';
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+/**
+ * Virtual try-on (camera body-tracking) setup. The garment is a flat, front-facing cut-out
+ * PNG with a transparent background. Two calibration anchors mark where the garment meets
+ * the body — the shoulder seams for TOP/OUTER/DRESS, the waistband ends for BOTTOM, the
+ * tops of the handles/strap ends for BAG — as fractions (0–1) of the image's width/height,
+ * measured as the image is viewed (the wearer's right side is on the image's left).
+ */
+export interface TryOnSettings {
+  garmentImage: string;
+  garmentType: GarmentType;
+  anchorLeft: Point2D;
+  anchorRight: Point2D;
+  /** Extra width multiplier for loose or oversized fits. 1 = anchors land exactly on the body. */
+  fit: number;
+  /** Vertical nudge, as a fraction of the anchor span. Positive moves the garment down. */
+  offsetY: number;
+  /** BAG only: the default way to wear it. */
+  carry?: CarryStyle;
+  /**
+   * BAG only: real width of the bag in cm, which sizes it against the wearer's shoulders.
+   * The image must be cropped tight to the bag for this to be accurate. Falls back to
+   * dimensions.widthCm, then to a typical bag width.
+   */
+  realWidthCm?: number;
+  /** BAG only: colour of the strap drawn for cross-body wear. */
+  strapColor?: string;
+}
+
 /** One buyable combination. Sizes/colours a product does not have are simply null. */
 export interface ProductVariant {
   id: string;
@@ -122,6 +161,11 @@ export interface Product {
    * of its own — so extension/format validation must read this instead of the URL string.
    */
   model3DAsset?: ModelAssetInfo;
+  /**
+   * Optional part-separated model for the /again colour remix. Needed when model3D is a single
+   * fused mesh (e.g. an AI-generated scan) whose parts cannot be recoloured independently.
+   */
+  remixModel?: string;
   animations: ProductAnimation[];
 
   /** Empty string = AR not yet configured for this product. */
@@ -134,7 +178,12 @@ export interface Product {
   shopUrl: VerifiableField<string>;
   instagramUrl: string;
 
+  /** Optional: only wearable products have a try-on garment. */
+  tryOn?: TryOnSettings;
+
   arAvailable: boolean;
   threeDAvailable: boolean;
+  /** Editorial switch for the camera try-on, mirroring arAvailable. */
+  tryOnAvailable?: boolean;
   featured?: boolean;
 }
