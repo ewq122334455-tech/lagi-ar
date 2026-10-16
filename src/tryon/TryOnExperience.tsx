@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Product, TryOnSettings } from '@/data/productTypes';
+import type { CarryStyle, Product, TryOnSettings } from '@/data/productTypes';
+import { CARRY_STYLE_LABELS } from '@/utils/tryOnAvailability';
 import { PoseTracker } from './PoseTracker';
 import type { BodyLandmark } from './PoseTracker';
-import { bodyAnchors, drawGarment, smoothAnchors } from './garmentFit';
-import type { BodyAnchors } from './garmentFit';
+import { bodyPoints, drawGarment, smoothPoints } from './garmentFit';
+import type { BodyPoints, FitAdjust, ScreenSide } from './garmentFit';
 
 type TryOnState =
   | 'ready-to-start'
@@ -16,6 +17,8 @@ type TryOnState =
 
 type Facing = 'user' | 'environment';
 
+const CARRY_ORDER: CarryStyle[] = ['HAND', 'SHOULDER', 'CROSSBODY'];
+
 interface TryOnExperienceProps {
   product: Product;
   settings: TryOnSettings;
@@ -27,7 +30,13 @@ interface TryOnExperienceProps {
  * draws the product's flat garment cut-out onto the body every frame, so the garment
  * follows the wearer as they move. A full-body photo can be used instead of the camera.
  */
-export function TryOnExperience({ product, settings, onExit }: TryOnExperienceProps) {
+export function TryOnExperience({ product, settings: rawSettings, onExit }: TryOnExperienceProps) {
+  const isBag = rawSettings.garmentType === 'BAG';
+  // A bag is sized from its real width: the try-on setting first, then the product's recorded dimensions.
+  const [settings] = useState<TryOnSettings>(() => ({
+    ...rawSettings,
+    realWidthCm: rawSettings.realWidthCm || product.dimensions.widthCm,
+  }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -35,9 +44,9 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
   const garmentRef = useRef<HTMLImageElement | null>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoLandmarksRef = useRef<BodyLandmark[] | null>(null);
-  const anchorsRef = useRef<BodyAnchors | null>(null);
+  const pointsRef = useRef<BodyPoints | null>(null);
   const rafRef = useRef<number | null>(null);
-  const adjustRef = useRef({ fit: 1, offsetY: 0 });
+  const adjustRef = useRef<FitAdjust>({ fit: 1, offsetY: 0, carry: 'SHOULDER', side: 'R' });
   const showGarmentRef = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,8 +59,10 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
   const [showGarment, setShowGarment] = useState(true);
   const [showAdjust, setShowAdjust] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [carry, setCarry] = useState<CarryStyle>(rawSettings.carry ?? 'SHOULDER');
+  const [side, setSide] = useState<ScreenSide>('R');
 
-  adjustRef.current = { fit, offsetY };
+  adjustRef.current = { fit, offsetY, carry, side };
   showGarmentRef.current = showGarment;
 
   const stopLoop = useCallback(() => {
@@ -109,12 +120,15 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
       ctx.drawImage(source, 0, 0, width, height);
       ctx.restore();
 
-      const next = landmarks ? bodyAnchors(landmarks, settings.garmentType, width, height, mirrored) : null;
-      anchorsRef.current = next ? (smooth ? smoothAnchors(anchorsRef.current, next) : next) : null;
-      if (anchorsRef.current && garmentRef.current && showGarmentRef.current) {
-        drawGarment(ctx, garmentRef.current, settings, anchorsRef.current, adjustRef.current);
-      }
-      return Boolean(next);
+      const next = landmarks ? bodyPoints(landmarks, width, height, mirrored) : null;
+      pointsRef.current = next ? (smooth ? smoothPoints(pointsRef.current, next) : next) : null;
+      if (!pointsRef.current || !garmentRef.current) return false;
+      // While comparing, still run the placement (invisibly) so the "step back" guidance does not flash.
+      ctx.save();
+      if (!showGarmentRef.current) ctx.globalAlpha = 0;
+      const placed = drawGarment(ctx, garmentRef.current, settings, pointsRef.current, adjustRef.current);
+      ctx.restore();
+      return placed;
     },
     [settings]
   );
@@ -124,7 +138,7 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
       stopCamera();
       photoRef.current = null;
       photoLandmarksRef.current = null;
-      anchorsRef.current = null;
+      pointsRef.current = null;
       setState('loading');
       setErrorMessage(null);
       setBodyFound(false);
@@ -189,7 +203,7 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
   const redrawPhoto = useCallback(() => {
     const photo = photoRef.current;
     if (!photo) return;
-    renderFrame(photo, photo.naturalWidth, photo.naturalHeight, false, photoLandmarksRef.current, false);
+    setBodyFound(renderFrame(photo, photo.naturalWidth, photo.naturalHeight, false, photoLandmarksRef.current, false) ?? false);
   }, [renderFrame]);
 
   const handlePhoto = useCallback(
@@ -208,10 +222,7 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
         photoLandmarksRef.current = await trackerRef.current!.detectImage(photo);
         setState('photo');
         // Canvas is laid out by now; draw on the next frame.
-        requestAnimationFrame(() => {
-          redrawPhoto();
-          setBodyFound(Boolean(anchorsRef.current));
-        });
+        requestAnimationFrame(redrawPhoto);
       } catch (err) {
         setErrorMessage((err as Error).message || '사진을 처리하지 못했습니다.');
         setState('engine-error');
@@ -225,7 +236,7 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
   // Photo mode has no render loop — redraw when the adjustments change.
   useEffect(() => {
     if (state === 'photo') redrawPhoto();
-  }, [state, fit, offsetY, showGarment, redrawPhoto]);
+  }, [state, fit, offsetY, showGarment, carry, side, redrawPhoto]);
 
   const switchCamera = useCallback(() => {
     const next: Facing = facing === 'user' ? 'environment' : 'user';
@@ -285,8 +296,9 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
           <p className="eyebrow text-mist">VIRTUAL TRY-ON</p>
           <h2 className="mt-3 text-2xl font-medium">{productName}, 직접 입어보세요</h2>
           <p className="mt-3 max-w-xs text-sm text-mist/80">
-            카메라에서 한두 걸음 떨어져 어깨부터 허리(하의는 무릎)까지 화면에 들어오게 서 주세요. 움직이면 옷이 따라
-            움직입니다.
+            {isBag
+              ? '카메라에서 한두 걸음 떨어져 어깨부터 골반, 손까지 화면에 들어오게 서 주세요. 손에 들기·어깨에 메기·크로스로 메기를 바꿔볼 수 있습니다.'
+              : '카메라에서 한두 걸음 떨어져 어깨부터 허리(하의는 무릎)까지 화면에 들어오게 서 주세요. 움직이면 옷이 따라 움직입니다.'}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <button
@@ -351,9 +363,11 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
           <p className="rounded-full bg-ink/70 px-5 py-3 text-sm text-paper">
             {state === 'photo'
               ? '사진에서 몸을 찾지 못했습니다. 상반신이 정면으로 나온 사진을 사용해 주세요.'
-              : settings.garmentType === 'BOTTOM'
-                ? '허리와 골반이 화면에 보이도록 뒤로 물러나 주세요'
-                : '어깨가 화면에 모두 보이도록 뒤로 물러나 주세요'}
+              : isBag && carry === 'HAND'
+                ? '어깨와 가방을 들 손이 화면에 보이도록 서 주세요'
+                : settings.garmentType === 'BOTTOM'
+                  ? '허리와 골반이 화면에 보이도록 뒤로 물러나 주세요'
+                  : '어깨가 화면에 모두 보이도록 뒤로 물러나 주세요'}
           </p>
         </div>
       )}
@@ -389,6 +403,14 @@ export function TryOnExperience({ product, settings, onExit }: TryOnExperiencePr
             >
               누르고 비교
             </ControlButton>
+            {isBag && (
+              <>
+                <ControlButton onClick={() => setCarry((c) => CARRY_ORDER[(CARRY_ORDER.indexOf(c) + 1) % CARRY_ORDER.length])}>
+                  {CARRY_STYLE_LABELS[carry]}
+                </ControlButton>
+                <ControlButton onClick={() => setSide((v) => (v === 'L' ? 'R' : 'L'))}>좌우 바꾸기</ControlButton>
+              </>
+            )}
             <ControlButton onClick={() => setShowAdjust((v) => !v)} pressed={showAdjust}>
               핏 조절
             </ControlButton>

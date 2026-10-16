@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { GarmentType, Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product, TryOnSettings } from '@/data/productTypes';
+import type { CarryStyle, GarmentType, Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product, TryOnSettings } from '@/data/productTypes';
 import { readLocalDrafts, writeLocalDraft, deleteLocalDraft, invalidateProductCache, loadProducts } from '@/data/productEngine';
 import { createEmptyProduct } from './emptyProduct';
 import { validateProduct } from './validateProduct';
@@ -10,7 +10,8 @@ import { getAIProvider } from '@/ai/AIProvider';
 import { getThreeDGenerationProvider } from '@/ai/ThreeDGenerationProvider';
 import type { Observation } from '@/utils/contentStatus';
 import { modelFormatOf } from '@/utils/modelFile';
-import { GARMENT_TYPE_LABELS, defaultTryOnSettings } from '@/utils/tryOnAvailability';
+import { CARRY_STYLE_LABELS, GARMENT_TYPE_LABELS, anchorGroup, defaultTryOnSettings } from '@/utils/tryOnAvailability';
+import { renderModelToPng } from '@/tryon/renderModelToPng';
 
 const TABS = ['BASIC', 'IMAGES', '3D & AR', 'TRY-ON', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
 type Tab = (typeof TABS)[number];
@@ -470,6 +471,8 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
 function TryOnTab({ product, update }: { product: Product; update: <K extends keyof Product>(k: K, v: Product[K]) => void }) {
   const tryOn = product.tryOn ?? defaultTryOnSettings();
   const [placing, setPlacing] = useState<'anchorLeft' | 'anchorRight'>('anchorLeft');
+  const [rendering, setRendering] = useState(false);
+  const [renderMessage, setRenderMessage] = useState<string | null>(null);
 
   function set(patch: Partial<TryOnSettings>) {
     update('tryOn', { ...tryOn, ...patch });
@@ -483,9 +486,31 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
   }
 
   function changeType(type: GarmentType) {
-    // Anchor defaults differ between shoulder- and waist-hung garments; reset them when switching between the two.
-    const reanchor = (type === 'BOTTOM') !== (tryOn.garmentType === 'BOTTOM');
+    // Anchors mean different things for shoulder-hung, waist-hung and bag items; reset them when switching between those.
+    const reanchor = anchorGroup(type) !== anchorGroup(tryOn.garmentType);
     update('tryOn', reanchor ? { ...defaultTryOnSettings(tryOn.garmentImage, type), fit: tryOn.fit } : { ...tryOn, garmentType: type });
+  }
+
+  async function renderFromModel() {
+    setRendering(true);
+    setRenderMessage(null);
+    try {
+      const png = await renderModelToPng(product.model3D);
+      const base = product.tryOn && tryOn.garmentType === 'BAG' ? tryOn : defaultTryOnSettings('', 'BAG');
+      update('tryOn', { ...base, garmentImage: png });
+      setRenderMessage('3D 모델을 정면에서 렌더링했습니다. 손잡이(끈) 위치를 클릭해 맞춰주세요.');
+    } catch {
+      setRenderMessage('3D 모델을 렌더링하지 못했습니다.');
+    } finally {
+      setRendering(false);
+    }
+  }
+
+  function downloadGarment() {
+    const a = document.createElement('a');
+    a.href = tryOn.garmentImage;
+    a.download = 'garment.png';
+    a.click();
   }
 
   function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -498,8 +523,9 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
     setPlacing(placing === 'anchorLeft' ? 'anchorRight' : 'anchorLeft');
   }
 
-  const bottom = tryOn.garmentType === 'BOTTOM';
-  const anchorName = bottom ? '허리밴드 끝' : '어깨 솔기';
+  const group = anchorGroup(tryOn.garmentType);
+  const anchorName = group === 'waist' ? '허리밴드 끝' : group === 'bag' ? '손잡이(끈) 윗부분' : '어깨 솔기';
+  const isBag = group === 'bag';
 
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
@@ -511,6 +537,24 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
             게시하려면 파일을 <code>public/products/{product.id}/tryon/</code>에 넣고 아래 경로를 입력하세요.
           </p>
           <input type="file" accept="image/png,image/webp" onChange={handleUpload} className="text-sm" />
+          {product.model3D && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={renderFromModel}
+                disabled={rendering}
+                className="eyebrow border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring disabled:opacity-40"
+              >
+                {rendering ? '렌더링 중...' : '3D 모델로 가방 이미지 만들기'}
+              </button>
+              {tryOn.garmentImage.startsWith('data:') && (
+                <button type="button" onClick={downloadGarment} className="eyebrow border-b border-ink pb-0.5 focus-ring">
+                  PNG 다운로드
+                </button>
+              )}
+            </div>
+          )}
+          {renderMessage && <p className="mt-2 text-xs text-graphite">{renderMessage}</p>}
           <TextInput
             className="mt-3 w-full"
             value={tryOn.garmentImage}
@@ -528,6 +572,36 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
             ))}
           </SelectInput>
         </Field>
+
+        {isBag && (
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="CARRY">
+              <SelectInput value={tryOn.carry ?? 'SHOULDER'} onChange={(e) => set({ carry: e.target.value as CarryStyle })}>
+                {(Object.keys(CARRY_STYLE_LABELS) as CarryStyle[]).map((c) => (
+                  <option key={c} value={c}>
+                    {CARRY_STYLE_LABELS[c]}
+                  </option>
+                ))}
+              </SelectInput>
+            </Field>
+            <Field label="WIDTH (cm)" hint="실제 가방 가로 길이">
+              <NumberInput
+                value={tryOn.realWidthCm ?? product.dimensions.widthCm ?? ''}
+                placeholder="32"
+                min={5}
+                onChange={(e) => set({ realWidthCm: Number(e.target.value) || undefined })}
+              />
+            </Field>
+            <Field label="STRAP COLOR" hint="크로스로 메기 끈 색">
+              <input
+                type="color"
+                value={tryOn.strapColor ?? '#1f1f1f'}
+                onChange={(e) => set({ strapColor: e.target.value })}
+                className="h-[42px] w-full border border-line bg-paper"
+              />
+            </Field>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="FIT (크기 배율)" hint="1 = 기준점이 몸에 정확히 맞음. 오버핏은 1보다 크게.">

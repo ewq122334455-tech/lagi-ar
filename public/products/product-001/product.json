@@ -121,6 +121,17 @@
     "source": "Official LAGI Smart Store"
   },
   "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "tryOn": {
+    "garmentImage": "products/product-001/tryon/bag.png",
+    "garmentType": "BAG",
+    "anchorLeft": { "x": 0.43, "y": 0.015 },
+    "anchorRight": { "x": 0.57, "y": 0.015 },
+    "fit": 1,
+    "offsetY": 0,
+    "carry": "SHOULDER",
+    "strapColor": "#c9434f"
+  },
+  "tryOnAvailable": true,
   "arAvailable": false,
   "threeDAvailable": true,
   "featured": true
