@@ -170,6 +170,8 @@ export interface Product {
 
   /** Empty string = AR not yet configured for this product. */
   arTarget: string;
+  /** Optional picture of the image arTarget was compiled from, shown so visitors know what to scan. */
+  arTargetPreview?: string;
   arSettings: ARSettings;
 
   hotspots: Hotspot[];
