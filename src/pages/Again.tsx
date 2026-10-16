@@ -8,19 +8,20 @@ import { AgainCard } from '@/again/AgainCard';
 import { REMIX_PALETTE, REMIX_PARTS, decodeColors, encodeColors, shuffleColors, swatchName } from '@/again/remix';
 import type { RemixColors } from '@/again/remix';
 import { canUseTryOn } from '@/utils/tryOnAvailability';
-import { REMIX_GARMENT_KEY } from '@/tryon/remixGarment';
+import { saveRemixGarment } from '@/tryon/remixGarment';
+import { detectHandleAnchors } from '@/tryon/autoAnchors';
 
 export default function Again() {
   const state = useProducts();
   const products = state.status === 'ready' ? state.data : [];
-  // The remix needs a bag GLB whose parts are named; today that is product-001.
-  const product = products.find((p) => p.model3D && p.tryOn?.garmentType === 'BAG') ?? products.find((p) => p.model3D) ?? null;
+  // The remix needs a GLB whose parts are separately named: a product's remixModel, or its main model.
+  const product = products.find((p) => p.remixModel) ?? products.find((p) => p.model3D && p.tryOn?.garmentType === 'BAG') ?? null;
 
   return (
     <div>
       <AgainHero />
       {product ? (
-        <RemixSection productId={product.id} modelUrl={product.model3D} tryOn={canUseTryOn(product)} name={product.name.value} />
+        <RemixSection productId={product.id} modelUrl={product.remixModel || product.model3D} tryOn={canUseTryOn(product)} name={product.name.value} />
       ) : (
         <section className="border-t border-line px-6 py-20 text-center text-sm text-stone lg:px-10">
           {state.status === 'loading' ? '불러오는 중…' : '조합할 수 있는 3D 제품이 아직 없습니다.'}
@@ -127,12 +128,12 @@ function RemixSection({ productId, modelUrl, tryOn, name }: { productId: string;
   function wearIt() {
     const png = viewerRef.current?.cutout();
     if (!png) return;
-    try {
-      sessionStorage.setItem(REMIX_GARMENT_KEY, png);
-    } catch {
-      // Storage full or blocked: fall back to the product's standard try-on image.
-    }
-    navigate(`/try-on/${productId}?remix=1`);
+    const img = new Image();
+    img.onload = () => {
+      saveRemixGarment({ image: png, ...(detectHandleAnchors(img) ?? {}) });
+      navigate(`/try-on/${productId}?remix=1`);
+    };
+    img.src = png;
   }
 
   const getBagImage = useCallback(() => viewerRef.current?.cutout() ?? null, []);

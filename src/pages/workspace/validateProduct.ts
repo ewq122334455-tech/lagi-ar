@@ -13,11 +13,11 @@ export function validateProduct(product: Product): ValidationIssue[] {
   if (!product.id.trim()) issues.push({ level: 'error', message: '제품 ID가 필요합니다.' });
   if (!/^[a-z0-9-]+$/.test(product.id)) issues.push({ level: 'error', message: 'ID는 영문 소문자, 숫자, 하이픈만 사용할 수 있습니다.' });
 
-  if (!product.name.value) issues.push({ level: 'warning', message: '제품명이 없습니다 (CONTENT REQUIRED로 게시됨).' });
+  if (!product.name.value) issues.push({ level: 'warning', message: '제품명이 없습니다 (사이트에 ‘정보 미등록’으로 표시됩니다).' });
   if (product.images.length === 0) issues.push({ level: 'warning', message: '대표 이미지가 없습니다.' });
 
   if (product.threeDAvailable && !product.model3D) {
-    issues.push({ level: 'error', message: '3D 사용 가능으로 표시되었지만 모델(GLB) 경로가 없습니다.' });
+    issues.push({ level: 'error', message: '3D 보기를 켰지만 3D 모델(.glb) 경로가 없습니다.' });
   }
   if (product.model3D) {
     if (isBlobUrl(product.model3D)) {
@@ -38,14 +38,13 @@ export function validateProduct(product: Product): ValidationIssue[] {
   }
 
   if (product.arAvailable) {
-    if (!product.arTarget) issues.push({ level: 'error', message: 'AR 사용 가능으로 표시되었지만 AR 타겟(.mind)이 없습니다.' });
-    if (!product.model3D) issues.push({ level: 'error', message: 'AR 사용 가능으로 표시되었지만 3D 모델이 없습니다.' });
+    if (!product.model3D) issues.push({ level: 'error', message: 'AR을 켰지만 3D 모델이 없습니다.' });
     if (!product.arSettings) issues.push({ level: 'error', message: 'AR 보정값(scale/position/rotation)이 없습니다.' });
   }
 
   if (product.tryOnAvailable) {
     if (!product.tryOn?.garmentImage) {
-      issues.push({ level: 'error', message: '가상 피팅 사용 가능으로 표시되었지만 의상 이미지가 없습니다.' });
+      issues.push({ level: 'error', message: '가상 피팅을 켰지만 피팅 이미지가 없습니다.' });
     } else if (product.tryOn.anchorLeft.x >= product.tryOn.anchorRight.x) {
       issues.push({ level: 'warning', message: '가상 피팅 기준점: 왼쪽 점이 오른쪽 점보다 왼쪽에 있어야 합니다.' });
     }
@@ -53,16 +52,16 @@ export function validateProduct(product: Product): ValidationIssue[] {
   if (product.tryOn?.garmentImage.startsWith('blob:')) {
     issues.push({
       level: 'warning',
-      message: `가상 피팅 의상 이미지가 임시(blob) 주소입니다. 게시 전 public/products/${product.id}/tryon/ 에 PNG를 넣고 경로를 입력하세요.`,
+      message: `가상 피팅 이미지가 이 브라우저에만 있는 임시 파일입니다. 게시 전 PNG를 public/products/${product.id}/tryon/ 에 올리고 경로를 입력하세요.`,
     });
   }
 
   product.hotspots.forEach((h, i) => {
-    if (!h.title.trim()) issues.push({ level: 'warning', message: `Hotspot #${i + 1}: 제목이 없습니다.` });
-    if (!h.description.value) issues.push({ level: 'warning', message: `Hotspot "${h.title || i + 1}": 설명이 CONTENT REQUIRED 상태입니다.` });
+    if (!h.title.trim()) issues.push({ level: 'warning', message: `디테일 포인트 #${i + 1}: 이름이 없습니다.` });
+    if (!h.description.value) issues.push({ level: 'warning', message: `디테일 포인트 "${h.title || i + 1}": 설명이 비어 있습니다.` });
   });
 
-  if (!product.shopUrl.value) issues.push({ level: 'warning', message: 'Shop URL이 없습니다 — BUY 버튼이 비활성화됩니다.' });
+  if (!product.shopUrl.value) issues.push({ level: 'warning', message: '구매 링크가 없습니다 — 구매 버튼이 비활성화됩니다.' });
 
   return issues;
 }

@@ -10,8 +10,7 @@ export default function TryOnPage() {
   const navigate = useNavigate();
   const state = useProduct(id);
   const [params] = useSearchParams();
-  // A recoloured bag handed over from /again replaces the standard cut-out; it was rendered
-  // with the same framing as that cut-out, so the product's calibration anchors still apply.
+  // A recoloured bag handed over from /again replaces the standard cut-out, with its own anchors.
   const remix = params.get('remix') === '1' ? readRemixGarment() : null;
 
   useEffect(() => {
@@ -45,7 +44,15 @@ export default function TryOnPage() {
     );
   }
 
-  const settings = remix && product.tryOn.garmentType === 'BAG' ? { ...product.tryOn, garmentImage: remix } : product.tryOn;
+  const settings =
+    remix && product.tryOn.garmentType === 'BAG'
+      ? {
+          ...product.tryOn,
+          garmentImage: remix.image,
+          anchorLeft: remix.anchorLeft ?? product.tryOn.anchorLeft,
+          anchorRight: remix.anchorRight ?? product.tryOn.anchorRight,
+        }
+      : product.tryOn;
   return <TryOnExperience product={product} settings={settings} onExit={exit} />;
 }
 

@@ -12,11 +12,36 @@ import type { Observation } from '@/utils/contentStatus';
 import { modelFormatOf } from '@/utils/modelFile';
 import { CARRY_STYLE_LABELS, GARMENT_TYPE_LABELS, anchorGroup, defaultTryOnSettings } from '@/utils/tryOnAvailability';
 import { renderModelToPng } from '@/tryon/renderModelToPng';
+import { detectHandleAnchors } from '@/tryon/autoAnchors';
 
 const TABS = ['BASIC', 'IMAGES', '3D & AR', 'TRY-ON', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
 type Tab = (typeof TABS)[number];
 
+const TAB_LABELS: Record<Tab, string> = {
+  BASIC: '1. 기본 정보',
+  IMAGES: '2. 사진',
+  '3D & AR': '3. 3D · AR',
+  'TRY-ON': '4. 가상 피팅',
+  HOTSPOTS: '5. 디테일 포인트',
+  'MATERIAL & PROCESS': '6. 소재 · 공정',
+  'AI ANALYSIS': '7. 메모 · 분석',
+  'PREVIEW & PUBLISH': '8. 미리보기 · 게시',
+};
+
 const CATEGORIES: HotspotCategory[] = ['MATERIAL', 'DETAIL', 'CRAFT', 'PROCESS', 'STRUCTURE', 'FUNCTION'];
+const CATEGORY_LABELS: Record<HotspotCategory, string> = {
+  MATERIAL: '소재',
+  DETAIL: '디테일',
+  CRAFT: '만듦새',
+  PROCESS: '공정',
+  STRUCTURE: '구조',
+  FUNCTION: '기능',
+};
+const LEVEL_LABELS: Record<Observation['level'], string> = {
+  OBSERVED: '확인된 사실',
+  INFERRED: '추정',
+  UNKNOWN: '모름',
+};
 
 export default function AssetWorkspace() {
   const [publishedIds, setPublishedIds] = useState<string[]>([]);
@@ -77,36 +102,36 @@ export default function AssetWorkspace() {
   return (
     <div className="px-6 py-16 lg:px-10 lg:py-20">
       <div className="mx-auto max-w-canvas">
-        <p className="eyebrow">INTERNAL TOOL</p>
-        <h1 className="mt-3 text-3xl font-medium lg:text-4xl">Product Creation Workspace</h1>
-        <p className="mt-4 max-w-2xl text-sm text-graphite">
-          이 도구는 개발/운영자용입니다. 정식 배포 전까지는 일반 방문자에게 노출하지 마세요. 이 사이트는 정적으로
-          배포되므로, 게시는 <code>product.json</code>을 내려받아 <code>public/products/&lt;id&gt;/</code>에 커밋하는
-          방식으로 이루어집니다. "임시 저장"은 이 브라우저에서만 미리보기를 위해 사용됩니다.
+        <p className="eyebrow">관리자 전용</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] lg:text-4xl">제품 등록</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-graphite">
+          탭 순서대로 채우면 됩니다. 입력한 내용은 <strong>8. 미리보기 · 게시</strong>에서 “임시 저장”하면 이 브라우저에서
+          바로 미리볼 수 있고, 실제 사이트에 올리려면 거기서 제품 파일(product.json)을 내려받아 GitHub에 올리면 됩니다.
+          (방문자에게는 보이지 않는 페이지입니다.)
         </p>
 
         {/* PRODUCT SELECTOR */}
         <div className="mt-10 flex flex-wrap items-end gap-4 border-y border-line py-6">
-          <Field label="PRODUCT ID">
+          <Field label="제품 ID" hint="영문 소문자·숫자·하이픈만 (예: product-002)">
             <TextInput
               value={product.id}
               onChange={(e) => update('id', e.target.value.trim())}
               placeholder="product-002"
             />
           </Field>
-          <Field label="LOAD EXISTING">
+          <Field label="기존 제품 불러오기">
             <SelectInput onChange={(e) => e.target.value && loadExisting(e.target.value)} defaultValue="">
               <option value="" disabled>
                 선택...
               </option>
               {publishedIds.map((id) => (
                 <option key={id} value={id}>
-                  {id} (published)
+                  {id} (게시됨)
                 </option>
               ))}
               {draftIds.map((id) => (
                 <option key={id} value={id}>
-                  {id} (draft)
+                  {id} (임시 저장)
                 </option>
               ))}
             </SelectInput>
@@ -116,7 +141,7 @@ export default function AssetWorkspace() {
             onClick={() => setProduct(createEmptyProduct(`product-${Date.now().toString().slice(-4)}`))}
             className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring"
           >
-            NEW PRODUCT
+            + 새 제품
           </button>
         </div>
 
@@ -131,7 +156,7 @@ export default function AssetWorkspace() {
                 tab === t ? 'border-ink bg-ink text-paper' : 'border-line text-graphite hover:border-ink'
               }`}
             >
-              {t}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -158,7 +183,7 @@ export default function AssetWorkspace() {
 
         <div className="mt-12 flex items-center gap-4 border-t border-line pt-6">
           <p className="eyebrow text-stone">
-            {errorCount > 0 ? `${errorCount}개의 오류` : '오류 없음'} · {issues.length}개 검증 항목
+            {errorCount > 0 ? `고쳐야 할 항목 ${errorCount}개` : '필수 항목 문제 없음'} · 확인 항목 {issues.length}개
           </p>
         </div>
       </div>
@@ -169,7 +194,7 @@ export default function AssetWorkspace() {
 function BasicTab({ product, update }: { product: Product; update: <K extends keyof Product>(k: K, v: Product[K]) => void }) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-      <Field label="NAME">
+      <Field label="제품명">
         <TextInput
           value={product.name.value ?? ''}
           onChange={(e) =>
@@ -177,7 +202,7 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="CATEGORY">
+      <Field label="카테고리" hint="예: 토트백, 크로스백">
         <TextInput
           value={product.category.value ?? ''}
           onChange={(e) =>
@@ -185,7 +210,7 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="PRICE (KRW)">
+      <Field label="가격 (원)" hint="숫자만 (예: 59000)">
         <NumberInput
           value={product.price.value ?? ''}
           onChange={(e) => {
@@ -194,13 +219,13 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }}
         />
       </Field>
-      <Field label="FEATURED ON HOME">
+      <Field label="홈 노출">
         <label className="flex items-center gap-2 py-2.5 text-sm">
           <input type="checkbox" checked={!!product.featured} onChange={(e) => update('featured', e.target.checked)} />
-          홈페이지에 노출
+          홈 화면 “Featured”에 보이기
         </label>
       </Field>
-      <Field label="SHORT DESCRIPTION" hint="카드/목록에 표시됩니다.">
+      <Field label="한 줄 소개" hint="제품 목록 카드에 표시됩니다.">
         <TextInput
           value={product.shortDescription.value ?? ''}
           onChange={(e) =>
@@ -212,13 +237,13 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="COLORS" hint="쉼표로 구분된 색상 코드, 예: #111110, #d8d6cf">
+      <Field label="색상" hint="색상 코드를 쉼표로 구분 (예: #111110, #d8d6cf)">
         <TextInput
           value={product.colors.join(', ')}
           onChange={(e) => update('colors', e.target.value.split(',').map((c) => c.trim()).filter(Boolean))}
         />
       </Field>
-      <Field label="DESCRIPTION" hint="">
+      <Field label="상세 설명" hint="">
         <TextArea
           className="sm:col-span-2"
           value={product.description.value ?? ''}
@@ -231,7 +256,7 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="STORY">
+      <Field label="제품 이야기" hint="이 제품이 만들어진 배경">
         <TextArea
           value={product.story.value ?? ''}
           onChange={(e) =>
@@ -239,7 +264,7 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="LAGI'S VIEW">
+      <Field label="LAGI가 고른 이유">
         <TextArea
           value={product.lagiSelectionReason.value ?? ''}
           onChange={(e) =>
@@ -251,7 +276,7 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
           }
         />
       </Field>
-      <Field label="SHOP URL">
+      <Field label="구매 링크" hint="네이버 스마트스토어 상품 주소">
         <TextInput
           value={product.shopUrl.value ?? ''}
           onChange={(e) =>
@@ -260,19 +285,19 @@ function BasicTab({ product, update }: { product: Product; update: <K extends ke
         />
       </Field>
       <div className="grid grid-cols-3 gap-3 sm:col-span-2">
-        <Field label="WIDTH (CM)">
+        <Field label="가로 (cm)">
           <NumberInput
             value={product.dimensions.widthCm ?? ''}
             onChange={(e) => update('dimensions', { ...product.dimensions, widthCm: e.target.value ? Number(e.target.value) : undefined })}
           />
         </Field>
-        <Field label="HEIGHT (CM)">
+        <Field label="세로 (cm)">
           <NumberInput
             value={product.dimensions.heightCm ?? ''}
             onChange={(e) => update('dimensions', { ...product.dimensions, heightCm: e.target.value ? Number(e.target.value) : undefined })}
           />
         </Field>
-        <Field label="DEPTH (CM)">
+        <Field label="폭 (cm)">
           <NumberInput
             value={product.dimensions.depthCm ?? ''}
             onChange={(e) => update('dimensions', { ...product.dimensions, depthCm: e.target.value ? Number(e.target.value) : undefined })}
@@ -293,17 +318,17 @@ function ImagesTab({ product, update }: { product: Product; update: <K extends k
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <p className="eyebrow mb-1">COVER IMAGES</p>
+        <p className="eyebrow mb-1">대표 사진</p>
         <p className="mb-4 text-xs text-stone">
-          업로드는 이 브라우저에서 미리보기용으로만 동작합니다. 실제 게시를 위해서는 파일을{' '}
-          <code>public/products/{product.id}/images/</code>에 추가하고 경로를 입력하세요.
+          여기서 올린 사진은 이 브라우저 미리보기용입니다. 실제 사이트에 올리려면 사진 파일을 GitHub의{' '}
+          <code>public/products/{product.id}/images/</code> 폴더에 올려야 합니다.
         </p>
         <input type="file" accept="image/*" multiple onChange={(e) => handleUpload(e, 'images')} className="text-sm" />
         <ImageGrid urls={product.images} onRemove={(i) => update('images', product.images.filter((_, idx) => idx !== i))} />
       </div>
 
       <div>
-        <p className="eyebrow mb-4">GALLERY</p>
+        <p className="eyebrow mb-4">추가 사진 (갤러리)</p>
         <input type="file" accept="image/*" multiple onChange={(e) => handleUpload(e, 'gallery')} className="text-sm" />
         <ImageGrid urls={product.gallery} onRemove={(i) => update('gallery', product.gallery.filter((_, idx) => idx !== i))} />
       </div>
@@ -374,21 +399,34 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
       <div className="flex flex-col gap-6">
         <div>
-          <p className="eyebrow mb-2">3D MODEL (GLB)</p>
+          <p className="eyebrow mb-2">3D 모델 파일 (.glb)</p>
+          <p className="mb-3 text-xs leading-relaxed text-stone">
+            .glb는 제품을 360° 돌려볼 수 있는 3D 파일입니다(Tripo·Meshy 같은 AI 3D 생성 툴이나 3D 프로그램에서 내보냄).
+            파일을 고르면 오른쪽에서 바로 미리볼 수 있습니다. 실제 사이트에 올리려면 파일을 GitHub의{' '}
+            <code>public/products/{product.id}/model/</code> 폴더에 올리고, 아래 칸에 그 경로를 적으세요.
+            10MB가 넘는 파일은 휴대폰에서 느리니 줄여서 올리는 것을 권장합니다.
+          </p>
           <input type="file" accept=".glb,.gltf" onChange={handleModelUpload} className="text-sm" />
-          {product.model3DAsset ? (
+          <TextInput
+            className="mt-3 w-full"
+            value={product.model3D.startsWith('blob:') ? '' : product.model3D}
+            onChange={(e) => {
+              update('model3D', e.target.value.trim());
+              update('model3DAsset', undefined);
+            }}
+            placeholder={`products/${product.id}/model/bag.glb`}
+          />
+          {product.model3DAsset && (
             <p className="mt-2 text-xs text-stone">
-              {product.model3DAsset.filename} · <span className="uppercase">{product.model3DAsset.format}</span>
+              미리보기 중: {product.model3DAsset.filename} · <span className="uppercase">{product.model3DAsset.format}</span>
             </p>
-          ) : (
-            product.model3D && <p className="mt-2 break-all text-xs text-stone">{product.model3D}</p>
           )}
         </div>
 
         <div className="border border-dashed border-line p-5">
-          <p className="eyebrow mb-2">AI 3D GENERATION (§19-21)</p>
+          <p className="eyebrow mb-2">AI로 3D 만들기 (서버 연결 필요)</p>
           <p className="mb-3 text-xs text-graphite">
-            provider: <code>{threeDProvider.id}</code> · available: <code>{String(threeDProvider.available)}</code>
+            {threeDProvider.available ? '연결됨' : '아직 3D 생성 서버가 연결되어 있지 않아 사용할 수 없습니다.'}
           </p>
           <button
             type="button"
@@ -398,37 +436,41 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
           >
             {generating ? '요청 중...' : 'AI로 3D 생성 요청'}
           </button>
-          {product.images.length === 0 && <p className="mt-2 text-xs text-stone">먼저 IMAGES 탭에서 사진을 추가하세요.</p>}
+          {product.images.length === 0 && <p className="mt-2 text-xs text-stone">먼저 ‘2. 사진’ 탭에서 사진을 추가하세요.</p>}
           {generationMessage && <p className="mt-3 text-sm text-graphite">{generationMessage}</p>}
         </div>
 
         <div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={product.threeDAvailable} onChange={(e) => update('threeDAvailable', e.target.checked)} />
-            3D 사용 가능으로 게시
+            사이트에 3D 보기 켜기
           </label>
         </div>
 
         <hr className="hairline" />
 
         <div>
-          <p className="eyebrow mb-2">AR TARGET (.mind)</p>
-          <TextInput
-            value={product.arTarget}
-            onChange={(e) => update('arTarget', e.target.value)}
-            placeholder={`products/${product.id}/ar/target.mind`}
-          />
-          <p className="mt-2 text-xs text-stone">
-            타겟 이미지를{' '}
+          <p className="eyebrow mb-2">AR 인식 이미지 (.mind) — 선택</p>
+          <p className="mb-3 text-xs leading-relaxed text-stone">
+            휴대폰 카메라로 <strong>특정 이미지(라벨·포스터·제품 카드 등)를 비추면 그 위에 3D 제품이 나타나게</strong> 하는
+            파일입니다. 비워두면 이미지 없이 카메라 화면에 바로 제품을 띄웁니다.
+            <br />
+            만드는 법: 이미지를{' '}
             <a href="https://hiukim.github.io/mind-ar-js-doc/tools/compile" target="_blank" rel="noopener noreferrer" className="underline">
-              MindAR 이미지 타겟 컴파일러
+              MindAR 변환 사이트
             </a>
-            로 변환한 뒤 위 경로에 배치하세요.
+            에 올려 .mind 파일을 받고 → GitHub의 <code>public/products/{product.id}/ar/</code> 폴더에 올린 뒤 → 아래에 경로를 적으세요.
           </p>
+          <TextInput
+            className="w-full"
+            value={product.arTarget}
+            onChange={(e) => update('arTarget', e.target.value.trim())}
+            placeholder={`products/${product.id}/ar/targets.mind`}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <Field label="SCALE">
+          <Field label="AR 크기 배율">
             <NumberInput
               value={product.arSettings.scale}
               step={0.1}
@@ -436,7 +478,7 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
             />
           </Field>
           {(['x', 'y', 'z'] as const).map((axis) => (
-            <Field key={axis} label={`POS ${axis.toUpperCase()}`}>
+            <Field key={axis} label={`위치 ${axis === 'x' ? '좌우' : axis === 'y' ? '위아래' : '앞뒤'} (${axis.toUpperCase()})`}>
               <NumberInput
                 value={product.arSettings.position[axis]}
                 step={0.1}
@@ -450,12 +492,12 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={product.arAvailable} onChange={(e) => update('arAvailable', e.target.checked)} />
-          AR 사용 가능으로 게시
+          사이트에 AR 켜기
         </label>
       </div>
 
       <div>
-        <p className="eyebrow mb-2">3D PREVIEW</p>
+        <p className="eyebrow mb-2">3D 미리보기</p>
         <ProductViewer
           className="aspect-square w-full"
           modelUrl={product.model3D}
@@ -497,8 +539,11 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
     try {
       const png = await renderModelToPng(product.model3D);
       const base = product.tryOn && tryOn.garmentType === 'BAG' ? tryOn : defaultTryOnSettings('', 'BAG');
-      update('tryOn', { ...base, garmentImage: png });
-      setRenderMessage('3D 모델을 정면에서 렌더링했습니다. 손잡이(끈) 위치를 클릭해 맞춰주세요.');
+      const img = new Image();
+      img.src = png;
+      await img.decode();
+      update('tryOn', { ...base, garmentImage: png, ...(detectHandleAnchors(img) ?? {}) });
+      setRenderMessage('3D 모델을 정면에서 찍은 이미지를 만들고 손잡이 위치를 자동으로 찾았습니다. 어긋나 보이면 오른쪽 이미지에서 직접 클릭해 고치세요.');
     } catch {
       setRenderMessage('3D 모델을 렌더링하지 못했습니다.');
     } finally {
@@ -531,7 +576,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
       <div className="flex flex-col gap-6">
         <div>
-          <p className="eyebrow mb-2">GARMENT IMAGE (PNG)</p>
+          <p className="eyebrow mb-2">피팅 이미지 (배경 없는 PNG)</p>
           <p className="mb-3 text-xs text-stone">
             배경을 투명하게 지운 정면 누끼 PNG를 사용하세요 (마네킹·사람 없이 옷만). 업로드는 이 브라우저 미리보기용이며,
             게시하려면 파일을 <code>public/products/{product.id}/tryon/</code>에 넣고 아래 경로를 입력하세요.
@@ -563,7 +608,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
           />
         </div>
 
-        <Field label="GARMENT TYPE">
+        <Field label="제품 종류">
           <SelectInput value={tryOn.garmentType} onChange={(e) => changeType(e.target.value as GarmentType)}>
             {(Object.keys(GARMENT_TYPE_LABELS) as GarmentType[]).map((t) => (
               <option key={t} value={t}>
@@ -575,7 +620,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
 
         {isBag && (
           <div className="grid grid-cols-3 gap-3">
-            <Field label="CARRY">
+            <Field label="기본 메는 방식">
               <SelectInput value={tryOn.carry ?? 'SHOULDER'} onChange={(e) => set({ carry: e.target.value as CarryStyle })}>
                 {(Object.keys(CARRY_STYLE_LABELS) as CarryStyle[]).map((c) => (
                   <option key={c} value={c}>
@@ -584,7 +629,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
                 ))}
               </SelectInput>
             </Field>
-            <Field label="WIDTH (cm)" hint="실제 가방 가로 길이">
+            <Field label="실제 가로 (cm)" hint="가방 크기를 몸에 맞추는 데 쓰입니다">
               <NumberInput
                 value={tryOn.realWidthCm ?? product.dimensions.widthCm ?? ''}
                 placeholder="32"
@@ -592,7 +637,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
                 onChange={(e) => set({ realWidthCm: Number(e.target.value) || undefined })}
               />
             </Field>
-            <Field label="STRAP COLOR" hint="크로스로 메기 끈 색">
+            <Field label="크로스 끈 색" hint="크로스로 메기 때 그려지는 끈">
               <input
                 type="color"
                 value={tryOn.strapColor ?? '#1f1f1f'}
@@ -604,10 +649,10 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="FIT (크기 배율)" hint="1 = 기준점이 몸에 정확히 맞음. 오버핏은 1보다 크게.">
+          <Field label="크기 배율" hint="1 = 기본. 오버핏이면 1보다 크게.">
             <NumberInput value={tryOn.fit} step={0.05} min={0.5} max={2} onChange={(e) => set({ fit: Number(e.target.value) || 1 })} />
           </Field>
-          <Field label="OFFSET Y" hint="+ 는 아래로, - 는 위로 (어깨 폭 대비 비율)">
+          <Field label="위아래 위치" hint="+ 는 아래로, - 는 위로">
             <NumberInput value={tryOn.offsetY} step={0.05} onChange={(e) => set({ offsetY: Number(e.target.value) || 0 })} />
           </Field>
         </div>
@@ -618,12 +663,12 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
         </label>
 
         <p className="text-xs text-stone">
-          미리보기: PREVIEW &amp; PUBLISH 탭에서 Save Draft 후 <code>/#/try-on/{product.id}</code>를 여세요.
+          미리보기: ‘8. 미리보기 · 게시’ 탭에서 임시 저장 후 ‘가상 피팅 →’ 버튼을 누르세요.
         </p>
       </div>
 
       <div>
-        <p className="eyebrow mb-2">CALIBRATION — {anchorName} 2곳 클릭</p>
+        <p className="eyebrow mb-2">기준점 맞추기 — {anchorName} 2곳 클릭</p>
         <p className="mb-3 text-xs text-stone">
           이미지에서 {anchorName}의 왼쪽 끝, 오른쪽 끝을 차례로 클릭하세요. 다음 클릭:{' '}
           <strong>{placing === 'anchorLeft' ? '왼쪽 (L)' : '오른쪽 (R)'}</strong>
@@ -685,29 +730,33 @@ function HotspotsTab({ product, update }: { product: Product; update: <K extends
   return (
     <div className="flex flex-col gap-6">
       <button type="button" onClick={addHotspot} className="eyebrow w-fit border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring">
-        + ADD HOTSPOT
+        + 디테일 포인트 추가
       </button>
+      <p className="max-w-2xl text-xs leading-relaxed text-stone">
+        3D 모델 위에 동그란 점으로 표시되고, 누르면 설명이 열리는 포인트입니다(예: 지퍼, 손잡이). 위치(X 좌우 · Y 높이 · Z
+        앞뒤)는 ‘3. 3D · AR’ 탭 미리보기를 보면서 숫자를 조금씩 바꿔 맞추세요.
+      </p>
 
-      {product.hotspots.length === 0 && <p className="text-sm text-stone">등록된 Hotspot이 없습니다.</p>}
+      {product.hotspots.length === 0 && <p className="text-sm text-stone">등록된 포인트가 없습니다.</p>}
 
       <div className="flex flex-col gap-6">
         {product.hotspots.map((h, i) => (
           <div key={h.id} className="grid grid-cols-1 gap-4 border border-line p-5 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="TITLE">
+            <Field label="이름">
               <TextInput value={h.title} onChange={(e) => updateHotspot(i, { ...h, title: e.target.value })} />
             </Field>
-            <Field label="CATEGORY">
+            <Field label="종류">
               <SelectInput value={h.category} onChange={(e) => updateHotspot(i, { ...h, category: e.target.value as HotspotCategory })}>
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {CATEGORY_LABELS[c]}
                   </option>
                 ))}
               </SelectInput>
             </Field>
             <div className="grid grid-cols-3 gap-2 sm:col-span-2">
               {(['x', 'y', 'z'] as const).map((axis) => (
-                <Field key={axis} label={axis.toUpperCase()}>
+                <Field key={axis} label={`${axis.toUpperCase()} (${axis === 'x' ? '좌우' : axis === 'y' ? '높이' : '앞뒤'})`}>
                   <NumberInput
                     value={h.position[axis]}
                     step={0.05}
@@ -716,7 +765,7 @@ function HotspotsTab({ product, update }: { product: Product; update: <K extends
                 </Field>
               ))}
             </div>
-            <Field label="DESCRIPTION" hint="">
+            <Field label="설명" hint="">
               <TextArea
                 className="sm:col-span-2 lg:col-span-3"
                 value={h.description.value ?? ''}
@@ -729,7 +778,7 @@ function HotspotsTab({ product, update }: { product: Product; update: <K extends
               />
             </Field>
             <button type="button" onClick={() => removeHotspot(i)} className="eyebrow h-fit self-end border border-line px-4 py-2.5 hover:border-ink focus-ring">
-              REMOVE
+              삭제
             </button>
           </div>
         ))}
@@ -756,15 +805,15 @@ function MaterialProcessTab({ product, update }: { product: Product; update: <K 
   return (
     <div className="flex flex-col gap-14">
       <div>
-        <p className="eyebrow mb-4">MATERIALS</p>
+        <p className="eyebrow mb-4">소재</p>
         <button type="button" onClick={addMaterial} className="eyebrow border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring">
-          + ADD MATERIAL
+          + 소재 추가
         </button>
         <div className="mt-5 flex flex-col gap-4">
           {product.materials.map((m, i) => (
             <div key={i} className="grid grid-cols-1 gap-3 border border-line p-4 sm:grid-cols-2">
               <TextInput
-                placeholder="Name"
+                placeholder="소재 이름 (예: 캔버스)"
                 value={m.name.value ?? ''}
                 onChange={(e) => {
                   const list = [...product.materials];
@@ -773,7 +822,7 @@ function MaterialProcessTab({ product, update }: { product: Product; update: <K 
                 }}
               />
               <TextInput
-                placeholder="Characteristics"
+                placeholder="특징 (예: 가볍고 튼튼함)"
                 value={m.characteristics.value ?? ''}
                 onChange={(e) => {
                   const list = [...product.materials];
@@ -794,20 +843,20 @@ function MaterialProcessTab({ product, update }: { product: Product; update: <K 
       </div>
 
       <div>
-        <p className="eyebrow mb-4">PROCESS</p>
+        <p className="eyebrow mb-4">만드는 과정</p>
         <button type="button" onClick={addStep} className="eyebrow border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring">
-          + ADD STEP
+          + 단계 추가
         </button>
         <div className="mt-5 flex flex-col gap-4">
           {product.process.map((s, i) => (
             <div key={i} className="grid grid-cols-1 gap-3 border border-line p-4 sm:grid-cols-2">
-              <TextInput placeholder="Title" value={s.title} onChange={(e) => {
+              <TextInput placeholder="단계 이름 (예: 재단)" value={s.title} onChange={(e) => {
                 const list = [...product.process];
                 list[i] = { ...s, title: e.target.value };
                 update('process', list);
               }} />
               <TextInput
-                placeholder="Description"
+                placeholder="설명"
                 value={s.description.value ?? ''}
                 onChange={(e) => {
                   const list = [...product.process];
@@ -843,7 +892,7 @@ function AIAnalysisTab({ product, update }: { product: Product; update: <K exten
   }
 
   function addManualObservation(level: Observation['level']) {
-    const label = window.prompt(`${level} 관찰 내용을 입력하세요`);
+    const label = window.prompt(`${LEVEL_LABELS[level]} 내용을 입력하세요`);
     if (!label) return;
     update('imageAnalysis', { observations: [...observations, { level, label }] });
   }
@@ -851,7 +900,8 @@ function AIAnalysisTab({ product, update }: { product: Product; update: <K exten
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-graphite">
-        provider: <code>{provider.id}</code> · available: <code>{String(provider.available)}</code>
+        제품에 대해 확인된 사실과 추정을 구분해서 적어두는 메모입니다. 사이트에는 표시되지 않습니다.
+        {!provider.available && ' (AI 이미지 분석 서버는 아직 연결되어 있지 않습니다.)'}
       </p>
       <div className="flex flex-wrap gap-3">
         <button
@@ -869,7 +919,7 @@ function AIAnalysisTab({ product, update }: { product: Product; update: <K exten
             onClick={() => addManualObservation(lvl)}
             className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring"
           >
-            + {lvl}
+            + {LEVEL_LABELS[lvl]}
           </button>
         ))}
       </div>
@@ -878,7 +928,7 @@ function AIAnalysisTab({ product, update }: { product: Product; update: <K exten
         {observations.length === 0 && <p className="text-sm text-stone">기록된 관찰 내용이 없습니다.</p>}
         {observations.map((o, i) => (
           <div key={i} className="flex items-start gap-3 border-l-2 border-line py-1 pl-4">
-            <span className="eyebrow shrink-0 text-stone">{o.level}</span>
+            <span className="eyebrow shrink-0 text-stone">{LEVEL_LABELS[o.level]}</span>
             <p className="text-sm text-graphite">{o.label}</p>
           </div>
         ))}
@@ -905,7 +955,7 @@ function PreviewPublishTab({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <p className="eyebrow mb-4">VALIDATION</p>
+        <p className="eyebrow mb-4">확인 항목</p>
         {issues.length === 0 && <p className="text-sm text-graphite">모든 검사를 통과했습니다.</p>}
         <ul className="flex flex-col gap-2">
           {issues.map((issue, i) => (
@@ -919,43 +969,47 @@ function PreviewPublishTab({
 
       <div className="flex flex-wrap gap-4 border-t border-line pt-6">
         <button type="button" onClick={onSaveDraft} className="eyebrow border border-ink px-6 py-3.5 hover:bg-ink hover:text-paper focus-ring">
-          SAVE DRAFT (THIS BROWSER)
+          임시 저장 (이 브라우저)
         </button>
         <button type="button" onClick={onDownload} className="eyebrow border border-line px-6 py-3.5 hover:border-ink focus-ring">
-          DOWNLOAD product.json
+          제품 파일 내려받기 (product.json)
         </button>
         <button type="button" onClick={onRemoveDraft} className="eyebrow border border-line px-6 py-3.5 text-stone hover:border-ink focus-ring">
-          DELETE DRAFT
+          임시 저장 삭제
         </button>
       </div>
       {savedMessage && <p className="text-sm text-graphite">{savedMessage}</p>}
 
       <div className="border border-dashed border-line p-5 text-sm text-graphite">
-        <p className="eyebrow mb-2">PUBLISH STEPS</p>
-        <ol className="list-decimal space-y-1 pl-5">
-          <li>DOWNLOAD product.json을 클릭합니다.</li>
+        <p className="eyebrow mb-2">실제 사이트에 올리는 방법</p>
+        <ol className="list-decimal space-y-1.5 pl-5">
+          <li>위의 <strong>제품 파일 내려받기</strong>를 누릅니다.</li>
           <li>
-            파일을 <code>public/products/{product.id}/product.json</code>에 저장합니다.
+            GitHub 저장소에서 <code>public/products/{product.id}/</code> 폴더를 열고 <em>Add file → Upload files</em>로
+            받은 <code>product.json</code>을 올립니다(같은 이름의 파일이 있으면 덮어씁니다).
           </li>
           <li>
-            이미지/GLB/AR 타겟 파일을 같은 폴더의 <code>images/</code>, <code>model/</code>, <code>ar/</code>에 추가합니다.
+            사진·3D·AR 파일을 같은 폴더 안의 <code>images/</code>, <code>model/</code>, <code>ar/</code> 폴더에 올립니다.
           </li>
           <li>
-            <code>public/products/manifest.json</code>의 <code>products</code> 배열에 <code>"{product.id}"</code>를 추가합니다.
+            새 제품이면 <code>public/products/manifest.json</code>의 목록에 <code>"{product.id}"</code>를 추가합니다.
           </li>
-          <li>커밋 후 배포하면 애플리케이션 재빌드 없이 제품이 즉시 노출됩니다.</li>
+          <li>커밋하면 1~2분 뒤 사이트에 자동으로 반영됩니다.</li>
         </ol>
       </div>
 
       <div>
-        <p className="eyebrow mb-4">LIVE PREVIEW (LOCAL DRAFT)</p>
-        <p className="mb-3 text-sm text-stone">SAVE DRAFT 후 아래 페이지에서 데스크톱/3D/AR 미리보기를 확인하세요.</p>
+        <p className="eyebrow mb-4">미리보기</p>
+        <p className="mb-3 text-sm text-stone">‘임시 저장’ 후 아래 버튼으로 실제 화면처럼 확인할 수 있습니다.</p>
         <div className="flex flex-wrap gap-3">
           <a href={`#/product/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
-            PRODUCT DETAIL →
+            제품 페이지 →
           </a>
           <a href={`#/ar/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
-            AR PAGE →
+            AR →
+          </a>
+          <a href={`#/try-on/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
+            가상 피팅 →
           </a>
         </div>
       </div>

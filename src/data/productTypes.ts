@@ -161,6 +161,11 @@ export interface Product {
    * of its own — so extension/format validation must read this instead of the URL string.
    */
   model3DAsset?: ModelAssetInfo;
+  /**
+   * Optional part-separated model for the /again colour remix. Needed when model3D is a single
+   * fused mesh (e.g. an AI-generated scan) whose parts cannot be recoloured independently.
+   */
+  remixModel?: string;
   animations: ProductAnimation[];
 
   /** Empty string = AR not yet configured for this product. */
