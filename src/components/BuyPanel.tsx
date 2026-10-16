@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { useCart } from '@/commerce/CartContext';
 import { canUseAR } from '@/utils/arAvailability';
+import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 function uniq(values: (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => !!v))];
@@ -176,6 +177,14 @@ export function BuyPanel({ product }: { product: Product }) {
             className="inline-flex items-center gap-2 rounded-full border-2 border-blue px-8 py-4 font-heading text-sm font-extrabold text-blue transition-transform hover:-translate-y-0.5 focus-ring"
           >
             AR로 보기
+          </Link>
+        )}
+        {canUseTryOn(product) && (
+          <Link
+            to={`/try-on/${product.id}`}
+            className="inline-flex items-center gap-2 rounded-full bg-blue px-8 py-4 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+          >
+            가상으로 입어보기
           </Link>
         )}
       </div>

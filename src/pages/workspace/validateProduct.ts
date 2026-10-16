@@ -43,6 +43,20 @@ export function validateProduct(product: Product): ValidationIssue[] {
     if (!product.arSettings) issues.push({ level: 'error', message: 'AR 보정값(scale/position/rotation)이 없습니다.' });
   }
 
+  if (product.tryOnAvailable) {
+    if (!product.tryOn?.garmentImage) {
+      issues.push({ level: 'error', message: '가상 피팅 사용 가능으로 표시되었지만 의상 이미지가 없습니다.' });
+    } else if (product.tryOn.anchorLeft.x >= product.tryOn.anchorRight.x) {
+      issues.push({ level: 'warning', message: '가상 피팅 기준점: 왼쪽 점이 오른쪽 점보다 왼쪽에 있어야 합니다.' });
+    }
+  }
+  if (product.tryOn?.garmentImage.startsWith('blob:')) {
+    issues.push({
+      level: 'warning',
+      message: `가상 피팅 의상 이미지가 임시(blob) 주소입니다. 게시 전 public/products/${product.id}/tryon/ 에 PNG를 넣고 경로를 입력하세요.`,
+    });
+  }
+
   product.hotspots.forEach((h, i) => {
     if (!h.title.trim()) issues.push({ level: 'warning', message: `Hotspot #${i + 1}: 제목이 없습니다.` });
     if (!h.description.value) issues.push({ level: 'warning', message: `Hotspot "${h.title || i + 1}": 설명이 CONTENT REQUIRED 상태입니다.` });

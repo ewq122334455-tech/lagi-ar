@@ -12,6 +12,7 @@ import { PhoneMockup } from '@/components/PhoneMockup';
 import { BuyPanel } from '@/components/BuyPanel';
 import { ProductViewer } from '@/three/ProductViewer';
 import { canUseAR } from '@/utils/arAvailability';
+import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,9 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const arUrl = canUseAR(product)
     ? `${window.location.origin}${window.location.pathname}#/ar/${product.id}`
+    : null;
+  const tryOnUrl = canUseTryOn(product)
+    ? `${window.location.origin}${window.location.pathname}#/try-on/${product.id}`
     : null;
 
   return (
@@ -191,7 +195,10 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               바로 AR을 시작할 수 있습니다.
             </h2>
           </div>
-          <PhoneMockup arUrl={arUrl} label="SCAN TO SEE IN AR" />
+          <div className="flex flex-wrap justify-center gap-8">
+            <PhoneMockup arUrl={arUrl} label="SCAN TO SEE IN AR" />
+            {tryOnUrl && <PhoneMockup arUrl={tryOnUrl} label="SCAN TO TRY IT ON" />}
+          </div>
         </div>
       </section>
 

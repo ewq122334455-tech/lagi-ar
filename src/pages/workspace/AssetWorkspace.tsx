@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product } from '@/data/productTypes';
+import type { GarmentType, Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product, TryOnSettings } from '@/data/productTypes';
 import { readLocalDrafts, writeLocalDraft, deleteLocalDraft, invalidateProductCache, loadProducts } from '@/data/productEngine';
 import { createEmptyProduct } from './emptyProduct';
 import { validateProduct } from './validateProduct';
@@ -10,8 +10,9 @@ import { getAIProvider } from '@/ai/AIProvider';
 import { getThreeDGenerationProvider } from '@/ai/ThreeDGenerationProvider';
 import type { Observation } from '@/utils/contentStatus';
 import { modelFormatOf } from '@/utils/modelFile';
+import { GARMENT_TYPE_LABELS, defaultTryOnSettings } from '@/utils/tryOnAvailability';
 
-const TABS = ['BASIC', 'IMAGES', '3D & AR', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
+const TABS = ['BASIC', 'IMAGES', '3D & AR', 'TRY-ON', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
 type Tab = (typeof TABS)[number];
 
 const CATEGORIES: HotspotCategory[] = ['MATERIAL', 'DETAIL', 'CRAFT', 'PROCESS', 'STRUCTURE', 'FUNCTION'];
@@ -138,6 +139,7 @@ export default function AssetWorkspace() {
           {tab === 'BASIC' && <BasicTab product={product} update={update} />}
           {tab === 'IMAGES' && <ImagesTab product={product} update={update} />}
           {tab === '3D & AR' && <ThreeDArTab product={product} update={update} />}
+          {tab === 'TRY-ON' && <TryOnTab product={product} update={update} />}
           {tab === 'HOTSPOTS' && <HotspotsTab product={product} update={update} />}
           {tab === 'MATERIAL & PROCESS' && <MaterialProcessTab product={product} update={update} />}
           {tab === 'AI ANALYSIS' && <AIAnalysisTab product={product} update={update} />}
@@ -460,6 +462,127 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
           selectedHotspotId={null}
           onSelectHotspot={() => {}}
         />
+      </div>
+    </div>
+  );
+}
+
+function TryOnTab({ product, update }: { product: Product; update: <K extends keyof Product>(k: K, v: Product[K]) => void }) {
+  const tryOn = product.tryOn ?? defaultTryOnSettings();
+  const [placing, setPlacing] = useState<'anchorLeft' | 'anchorRight'>('anchorLeft');
+
+  function set(patch: Partial<TryOnSettings>) {
+    update('tryOn', { ...tryOn, ...patch });
+  }
+
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    update('tryOn', product.tryOn ? { ...tryOn, garmentImage: url } : defaultTryOnSettings(url, tryOn.garmentType));
+  }
+
+  function changeType(type: GarmentType) {
+    // Anchor defaults differ between shoulder- and waist-hung garments; reset them when switching between the two.
+    const reanchor = (type === 'BOTTOM') !== (tryOn.garmentType === 'BOTTOM');
+    update('tryOn', reanchor ? { ...defaultTryOnSettings(tryOn.garmentImage, type), fit: tryOn.fit } : { ...tryOn, garmentType: type });
+  }
+
+  function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const point = {
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+    };
+    set({ [placing]: point });
+    setPlacing(placing === 'anchorLeft' ? 'anchorRight' : 'anchorLeft');
+  }
+
+  const bottom = tryOn.garmentType === 'BOTTOM';
+  const anchorName = bottom ? '허리밴드 끝' : '어깨 솔기';
+
+  return (
+    <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+      <div className="flex flex-col gap-6">
+        <div>
+          <p className="eyebrow mb-2">GARMENT IMAGE (PNG)</p>
+          <p className="mb-3 text-xs text-stone">
+            배경을 투명하게 지운 정면 누끼 PNG를 사용하세요 (마네킹·사람 없이 옷만). 업로드는 이 브라우저 미리보기용이며,
+            게시하려면 파일을 <code>public/products/{product.id}/tryon/</code>에 넣고 아래 경로를 입력하세요.
+          </p>
+          <input type="file" accept="image/png,image/webp" onChange={handleUpload} className="text-sm" />
+          <TextInput
+            className="mt-3 w-full"
+            value={tryOn.garmentImage}
+            onChange={(e) => set({ garmentImage: e.target.value })}
+            placeholder={`products/${product.id}/tryon/garment.png`}
+          />
+        </div>
+
+        <Field label="GARMENT TYPE">
+          <SelectInput value={tryOn.garmentType} onChange={(e) => changeType(e.target.value as GarmentType)}>
+            {(Object.keys(GARMENT_TYPE_LABELS) as GarmentType[]).map((t) => (
+              <option key={t} value={t}>
+                {GARMENT_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </SelectInput>
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="FIT (크기 배율)" hint="1 = 기준점이 몸에 정확히 맞음. 오버핏은 1보다 크게.">
+            <NumberInput value={tryOn.fit} step={0.05} min={0.5} max={2} onChange={(e) => set({ fit: Number(e.target.value) || 1 })} />
+          </Field>
+          <Field label="OFFSET Y" hint="+ 는 아래로, - 는 위로 (어깨 폭 대비 비율)">
+            <NumberInput value={tryOn.offsetY} step={0.05} onChange={(e) => set({ offsetY: Number(e.target.value) || 0 })} />
+          </Field>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={Boolean(product.tryOnAvailable)} onChange={(e) => update('tryOnAvailable', e.target.checked)} />
+          가상 피팅 사용 가능으로 게시
+        </label>
+
+        <p className="text-xs text-stone">
+          미리보기: PREVIEW &amp; PUBLISH 탭에서 Save Draft 후 <code>/#/try-on/{product.id}</code>를 여세요.
+        </p>
+      </div>
+
+      <div>
+        <p className="eyebrow mb-2">CALIBRATION — {anchorName} 2곳 클릭</p>
+        <p className="mb-3 text-xs text-stone">
+          이미지에서 {anchorName}의 왼쪽 끝, 오른쪽 끝을 차례로 클릭하세요. 다음 클릭:{' '}
+          <strong>{placing === 'anchorLeft' ? '왼쪽 (L)' : '오른쪽 (R)'}</strong>
+        </p>
+        {tryOn.garmentImage ? (
+          <div
+            className="relative cursor-crosshair select-none bg-[repeating-conic-gradient(#e5e5e5_0%_25%,#fff_0%_50%)] bg-[length:20px_20px]"
+            onClick={handleImageClick}
+          >
+            <img src={tryOn.garmentImage} alt="" className="block w-full" draggable={false} />
+            {(['anchorLeft', 'anchorRight'] as const).map((key) => (
+              <span
+                key={key}
+                className="pointer-events-none absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue text-[10px] font-bold text-paper ring-2 ring-paper"
+                style={{ left: `${tryOn[key].x * 100}%`, top: `${tryOn[key].y * 100}%` }}
+              >
+                {key === 'anchorLeft' ? 'L' : 'R'}
+              </span>
+            ))}
+            <span
+              className="pointer-events-none absolute border-t-2 border-dashed border-blue"
+              style={{
+                left: `${tryOn.anchorLeft.x * 100}%`,
+                top: `${tryOn.anchorLeft.y * 100}%`,
+                width: `${(tryOn.anchorRight.x - tryOn.anchorLeft.x) * 100}%`,
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex aspect-square items-center justify-center border border-dashed border-line text-sm text-stone">
+            의상 이미지를 먼저 올려주세요.
+          </div>
+        )}
       </div>
     </div>
   );

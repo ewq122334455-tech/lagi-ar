@@ -71,6 +71,32 @@ export interface ARSettings {
   rotation: Vector3Like;
 }
 
+/** What part of the body a try-on garment is worn on — decides which pose landmarks it anchors to. */
+export type GarmentType = 'TOP' | 'OUTER' | 'DRESS' | 'BOTTOM';
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+/**
+ * Virtual try-on (camera body-tracking) setup. The garment is a flat, front-facing cut-out
+ * PNG with a transparent background. Two calibration anchors mark where the garment meets
+ * the body — the shoulder seams for TOP/OUTER/DRESS, the waistband ends for BOTTOM — as
+ * fractions (0–1) of the image's width/height, measured as the image is viewed (the
+ * wearer's right side is on the image's left).
+ */
+export interface TryOnSettings {
+  garmentImage: string;
+  garmentType: GarmentType;
+  anchorLeft: Point2D;
+  anchorRight: Point2D;
+  /** Extra width multiplier for loose or oversized fits. 1 = anchors land exactly on the body. */
+  fit: number;
+  /** Vertical nudge, as a fraction of the anchor span. Positive moves the garment down. */
+  offsetY: number;
+}
+
 /** One buyable combination. Sizes/colours a product does not have are simply null. */
 export interface ProductVariant {
   id: string;
@@ -134,7 +160,12 @@ export interface Product {
   shopUrl: VerifiableField<string>;
   instagramUrl: string;
 
+  /** Optional: only wearable products have a try-on garment. */
+  tryOn?: TryOnSettings;
+
   arAvailable: boolean;
   threeDAvailable: boolean;
+  /** Editorial switch for the camera try-on, mirroring arAvailable. */
+  tryOnAvailable?: boolean;
   featured?: boolean;
 }
