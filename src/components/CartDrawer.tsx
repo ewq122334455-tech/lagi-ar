@@ -36,7 +36,7 @@ export function CartDrawer() {
         className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-paper shadow-xl"
       >
         <header className="flex items-center justify-between border-b border-line px-6 py-5">
-          <h2 className="font-heading text-lg font-extrabold">
+          <h2 className="font-heading text-lg font-semibold">
             장바구니 <span className="text-stone">{count}</span>
           </h2>
           <button
@@ -54,7 +54,7 @@ export function CartDrawer() {
             <Link
               to="/products"
               onClick={close}
-              className="rounded-full bg-ink px-6 py-3 font-heading text-sm font-extrabold text-paper focus-ring"
+              className="rounded-full bg-ink px-6 py-3 font-heading text-sm font-semibold text-paper focus-ring"
             >
               제품 보러 가기
             </Link>
@@ -79,7 +79,7 @@ export function CartDrawer() {
                       <Link
                         to={`/product/${line.productId}`}
                         onClick={close}
-                        className="block truncate font-heading text-sm font-extrabold hover:text-blue"
+                        className="block truncate font-heading text-sm font-semibold hover:text-blue"
                       >
                         {line.name ?? '이름 미등록 제품'}
                       </Link>
@@ -132,7 +132,7 @@ export function CartDrawer() {
             <footer className="border-t border-line px-6 py-5">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-graphite">주문금액</span>
-                <span className="font-heading text-lg font-extrabold">
+                <span className="font-heading text-lg font-semibold">
                   {formatKRW(subtotal.amount)}
                 </span>
               </div>
@@ -144,7 +144,7 @@ export function CartDrawer() {
               <Link
                 to="/checkout"
                 onClick={close}
-                className="mt-4 block rounded-full bg-ink px-6 py-4 text-center font-heading text-sm font-extrabold text-paper focus-ring"
+                className="mt-4 block rounded-full bg-ink px-6 py-4 text-center font-heading text-sm font-semibold text-paper focus-ring"
               >
                 주문하기
               </Link>

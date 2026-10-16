@@ -1,5 +1,6 @@
 import {
   Box3,
+  type Object3D,
   DirectionalLight,
   HemisphereLight,
   PMREMGenerator,
@@ -18,7 +19,14 @@ import { GLTFLoader, RoomEnvironment } from 'three-stdlib';
  */
 export async function renderModelToPng(modelUrl: string, size = 1024): Promise<string> {
   const gltf = await new GLTFLoader().loadAsync(modelUrl);
-  const model = gltf.scene;
+  return renderObjectToPng(gltf.scene, size);
+}
+
+/**
+ * Same front-view cut-out for an already-loaded object (e.g. a recoloured bag). The object is
+ * re-parented into a private scene, so pass a clone if it is still shown elsewhere.
+ */
+export function renderObjectToPng(model: Object3D, size = 1024): string {
 
   const renderer = new WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(size, size, false);

@@ -6,6 +6,7 @@ const LINKS = [
   { to: '/products', label: '제품' },
   { to: '/ar', label: 'LOOK CLOSER' },
   { to: '/materials', label: '소재' },
+  { to: '/again', label: '다시' },
   { to: '/about', label: '브랜드' },
 ];
 
@@ -25,8 +26,8 @@ export function Nav() {
   }
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--nav-height)] items-center justify-between border-b border-line bg-paper px-6 lg:px-10">
-      <NavLink to="/" className="font-display text-2xl focus-ring" aria-label="LAGI 홈">
+    <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--nav-height)] items-center justify-between border-b border-line bg-paper/85 px-6 backdrop-blur-md lg:px-10">
+      <NavLink to="/" className="text-xl font-bold tracking-[0.2em] focus-ring" aria-label="LAGI 홈">
         LAGI
       </NavLink>
 
@@ -36,7 +37,7 @@ export function Nav() {
             key={l.to}
             to={l.to}
             className={({ isActive }) =>
-              `font-heading text-sm font-extrabold focus-ring transition-colors hover:text-blue ${isActive ? 'text-ink' : 'text-graphite'}`
+              `text-sm font-medium focus-ring transition-colors hover:text-ink ${isActive ? 'text-ink underline decoration-1 underline-offset-[6px]' : 'text-graphite'}`
             }
           >
             {l.label}
@@ -44,7 +45,7 @@ export function Nav() {
         ))}
 
         {searchOpen ? (
-          <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-full border-2 border-ink px-3 py-1.5">
+          <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-full border border-ink px-3 py-1.5">
             <SearchIcon />
             <input
               autoFocus
@@ -81,7 +82,7 @@ export function Nav() {
 
       {open && (
         <div className="fixed inset-x-0 top-[var(--nav-height)] flex flex-col gap-6 border-t border-line bg-paper px-6 py-8 lg:hidden">
-          <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-full border-2 border-line px-3 py-2">
+          <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-full border border-line px-3 py-2">
             <SearchIcon />
             <input
               type="search"
@@ -93,7 +94,7 @@ export function Nav() {
             />
           </form>
           {LINKS.map((l) => (
-            <NavLink key={l.to} to={l.to} onClick={() => setOpen(false)} className="font-heading text-lg font-extrabold text-ink focus-ring">
+            <NavLink key={l.to} to={l.to} onClick={() => setOpen(false)} className="font-heading text-lg font-semibold text-ink focus-ring">
               {l.label}
             </NavLink>
           ))}
@@ -103,7 +104,7 @@ export function Nav() {
               setOpen(false);
               openCart();
             }}
-            className="w-fit rounded-full bg-ink px-6 py-3 font-heading text-sm font-extrabold text-paper focus-ring"
+            className="w-fit rounded-full bg-ink px-6 py-3 font-heading text-sm font-semibold text-paper focus-ring"
           >
             장바구니 {count > 0 && `(${count})`}
           </button>
@@ -119,11 +120,11 @@ function CartButton({ onOpen, count }: { onOpen: () => void; count: number }) {
       type="button"
       onClick={onOpen}
       aria-label={`장바구니 열기, ${count}개 담김`}
-      className="relative rounded-full bg-ink px-5 py-2 font-heading text-sm font-extrabold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+      className="relative rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-blue focus-ring"
     >
       장바구니
       {count > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1 text-[0.7rem] font-extrabold text-paper">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange px-1 text-[0.7rem] font-semibold text-paper">
           {count}
         </span>
       )}

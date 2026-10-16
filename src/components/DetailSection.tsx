@@ -30,13 +30,13 @@ export function DetailSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-[var(--nav-height)] border-t-2 ${accent ? ACCENT_BORDER[accent] : 'border-line'} px-6 py-20 lg:px-10 lg:py-28 ${className ?? ''}`}
+      className={`scroll-mt-[var(--nav-height)] border-t ${accent ? ACCENT_BORDER[accent] : 'border-line'} px-6 py-20 lg:px-10 lg:py-28 ${className ?? ''}`}
     >
       <div className="mx-auto max-w-canvas">
         <p className={`text-xs font-bold uppercase tracking-[0.24em] ${accent ? ACCENT_TEXT[accent] : 'text-stone'}`}>
           {eyebrow}
         </p>
-        {title && <h2 className="mt-3 max-w-2xl font-display text-4xl leading-tight lg:text-5xl">{title}</h2>}
+        {title && <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.035em] lg:text-5xl">{title}</h2>}
         <div className="mt-10">{children}</div>
       </div>
     </section>

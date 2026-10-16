@@ -13,13 +13,14 @@ export default {
       colors: {
         // Token names kept stable so every existing screen (admin workspace, AR pages,
         // 3D viewer overlays) re-skins automatically from these values alone.
-        paper: '#ffffff',
-        ink: '#111111',
-        graphite: '#3a3a3a',
-        stone: '#8a8a8a',
-        mist: '#f5f5f5',
-        line: '#e5e5e5',
-        accent: '#111111',
+        // Warm, paper-like neutrals: reads calmer and more editorial than pure white.
+        paper: '#f6f4ef',
+        ink: '#161514',
+        graphite: '#45423d',
+        stone: '#8c877e',
+        mist: '#ebe7df',
+        line: '#dcd6cb',
+        accent: '#161514',
         // Brand accents, taken from the LAGI logo colourways. Used for large graphic
         // blocks / CTAs / hotspots, never flooded across the whole screen.
         // `blue` is the lead colour; the others are points.
@@ -28,13 +29,11 @@ export default {
         lime: '#DEB457',
       },
       fontFamily: {
-        // Body copy: legible at length in both scripts, still soft/rounded terminals.
-        sans: ['"Gothic A1"', '"Nunito"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        // Product names, nav, buttons, numbers: bold rounded grotesk (KO+EN).
-        heading: ['"Nunito"', '"Gothic A1"', '-apple-system', 'sans-serif'],
-        // Reserved for the handful of major display titles (LOOK CLOSER, FEATURED
-        // PRODUCTS, MATERIALS, PROCESS, STORY) — a genuinely rounded bubble face.
-        display: ['"Jua"', '"Nunito"', '"Gothic A1"', 'sans-serif'],
+        // One family for Korean and Latin text: Pretendard is even and neutral at every weight.
+        sans: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        heading: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        // Display: an editorial serif for Latin headlines; Korean glyphs fall through to Pretendard.
+        display: ['"Instrument Serif"', '"Pretendard Variable"', 'Pretendard', 'serif'],
       },
       letterSpacing: {
         widest2: '0.28em',

@@ -91,7 +91,7 @@ export default function ProductCollection() {
                     type="button"
                     onClick={() => setCategory(c)}
                     aria-pressed={category === c}
-                    className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-extrabold focus-ring ${
+                    className={`rounded-full border-2 px-4 py-2 font-heading text-sm font-semibold focus-ring ${
                       category === c
                         ? 'border-ink bg-ink text-paper'
                         : 'border-line text-graphite hover:border-ink'
@@ -122,7 +122,7 @@ export default function ProductCollection() {
                   <select
                     value={sort}
                     onChange={(e) => setSort(e.target.value as SortKey)}
-                    className="rounded-full border-2 border-line bg-paper px-4 py-2 font-heading text-sm font-bold focus-ring"
+                    className="rounded-full border border-line bg-paper px-4 py-2 font-heading text-sm font-bold focus-ring"
                   >
                     {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
                       <option key={k} value={k}>

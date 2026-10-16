@@ -644,7 +644,7 @@ function TryOnTab({ product, update }: { product: Product; update: <K extends ke
               </span>
             ))}
             <span
-              className="pointer-events-none absolute border-t-2 border-dashed border-blue"
+              className="pointer-events-none absolute border-t border-dashed border-blue"
               style={{
                 left: `${tryOn.anchorLeft.x * 100}%`,
                 top: `${tryOn.anchorLeft.y * 100}%`,

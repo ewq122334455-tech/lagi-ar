@@ -22,10 +22,10 @@ export function ColorBlockLink({ index, eyebrow, title, subtitle, ctaLabel, to, 
   return (
     <Link
       to={to}
-      className={`group flex min-h-[22rem] flex-col justify-between p-8 transition-transform duration-300 hover:-translate-y-1 focus-ring lg:p-10 ${COLOR_CLASSES[color]}`}
+      className={`group flex min-h-[20rem] flex-col justify-between rounded-2xl p-8 transition-transform duration-300 hover:-translate-y-1 focus-ring lg:p-10 ${COLOR_CLASSES[color]}`}
     >
       <div className="flex items-start justify-between">
-        <span className="font-heading text-sm font-extrabold opacity-70">{index}</span>
+        <span className="font-display text-3xl opacity-60">{index}</span>
         {image && (
           <img src={image} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" />
         )}
@@ -33,9 +33,9 @@ export function ColorBlockLink({ index, eyebrow, title, subtitle, ctaLabel, to, 
       <div>
         {/* Raw utilities, not `.eyebrow`: that class forces a grey that disappears on a colour block. */}
         <p className="text-xs font-bold uppercase tracking-[0.24em] opacity-75">{eyebrow}</p>
-        <h3 className="mt-2 font-display text-4xl leading-none lg:text-5xl">{title}</h3>
+        <h3 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.03em] lg:text-4xl">{title}</h3>
         <p className="mt-4 max-w-xs text-sm opacity-90">{subtitle}</p>
-        <p className="mt-6 font-heading text-sm font-extrabold underline-offset-4 group-hover:underline">
+        <p className="mt-6 font-heading text-sm font-semibold underline-offset-4 group-hover:underline">
           {ctaLabel} →
         </p>
       </div>

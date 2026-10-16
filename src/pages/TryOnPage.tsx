@@ -1,13 +1,18 @@
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { Loading } from '@/components/Loading';
 import { TryOnExperience } from '@/tryon/TryOnExperience';
+import { readRemixGarment } from '@/tryon/remixGarment';
 
 export default function TryOnPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const state = useProduct(id);
+  const [params] = useSearchParams();
+  // A recoloured bag handed over from /again replaces the standard cut-out; it was rendered
+  // with the same framing as that cut-out, so the product's calibration anchors still apply.
+  const remix = params.get('remix') === '1' ? readRemixGarment() : null;
 
   useEffect(() => {
     document.body.style.overscrollBehavior = 'none';
@@ -40,7 +45,8 @@ export default function TryOnPage() {
     );
   }
 
-  return <TryOnExperience product={product} settings={product.tryOn} onExit={exit} />;
+  const settings = remix && product.tryOn.garmentType === 'BAG' ? { ...product.tryOn, garmentImage: remix } : product.tryOn;
+  return <TryOnExperience product={product} settings={settings} onExit={exit} />;
 }
 
 function FullscreenMessage({
