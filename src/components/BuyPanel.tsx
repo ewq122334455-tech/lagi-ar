@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { useCart } from '@/commerce/CartContext';
-import { canUseAR } from '@/utils/arAvailability';
 import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 function uniq(values: (string | null)[]): string[] {
@@ -171,14 +170,6 @@ export function BuyPanel({ product }: { product: Product }) {
         >
           장바구니
         </button>
-        {canUseAR(product) && (
-          <Link
-            to={`/ar/${product.id}`}
-            className="inline-flex items-center gap-2 rounded-full border border-blue px-8 py-4 font-heading text-sm font-semibold text-blue transition-transform hover:-translate-y-0.5 focus-ring"
-          >
-            AR로 보기
-          </Link>
-        )}
         {canUseTryOn(product) && (
           <Link
             to={`/try-on/${product.id}`}

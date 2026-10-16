@@ -187,5 +187,6 @@
   "arAvailable": true,
   "threeDAvailable": true,
   "featured": true,
-  "remixModel": "products/product-001/model/lagi-bag.glb"
+  "remixModel": "products/product-001/model/lagi-bag.glb",
+  "arTargetPreview": "products/product-001/ar/target-preview.png"
 }
