@@ -1,0 +1,92 @@
+{
+  "id": "milkpack-earphone-case",
+  "brandLabel": "LAGI × POPSICLUS",
+  "name": {
+    "value": "우유팩 이어폰 케이스",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "category": {
+    "value": "Acc.",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "price": {
+    "value": 37000,
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "업사이클링 이어폰백 · 리사이클 키링 키체인",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/milkpack-earphone-case/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "dimensions": {
+    "widthCm": 8,
+    "heightCm": 8,
+    "depthCm": 4
+  },
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "model3D": "products/milkpack-earphone-case/model/keychain.glb",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "상품명·가격·배송비는 LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)에서 가져왔습니다. 정가 기준이며 할인가는 반영하지 않았습니다."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "치수(W80×H80×D40mm)와 3D 모델은 브랜드 3D 모델링 도면을 기준으로 만들었습니다."
+      }
+    ]
+  },
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": true,
+  "featured": true
+}

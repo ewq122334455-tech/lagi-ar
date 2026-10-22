@@ -24,7 +24,9 @@ export function ProductCard({ product, rank }: ProductCardProps) {
             src={cover}
             alt={name}
             loading="lazy"
-            className="h-full w-full object-contain p-[12%] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            className={`h-full w-full transition-transform duration-500 ease-out group-hover:scale-[1.04] ${
+              product.images[0] ? 'object-cover' : 'object-contain p-[12%]'
+            }`}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-stone">
@@ -47,7 +49,7 @@ export function ProductCard({ product, rank }: ProductCardProps) {
       </div>
 
       <div className="mt-2.5 space-y-0.5 px-0.5">
-        <p className="text-[11px] font-bold tracking-wide">LAGI</p>
+        <p className="text-[11px] font-bold tracking-wide">{product.brandLabel ?? 'LAGI'}</p>
         <h3 className="line-clamp-2 text-[13px] leading-snug text-graphite group-hover:text-ink">{name}</h3>
         <p className="pt-1 text-sm font-bold">
           {product.price.value != null ? (
@@ -56,8 +58,10 @@ export function ProductCard({ product, rank }: ProductCardProps) {
             <span className="text-xs font-medium text-stone">가격 정보 준비 중</span>
           )}
         </p>
-        {product.category.value && product.category.status === 'VERIFIED' && (
-          <p className="text-[11px] text-stone">{product.category.value}</p>
+        {product.shipping && (
+          <p className={`text-[11px] ${product.shipping.fee === 0 ? 'font-semibold text-blue' : 'text-stone'}`}>
+            {product.shipping.fee === 0 ? '무료배송' : `배송비 ${product.shipping.fee.toLocaleString('ko-KR')}원`}
+          </p>
         )}
       </div>
     </Link>

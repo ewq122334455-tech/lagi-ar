@@ -13,6 +13,7 @@ import { BuyPanel } from '@/components/BuyPanel';
 import { ProductViewer } from '@/three/ProductViewer';
 import { canUseAR } from '@/utils/arAvailability';
 import { canUseTryOn } from '@/utils/tryOnAvailability';
+import { shippingLabel } from '@/utils/shipping';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +80,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
             <Link to="/about" className="mt-4 flex items-center justify-between rounded-md bg-mist px-3 py-2.5 text-sm hover:bg-line focus-ring">
               <span className="flex items-center gap-2 font-bold">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue text-[10px] font-black text-paper">L</span>
-                LAGI
+                {product.brandLabel ?? 'LAGI'}
               </span>
               <span className="text-xs text-stone">브랜드 보기 ›</span>
             </Link>
@@ -119,6 +120,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
                   {product.remixModel && <Pill tone="orange">다시 조합</Pill>}
                 </span>
               </InfoRow>
+              {product.shipping && <InfoRow label="배송">{shippingLabel(product.shipping)}</InfoRow>}
               <InfoRow label="구매처">공식 네이버 스마트스토어</InfoRow>
             </dl>
 

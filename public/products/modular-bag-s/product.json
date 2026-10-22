@@ -1,0 +1,109 @@
+{
+  "id": "modular-bag-s",
+  "brandLabel": "LAGI × POPSICLUS",
+  "name": {
+    "value": "모듈러백 스몰 S",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "category": {
+    "value": "Bag",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "price": {
+    "value": 98000,
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "투웨이백 · 리사이클 업사이클링 가방",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/modular-bag-s/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "dimensions": {
+    "widthCm": 22,
+    "heightCm": 14,
+    "depthCm": 2.5
+  },
+  "shipping": {
+    "fee": 0,
+    "freeOver": 50000
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "model3D": "products/modular-bag-s/model/mini-flap.glb",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "상품명·가격·배송비는 LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)에서 가져왔습니다. 정가 기준이며 할인가는 반영하지 않았습니다."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "치수(W220×H140×D25mm)와 3D 모델은 브랜드 3D 모델링 도면을 기준으로 만들었습니다."
+      }
+    ]
+  },
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": true,
+  "featured": true,
+  "tryOn": {
+    "garmentImage": "products/modular-bag-s/tryon/bag.png",
+    "garmentType": "BAG",
+    "anchorLeft": {
+      "x": 0.395,
+      "y": 0.031
+    },
+    "anchorRight": {
+      "x": 0.604,
+      "y": 0.031
+    },
+    "fit": 1,
+    "offsetY": 0,
+    "carry": "HAND",
+    "strapColor": "#1f1f1f"
+  },
+  "tryOnAvailable": true
+}

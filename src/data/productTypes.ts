@@ -133,8 +133,18 @@ export interface ImageAnalysis {
   imageRef?: string;
 }
 
+/** Delivery cost as listed on the store. fee 0 = free shipping. */
+export interface ShippingInfo {
+  fee: number;
+  /** Order total from which shipping becomes free. */
+  freeOver?: number;
+}
+
 export interface Product {
   id: string;
+  /** Brand line shown above the name, e.g. a collaboration ("LAGI × POPSICLUS"). Defaults to LAGI. */
+  brandLabel?: string;
+  shipping?: ShippingInfo;
   name: VerifiableField<string>;
   category: VerifiableField<string>;
   price: VerifiableField<number>;
