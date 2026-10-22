@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { Routes, Route, Outlet, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { Loading } from '@/components/Loading';
@@ -15,11 +15,9 @@ const About = lazy(() => import('@/pages/About'));
 const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
 const Again = lazy(() => import('@/pages/Again'));
-const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
 const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.SignupPage })));
 const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
-const CutoutStudio = lazy(() => import('@/pages/workspace/CutoutStudio'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
@@ -69,10 +67,9 @@ export default function App() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
-            <Route path="/cutouts" element={<CutoutStudio />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-          <Route path="/try-on/:id" element={<TryOnPage />} />
+          <Route path="/try-on/:id" element={<TryOnRedirect />} />
           <Route path="/exhibition" element={<Exhibition />} />
         </Routes>
       </Suspense>
@@ -82,3 +79,8 @@ export default function App() {
   );
 }
 
+/** Old camera try-on links and QR codes now open the AI fitting. */
+function TryOnRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/ai-fit/${id}`} replace />;
+}

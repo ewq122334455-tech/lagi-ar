@@ -22,8 +22,6 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
-  /** Password for the cut-out studio (/cutouts) — set with `npx wrangler secret put ADMIN_KEY`. */
-  ADMIN_KEY?: string;
 }
 
 interface TryOnRequest {
@@ -57,8 +55,8 @@ function cors(origin: string | null, env: Env): Record<string, string> {
   const ok = origin && allowed.includes(origin);
   return {
     'Access-Control-Allow-Origin': ok ? origin : allowed[0],
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -219,7 +217,6 @@ export default {
       if (throttled(`auth:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
       return handleAuth(path, request, env.USERS, headers);
     }
-    if (path.startsWith('/cutout')) return handleCutout(path, request, env, headers);
     return tryOn(request, env, headers);
   },
 };
@@ -303,84 +300,4 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null
     if (img?.data) return `data:${img.mimeType};base64,${img.data}`;
   }
   return null;
-}
-
-// ---- Cut-out studio: photoreal product cut-outs for the live camera try-on -------------------
-
-const MAX_CUTOUT_BYTES = 4 * 1024 * 1024;
-
-function cutoutPrompt(name: string, category: string) {
-  const kind = category.toLowerCase();
-  const pose = kind.includes('bag')
-    ? 'standing upright, seen straight from the front, with its handles or strap raised above the bag'
-    : kind === 'top'
-      ? 'seen straight from the front as if worn by an invisible mannequin (ghost mannequin), sleeves relaxed'
-      : kind === 'bottom'
-        ? 'seen straight from the front as if worn by an invisible mannequin (ghost mannequin), waistband at the top'
-        : 'seen straight from the front';
-  return [
-    `This is a photo of the product "${name}". Create a photorealistic studio cut-out of exactly this product: identical shape, colours, prints, text, materials, stitching and hardware.`,
-    `Show only the product, ${pose}, fully visible and centred, filling about 80% of the frame.`,
-    'Remove any person, hands, hangers, props and the original background.',
-    'Place it on a perfectly flat, uniform pure green (#00FF00) background with no shadow, gradient or texture. If the product itself contains bright green, use pure magenta (#FF00FF) instead.',
-    'Return only the image.',
-  ].join(' ');
-}
-
-function isAdmin(request: Request, env: Env) {
-  const key = request.headers.get('X-Admin-Key') ?? '';
-  return !!env.ADMIN_KEY && key.length > 0 && sameString(key, env.ADMIN_KEY);
-}
-
-async function handleCutout(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
-  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
-  const id = /^\/cutout\/([a-z0-9-]{1,60})$/.exec(path)?.[1];
-
-  if (request.method === 'GET' && id) {
-    const raw = await env.USERS?.get(`cutout:${id}`);
-    if (!raw) return json({ error: 'not found' }, 404, headers);
-    return new Response(raw, {
-      status: 200,
-      headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
-    });
-  }
-
-  if (!isAdmin(request, env)) return json({ error: '관리자 키가 맞지 않습니다.' }, 401, headers);
-  if (!env.USERS) return json({ error: '저장소(KV)가 연결되지 않았습니다.' }, 503, headers);
-
-  if (request.method === 'POST' && path === '/cutout/generate') {
-    if (!env.GEMINI_API_KEY) return json({ error: 'server not configured' }, 500, headers);
-    const body = (await request.json().catch(() => ({}))) as { productImage?: string; productName?: string; category?: string };
-    const product = await fetchProductImage(body.productImage ?? '', allowed);
-    if ('error' in product) return json({ error: product.error }, product.status, headers);
-    const image = await geminiImage(env, [
-      { text: cutoutPrompt(body.productName ?? 'product', body.category ?? '') },
-      { inline_data: { mime_type: product.mime, data: product.data } },
-    ]);
-    return image ? json({ image }, 200, headers) : json({ error: 'AI가 누끼를 만들지 못했습니다. 다시 시도해 주세요.' }, 502, headers);
-  }
-
-  if (request.method === 'PUT' && id) {
-    const body = (await request.json().catch(() => null)) as {
-      image?: string;
-      anchorLeft?: { x: number; y: number };
-      anchorRight?: { x: number; y: number };
-    } | null;
-    const img = parseDataUrl(body?.image ?? '');
-    const pt = (p?: { x: number; y: number }) => !!p && Number.isFinite(p.x) && Number.isFinite(p.y);
-    if (!img || img.mime !== 'image/png' || !pt(body?.anchorLeft) || !pt(body?.anchorRight))
-      return json({ error: 'invalid cut-out' }, 400, headers);
-    if (img.data.length * 0.75 > MAX_CUTOUT_BYTES) return json({ error: '이미지가 너무 큽니다.' }, 413, headers);
-    await env.USERS.put(
-      `cutout:${id}`,
-      JSON.stringify({ image: body!.image, anchorLeft: body!.anchorLeft, anchorRight: body!.anchorRight }),
-    );
-    return json({ ok: true }, 200, headers);
-  }
-
-  if (request.method === 'DELETE' && id) {
-    await env.USERS.delete(`cutout:${id}`);
-    return json({ ok: true }, 200, headers);
-  }
-  return json({ error: 'not found' }, 404, headers);
 }
