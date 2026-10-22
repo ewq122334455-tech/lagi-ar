@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
+import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { productCover, productDisplayName } from '@/utils/productImage';
 import { LagiLogo } from '@/components/LagiLogo';
 
@@ -14,7 +14,7 @@ interface ProductCardProps {
 export function ProductCard({ product, rank }: ProductCardProps) {
   const name = productDisplayName(product);
   const cover = productCover(product);
-  const tryOn = canUseTryOn(product);
+  const tryOn = aiTryOnEnabled(product);
 
   return (
     <Link to={`/product/${product.id}`} className="group block focus-ring" aria-label={`${name} 상세보기`}>
@@ -44,7 +44,7 @@ export function ProductCard({ product, rank }: ProductCardProps) {
         )}
         <div className="absolute bottom-2 left-2 flex gap-1">
           {product.threeDAvailable && <Tag className="bg-paper/90 text-ink">3D</Tag>}
-          {tryOn && <Tag className="bg-lime text-ink">피팅</Tag>}
+          {tryOn && <Tag className="bg-lime text-ink">AI 피팅</Tag>}
         </div>
       </div>
 

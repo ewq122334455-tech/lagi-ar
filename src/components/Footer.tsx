@@ -7,7 +7,7 @@ const COLUMNS: { title: string; links: { label: string; to: string; external?: b
     links: [
       { label: '전체 상품', to: '/products' },
       { label: 'LAGI 랭킹', to: '/products?sort=ranking' },
-      { label: '가상 피팅', to: '/products?filter=tryon' },
+      { label: 'AI 피팅', to: '/products?filter=tryon' },
       { label: '다시 조합', to: '/again' },
     ],
   },

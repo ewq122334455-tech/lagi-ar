@@ -4,12 +4,10 @@ import { Loading } from '@/components/Loading';
 import { ErrorState } from '@/components/ErrorState';
 import { QRCodeImage } from '@/components/QRCode';
 import { canUseAR } from '@/utils/arAvailability';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 export default function ARLanding() {
   const state = useProducts();
   const arProducts = state.status === 'ready' ? state.data.filter((p) => canUseAR(p)) : [];
-  const tryOnProducts = state.status === 'ready' ? state.data.filter((p) => canUseTryOn(p)) : [];
 
   return (
     <div>
@@ -71,33 +69,6 @@ export default function ARLanding() {
         </div>
       </section>
 
-      {tryOnProducts.length > 0 && (
-        <section className="border-t border-line px-6 py-20 lg:px-10 lg:py-28">
-          <div className="mx-auto max-w-canvas">
-            <p className="eyebrow">VIRTUAL TRY-ON</p>
-            <h2 className="mt-4 max-w-2xl font-display text-4xl leading-tight">
-              카메라 앞에 서면 옷이 몸에 맞춰 입혀집니다.
-            </h2>
-            <p className="mt-4 max-w-xl text-graphite">
-              어깨와 골반을 실시간으로 인식해 움직임을 따라갑니다. 카메라가 없다면 전신 사진으로도 입어볼 수 있습니다.
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-              {tryOnProducts.map((p) => {
-                const url = `${window.location.origin}${window.location.pathname}#/try-on/${p.id}`;
-                return (
-                  <div key={p.id} className="flex flex-col items-center gap-4 border border-line p-8 text-center">
-                    <p className="font-medium">{p.name.value ?? p.id}</p>
-                    <QRCodeImage value={url} size={140} />
-                    <Link to={`/try-on/${p.id}`} className="eyebrow border-b border-ink pb-0.5 hover:text-graphite focus-ring">
-                      지금 입어보기 →
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

@@ -3,8 +3,9 @@ import type { Product } from '@/data/productTypes';
 /** URL of the AI try-on Worker (server/tryon-worker). Empty until it is deployed and configured. */
 export const AI_TRYON_URL: string = import.meta.env.VITE_TRYON_API_URL ?? '';
 
-export function aiTryOnEnabled(product?: Pick<Product, 'images'>): boolean {
-  return Boolean(AI_TRYON_URL) && (!product || product.images.length > 0);
+/** AI fitting needs only a product photo to show the visitor. */
+export function aiTryOnEnabled(product: Pick<Product, 'images'>): boolean {
+  return product.images.length > 0;
 }
 
 /** Downscale a photo to at most `max` px on its long side as a JPEG data URL (keeps uploads small). */

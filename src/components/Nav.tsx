@@ -8,7 +8,7 @@ const TABS: { to: string; label: string; match: (path: string, search: string) =
   { to: '/', label: '홈', match: (p) => p === '/' },
   { to: '/products?sort=ranking', label: '랭킹', match: (p, s) => p === '/products' && s.includes('sort=ranking') },
   { to: '/products', label: '전체 상품', match: (p, s) => p === '/products' && !s.includes('sort=ranking') && !s.includes('filter=') },
-  { to: '/products?filter=tryon', label: '가상 피팅', match: (p, s) => p === '/products' && s.includes('filter=tryon') },
+  { to: '/products?filter=tryon', label: 'AI 피팅', match: (p, s) => p === '/products' && s.includes('filter=tryon') },
   { to: '/again', label: '다시 조합', match: (p) => p === '/again' },
   { to: '/materials', label: '소재', match: (p) => p === '/materials' },
   { to: '/story', label: '스토리', match: (p) => p === '/story' },

@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { Loading } from '@/components/Loading';
 import { ErrorState } from '@/components/ErrorState';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
+import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import type { Product } from '@/data/productTypes';
 
 type SortKey = 'ranking' | 'recommended' | 'price-asc' | 'price-desc' | 'name';
@@ -56,7 +56,7 @@ export default function ProductCollection() {
     if (state.status !== 'ready') return [];
     const filtered = state.data
       .filter((p) => category === 'ALL' || p.category.value === category)
-      .filter((p) => !onlyTryOn || canUseTryOn(p))
+      .filter((p) => !onlyTryOn || aiTryOnEnabled(p))
       .filter((p) => !only3D || !!p.model3D)
       .filter((p) => {
         if (!query) return true;
@@ -75,7 +75,7 @@ export default function ProductCollection() {
     return sorted;
   }, [state, category, sort, onlyTryOn, only3D, query]);
 
-  const title = query ? `‘${searchParams.get('q')}’ 검색 결과` : sort === 'ranking' ? 'LAGI 랭킹' : onlyTryOn ? '가상 피팅 가능 상품' : '전체 상품';
+  const title = query ? `‘${searchParams.get('q')}’ 검색 결과` : sort === 'ranking' ? 'LAGI 랭킹' : onlyTryOn ? 'AI 피팅 가능 상품' : '전체 상품';
 
   return (
     <div className="px-4 pb-20 pt-6 lg:px-10 lg:pt-10">
@@ -99,7 +99,7 @@ export default function ProductCollection() {
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="no-scrollbar flex gap-2 overflow-x-auto">
               <Chip active={onlyTryOn} onClick={() => setParam('filter', onlyTryOn ? null : 'tryon')}>
-                가상 피팅
+                AI 피팅
               </Chip>
               <Chip active={only3D} onClick={() => setOnly3D((v) => !v)}>
                 3D 보기

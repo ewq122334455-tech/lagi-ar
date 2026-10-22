@@ -6,7 +6,6 @@ import { ErrorState } from '@/components/ErrorState';
 import { productDisplayName } from '@/utils/productImage';
 import { AI_TRYON_URL, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import type { Product } from '@/data/productTypes';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 const BAG_STYLES = [
   { key: 'shoulder', label: '어깨에 메기', prompt: 'with the handles resting on one shoulder' },
@@ -183,9 +182,6 @@ function AiFit({ product }: { product: Product }) {
           <ul className="mt-6 space-y-1.5 text-xs leading-relaxed text-stone">
             <li>· 사진은 AI 합성을 위해 서버를 거쳐 Google Gemini로 전송되며, 라기 서버에는 저장하지 않습니다.</li>
             <li>· AI가 만든 참고용 이미지라 실제 크기·색감과 다를 수 있어요.</li>
-            {canUseTryOn(product) && (
-              <li>· 실시간으로 움직이며 보고 싶다면 <Link to={`/try-on/${product.id}`} className="underline">카메라 피팅</Link>을 이용해 보세요.</li>
-            )}
           </ul>
         </div>
       </div>
