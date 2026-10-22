@@ -115,14 +115,14 @@ export default function Home() {
 
       {/* Brand band */}
       <Reveal as="section" className="mx-4 mt-14 grid grid-cols-1 overflow-hidden rounded-xl lg:mx-10 lg:grid-cols-2">
-        <Link to="/again" className="group flex flex-col justify-between gap-10 bg-blue p-7 text-paper focus-ring lg:p-10">
-          <p className="text-xs font-bold tracking-[0.2em] text-paper/70">ABOUT THE NAME</p>
+        <Link to="/about" className="group flex flex-col justify-between gap-10 bg-blue p-7 text-paper focus-ring lg:p-10">
+          <p className="text-xs font-bold tracking-[0.2em] text-paper/70">BRAND</p>
           <div>
-            <p className="text-3xl font-bold tracking-[-0.04em] lg:text-5xl">lagi = 다시</p>
+            <p className="font-display text-3xl tracking-[-0.02em] lg:text-5xl">LAGI IN AGING</p>
             <p className="mt-3 max-w-md text-sm text-paper/80">
-              LAGI는 말레이·인도네시아어로 ‘다시’라는 뜻이에요. 같은 가방을 다시 보고, 다시 조합하고, 다시 메어보세요.
+              라기의 물건은 오래 쓸수록 멋이 듭니다. 바랜 색과 생활 자국까지 당신의 시간이 되도록, 처음부터 오래 쓸 것을 생각하며 만들어요.
             </p>
-            <p className="mt-5 text-sm font-semibold group-hover:underline">다시 조합하러 가기 →</p>
+            <p className="mt-5 text-sm font-semibold group-hover:underline">브랜드 이야기 →</p>
           </div>
         </Link>
         <div className="grid grid-cols-2">
@@ -397,9 +397,9 @@ function WearSection({ tops, bottoms }: { tops: Product[]; bottoms: Product[] })
         <div>
           <p className="text-[11px] font-bold tracking-[0.3em] text-ink/60">NEW · LAGI WEAR</p>
           <h2 className="mt-3 text-3xl font-bold tracking-[-0.04em] lg:text-5xl">
-            매일 입는 옷도,
+            오래 입을수록,
             <br />
-            다시 새롭게.
+            내 옷이 되는.
           </h2>
         </div>
         <div className="flex gap-2" role="tablist" aria-label="의류 종류">
