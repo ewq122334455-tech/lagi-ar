@@ -43,12 +43,12 @@ function AgainHero() {
   return (
     <section className="relative overflow-hidden bg-ink px-6 pb-20 pt-16 text-paper lg:px-10 lg:pb-28 lg:pt-24">
       <div className="mx-auto max-w-canvas">
-        <p className="eyebrow text-paper/50">LAGI · /ˈla.gi/ · adv.</p>
-        <div className="mt-8 flex min-h-[1.1em] items-baseline gap-6 font-display text-[22vw] leading-none lg:text-[13vw]" aria-live="polite">
-          <span key={current.word} className="animate-[lagi-word_1.6s_ease-in-out] italic">
+        <p className="text-xs font-semibold tracking-[0.2em] text-paper/50">lagi · /ˈla.gi/ · adv.</p>
+        <div className="mt-8 flex min-h-[1.1em] items-baseline gap-6 text-[22vw] font-medium leading-none tracking-[-0.04em] lg:text-[13vw]" aria-live="polite">
+          <span key={current.word} className={`animate-[lagi-word_1.6s_ease-in-out] ${/^[\x00-\x7f ]+$/.test(current.word) ? 'italic' : 'font-bold'}`}>
             {current.word}
           </span>
-          <span className="hidden text-base not-italic text-paper/40 sm:inline lg:text-lg">{current.lang}</span>
+          <span className="hidden text-base font-normal not-italic tracking-normal text-paper/40 sm:inline lg:text-lg">{current.lang}</span>
         </div>
         <div className="mt-10 grid grid-cols-1 gap-10 border-t border-paper/15 pt-10 lg:grid-cols-3">
           <p className="text-2xl font-semibold leading-snug tracking-[-0.03em] lg:col-span-2 lg:text-3xl">

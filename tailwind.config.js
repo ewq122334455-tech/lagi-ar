@@ -31,13 +31,14 @@ export default {
         lime: '#DEB457',
       },
       fontFamily: {
-        // Brand type: Latin in Posterama 2001, Hangul in 윤고딕 (Yoon Gothic). Both are licensed
+        // Brand type: Latin in Posterama (display: Posterama 2001), Hangul in 윤고딕 (Yoon Gothic). Both are licensed
         // fonts, so each falls back to its closest free match — Jost (geometric Latin) and Pretendard
         // (Hangul) — until the font files are added. Latin fonts come first: they have no Hangul, so
         // Korean characters fall through to the Korean fonts automatically.
-        sans: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
-        heading: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
-        display: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        sans: ['posterama', '"Posterama"', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        heading: ['posterama', '"Posterama"', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        // Posterama 2001 is an all-caps display cut (A drawn as Λ): headlines only, never body text.
+        display: ['"Posterama 2001"', 'posterama-2001', 'posterama', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
       },
       letterSpacing: {
         widest2: '0.28em',

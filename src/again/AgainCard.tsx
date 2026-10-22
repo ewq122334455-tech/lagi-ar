@@ -12,7 +12,7 @@ const THEMES = [
 const EXAMPLES = ['그 바다에 가기', '처음처럼 시작하기', '좋아하는 노래 듣기', '엄마랑 여행 가기', '같은 가방 메고 나가기'];
 
 /** Same brand stack as the site (see tailwind.config.js). */
-const FONT = `"Posterama 2001", posterama-2001, Posterama2001, Jost, YoonGothic, "Yoon Gothic", "윤고딕", "Pretendard Variable", Pretendard, sans-serif`;
+const FONT = `posterama, "Posterama", Jost, YoonGothic, "Yoon Gothic", "윤고딕", "Pretendard Variable", Pretendard, sans-serif`;
 
 const W = 1080;
 const H = 1350;
