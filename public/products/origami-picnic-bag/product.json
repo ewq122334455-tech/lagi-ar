@@ -145,22 +145,5 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true,
-  "tryOn": {
-    "garmentImage": "products/origami-picnic-bag/tryon/bag.png",
-    "garmentType": "BAG",
-    "anchorLeft": {
-      "x": 0.425,
-      "y": 0.03
-    },
-    "anchorRight": {
-      "x": 0.574,
-      "y": 0.03
-    },
-    "fit": 1,
-    "offsetY": 0,
-    "carry": "SHOULDER",
-    "strapColor": "#1f1f1f"
-  },
-  "tryOnAvailable": true
+  "featured": true
 }

@@ -141,22 +141,5 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true,
-  "tryOn": {
-    "garmentImage": "products/daily-pouch-bag/tryon/bag.png",
-    "garmentType": "BAG",
-    "anchorLeft": {
-      "x": 0.418,
-      "y": 0.031
-    },
-    "anchorRight": {
-      "x": 0.582,
-      "y": 0.031
-    },
-    "fit": 1,
-    "offsetY": 0,
-    "carry": "SHOULDER",
-    "strapColor": "#1f1f1f"
-  },
-  "tryOnAvailable": true
+  "featured": true
 }

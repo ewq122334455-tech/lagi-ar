@@ -142,22 +142,5 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true,
-  "tryOn": {
-    "garmentImage": "products/modular-bag-s/tryon/bag.png",
-    "garmentType": "BAG",
-    "anchorLeft": {
-      "x": 0.395,
-      "y": 0.031
-    },
-    "anchorRight": {
-      "x": 0.604,
-      "y": 0.031
-    },
-    "fit": 1,
-    "offsetY": 0,
-    "carry": "HAND",
-    "strapColor": "#1f1f1f"
-  },
-  "tryOnAvailable": true
+  "featured": true
 }

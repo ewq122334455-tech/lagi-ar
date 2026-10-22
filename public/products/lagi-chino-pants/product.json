@@ -165,20 +165,5 @@
         "label": "임의로 만든 샘플 상품입니다. 이름·가격·설명·이미지는 실제 상품이 정해지면 교체하세요."
       }
     ]
-  },
-  "tryOn": {
-    "garmentImage": "products/lagi-chino-pants/tryon/garment.png",
-    "garmentType": "BOTTOM",
-    "anchorLeft": {
-      "x": 0.28,
-      "y": 0.11
-    },
-    "anchorRight": {
-      "x": 0.72,
-      "y": 0.11
-    },
-    "fit": 1.0,
-    "offsetY": 0
-  },
-  "tryOnAvailable": true
+  }
 }

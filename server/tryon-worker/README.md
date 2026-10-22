@@ -42,8 +42,3 @@ npx wrangler deploy
 - `POST /auth/signup` {name, email, password, agree, marketing} · `POST /auth/login` {email, password}
 - `GET /auth/me` · `POST /auth/logout` (헤더 `Authorization: Bearer <token>`)
 
-## 카메라 피팅 실사 누끼 (/cutouts)
-카메라 피팅(거울 모드)에 쓰는 상품 이미지를 실제 사진 같은 누끼로 바꾸는 관리자 도구입니다.
-1. 관리자 키 정하기: `npx wrangler secret put ADMIN_KEY` (아무도 모르는 긴 문장)
-2. 사이트 주소 뒤에 `#/cutouts` 를 붙여 열고, 관리자 키 입력 → ‘아직 없는 것 전부 만들기’
-3. 한 장당 Gemini 이미지 1장 요금(약 55원). 결과는 KV(`cutout:상품ID`)에 저장되고 카메라 피팅이 자동으로 사용합니다.
