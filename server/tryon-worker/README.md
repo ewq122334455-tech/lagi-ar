@@ -1,4 +1,4 @@
-# LAGI AI 피팅 서버 (Cloudflare Worker)
+# LAGI 서버 (Cloudflare Worker) — AI 피팅 + 회원
 
 사이트의 "AI 피팅"은 방문자 사진과 상품 사진을 Google Gemini 이미지 모델에 보내
 "그 상품을 든 사람 사진"을 새로 만들어 줍니다. 이 Worker는 Gemini API 키를 숨겨 두고
@@ -30,3 +30,14 @@ npx wrangler deploy
 - 남용 방지: Worker에 간단한 횟수 제한이 있지만, 비용이 걱정되면 Cloudflare 대시보드에서
   Rate limiting 규칙을 추가하고 Google AI Studio에서 사용 한도를 설정하세요.
 - 허용된 사이트(`ALLOWED_ORIGINS`)에서만 호출할 수 있고, 상품 이미지도 그 사이트에서만 가져옵니다.
+
+## 회원가입 · 로그인
+같은 Worker가 회원 정보도 저장합니다(Cloudflare KV, `USERS`). 비밀번호는 PBKDF2로 암호화해 저장하고, 로그인은 30일 유지됩니다.
+`wrangler.toml`의 `[[kv_namespaces]] binding = "USERS"` 덕분에 `npx wrangler deploy` 때 저장소가 자동으로 만들어집니다.
+자동 생성이 안 되는 wrangler 버전이면:
+```bash
+npx wrangler kv namespace create USERS   # "설정에 추가할까요?" → y
+npx wrangler deploy
+```
+- `POST /auth/signup` {name, email, password, agree, marketing} · `POST /auth/login` {email, password}
+- `GET /auth/me` · `POST /auth/logout` (헤더 `Authorization: Bearer <token>`)

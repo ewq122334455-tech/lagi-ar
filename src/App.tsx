@@ -6,6 +6,7 @@ import { Loading } from '@/components/Loading';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CartDrawer } from '@/components/CartDrawer';
 import { CartProvider } from '@/commerce/CartContext';
+import { AuthProvider } from '@/auth/AuthContext';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ProductCollection = lazy(() => import('@/pages/ProductCollection'));
@@ -15,6 +16,9 @@ const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
 const Again = lazy(() => import('@/pages/Again'));
 const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
+const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
+const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.SignupPage })));
+const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
@@ -41,6 +45,7 @@ function SiteLayout() {
 export default function App() {
   return (
     <ErrorBoundary>
+      <AuthProvider>
       <CartProvider>
       <Suspense fallback={<Loading label="LAGI" />}>
         <Routes>
@@ -55,6 +60,9 @@ export default function App() {
             <Route path="/story" element={<Story />} />
             <Route path="/again" element={<Again />} />
             <Route path="/ai-fit/:id" element={<AiFitPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/account" element={<AccountPage />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
@@ -63,6 +71,7 @@ export default function App() {
         </Routes>
       </Suspense>
       </CartProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

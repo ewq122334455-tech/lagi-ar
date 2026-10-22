@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { LagiLogo } from '@/components/LagiLogo';
+import { useAuth } from '@/auth/AuthContext';
 
 /** Store categories. `match` decides which tab lights up for the current URL. */
 const TABS: { to: string; label: string; match: (path: string, search: string) => boolean }[] = [
@@ -21,6 +22,7 @@ export function Nav() {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const { count, open: openCart } = useCart();
+  const { user } = useAuth();
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +40,20 @@ export function Nav() {
             lagi = 다시 · <span className="opacity-70">Look closer, again.</span>
           </p>
           <div className="flex gap-5 opacity-90">
+            {user ? (
+              <Link to="/account" className="font-semibold hover:opacity-100 focus-ring">
+                {user.name}님
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" className="hover:opacity-100 focus-ring">
+                  로그인
+                </Link>
+                <Link to="/signup" className="hover:opacity-100 focus-ring">
+                  회원가입
+                </Link>
+              </>
+            )}
             <a href="https://smartstore.naver.com/lagi_official" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 focus-ring">
               스마트스토어
             </a>
@@ -79,6 +95,14 @@ export function Nav() {
             <Link to="/again" className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold hover:bg-mist focus-ring lg:flex">
               <span className="h-2 w-2 rounded-full bg-lime" aria-hidden="true" />
               다시 조합하기
+            </Link>
+            <Link
+              to={user ? '/account' : '/login'}
+              aria-label={user ? '내 정보' : '로그인'}
+              className="flex items-center gap-2 rounded-full p-2 text-sm font-semibold hover:bg-mist focus-ring lg:px-3"
+            >
+              <UserIcon />
+              <span className="hidden lg:inline">{user ? '마이' : '로그인'}</span>
             </Link>
             <button
               type="button"
@@ -218,6 +242,14 @@ function AgainIcon() {
     <svg {...iconProps}>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />
       <path d="M20 4v5h-5" />
+    </svg>
+  );
+}
+function UserIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" />
     </svg>
   );
 }
