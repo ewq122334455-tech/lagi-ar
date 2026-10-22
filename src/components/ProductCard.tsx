@@ -43,7 +43,6 @@ export function ProductCard({ product, rank }: ProductCardProps) {
           </span>
         )}
         <div className="absolute bottom-2 left-2 flex gap-1">
-          {product.threeDAvailable && <Tag className="bg-paper/90 text-ink">3D</Tag>}
           {tryOn && <Tag className="bg-lime text-ink">AI 피팅</Tag>}
         </div>
       </div>

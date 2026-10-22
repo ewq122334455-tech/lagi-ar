@@ -71,7 +71,7 @@ export default function Home() {
 
       {/* LOOK CLOSER details */}
       {hero && hero.hotspots.length > 0 && (
-        <Section title="LOOK CLOSER" subtitle="가까이 볼수록 보이는 디테일" more={{ to: `/product/${hero.id}`, label: '3D로 보기' }}>
+        <Section title="LOOK CLOSER" subtitle="가까이 볼수록 보이는 디테일" more={{ to: `/product/${hero.id}`, label: '자세히 보기' }}>
           <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:px-0">
             {hero.hotspots.map((h, i) => (
               <Link
@@ -159,8 +159,8 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
           그리고 다시.
         </>
       ),
-      text: '360°로 돌려보고, 지퍼와 손잡이까지 가까이 들여다보세요.',
-      cta: '3D로 보기',
+      text: '라기의 가방과 소품을 가까이, 그리고 다시 들여다보세요.',
+      cta: '제품 보기',
       to: hero ? `/product/${hero.id}` : '/products',
       className: 'bg-blue text-paper',
       image: cover,
@@ -269,17 +269,17 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
           </div>
         </Link>
         <Link
-          to={hero ? `/product/${hero.id}` : '/products'}
+          to="/products"
           className="flex min-h-[160px] flex-col justify-between rounded-xl bg-ink p-5 text-paper hover:bg-[#262626] focus-ring lg:p-7"
         >
-          <p className="text-[11px] font-bold tracking-[0.2em] text-paper/60">3D VIEW</p>
+          <p className="text-[11px] font-bold tracking-[0.2em] text-paper/60">ALL ITEMS</p>
           <div>
             <p className="text-lg font-bold leading-snug tracking-[-0.03em] lg:text-2xl">
-              돌려보고,
+              라기의 모든
               <br />
-              들여다보고
+              가방과 소품
             </p>
-            <p className="mt-2 text-xs text-paper/60">제품 상세에서 3D로 보기 →</p>
+            <p className="mt-2 text-xs text-paper/60">전체 상품 보기 →</p>
           </div>
         </Link>
       </div>
@@ -294,7 +294,6 @@ function QuickMenu({ hero, tryOnId }: { hero: Product | null; tryOnId: string | 
     ...(tryOnId ? [{ label: 'AI 피팅', to: `/ai-fit/${tryOnId}`, glyph: 'AI', tone: 'bg-lime text-ink' }] : []),
     { label: '다시 조합', to: '/again', glyph: '↻', tone: 'bg-orange text-paper' },
     { label: '다시 카드', to: '/again#card', glyph: 'CARD', tone: 'bg-cream text-ink' },
-    ...(hero ? [{ label: '3D 보기', to: `/product/${hero.id}`, glyph: '3D', tone: 'bg-ink text-paper' }] : []),
     { label: '소재', to: '/materials', glyph: 'MAT', tone: 'bg-mist text-ink' },
     { label: '스마트스토어', to: 'https://smartstore.naver.com/lagi_official', external: true, glyph: 'N', tone: 'bg-[#03c75a] text-paper' },
   ];
