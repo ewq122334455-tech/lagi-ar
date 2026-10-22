@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { useCart } from '@/commerce/CartContext';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 
 function uniq(values: (string | null)[]): string[] {
@@ -161,14 +160,6 @@ export function BuyPanel({ product }: { product: Product }) {
             className="flex h-12 items-center justify-center gap-2 rounded-md bg-ink text-sm font-bold text-paper hover:bg-[#2a2a2a] focus-ring"
           >
             ✦ AI로 입어보기 <span className="text-xs font-medium text-paper/60">내 사진으로</span>
-          </Link>
-        )}
-        {canUseTryOn(product) && (
-          <Link
-            to={`/try-on/${product.id}`}
-            className="flex h-12 items-center justify-center gap-2 rounded-md bg-lime text-sm font-bold text-ink hover:brightness-95 focus-ring"
-          >
-            카메라로 메어보기
           </Link>
         )}
         <div className="grid grid-cols-2 gap-2">

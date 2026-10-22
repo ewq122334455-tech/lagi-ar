@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { AGAIN_WORDS } from '@/components/AgainMarquee';
 import { RemixViewer } from '@/again/RemixViewer';
@@ -7,9 +7,6 @@ import type { RemixViewerHandle } from '@/again/RemixViewer';
 import { AgainCard } from '@/again/AgainCard';
 import { REMIX_PALETTE, REMIX_PARTS, decodeColors, encodeColors, shuffleColors, swatchName } from '@/again/remix';
 import type { RemixColors } from '@/again/remix';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
-import { saveRemixGarment } from '@/tryon/remixGarment';
-import { detectHandleAnchors } from '@/tryon/autoAnchors';
 
 export default function Again() {
   const state = useProducts();
@@ -21,7 +18,7 @@ export default function Again() {
     <div>
       <AgainHero />
       {product ? (
-        <RemixSection productId={product.id} modelUrl={product.remixModel || product.model3D} tryOn={canUseTryOn(product)} name={product.name.value} />
+        <RemixSection productId={product.id} modelUrl={product.remixModel || product.model3D} name={product.name.value} />
       ) : (
         <section className="border-t border-line px-6 py-20 text-center text-sm text-stone lg:px-10">
           {state.status === 'loading' ? '불러오는 중…' : '조합할 수 있는 3D 제품이 아직 없습니다.'}
@@ -60,10 +57,7 @@ function AgainHero() {
               <a href="#remix" className="hover:text-paper focus-ring">01 — 다시 조합하기: 색을 바꿔 나만의 가방</a>
             </li>
             <li>
-              <a href="#remix" className="hover:text-paper focus-ring">02 — 다시 메어보기: 그 조합 그대로 가상 피팅</a>
-            </li>
-            <li>
-              <a href="#card" className="hover:text-paper focus-ring">03 — 다시 카드: 다시 하고 싶은 것 한 줄</a>
+              <a href="#card" className="hover:text-paper focus-ring">02 — 다시 카드: 다시 하고 싶은 것 한 줄</a>
             </li>
           </ol>
         </div>
@@ -72,9 +66,8 @@ function AgainHero() {
   );
 }
 
-function RemixSection({ productId, modelUrl, tryOn, name }: { productId: string; modelUrl: string; tryOn: boolean; name: string | null }) {
+function RemixSection({ productId, modelUrl, name }: { productId: string; modelUrl: string; name: string | null }) {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
   const viewerRef = useRef<RemixViewerHandle>(null);
   const [colors, setColors] = useState<RemixColors>(() => decodeColors(params.get('c')));
   const [selected, setSelected] = useState<string>('body');
@@ -123,17 +116,6 @@ function RemixSection({ productId, modelUrl, tryOn, name }: { productId: string;
     a.href = png;
     a.download = `lagi-again-${count || 0}.png`;
     a.click();
-  }
-
-  function wearIt() {
-    const png = viewerRef.current?.cutout();
-    if (!png) return;
-    const img = new Image();
-    img.onload = () => {
-      saveRemixGarment({ image: png, ...(detectHandleAnchors(img) ?? {}) });
-      navigate(`/try-on/${productId}?remix=1`);
-    };
-    img.src = png;
   }
 
   const getBagImage = useCallback(() => viewerRef.current?.cutout() ?? null, []);
@@ -232,11 +214,6 @@ function RemixSection({ productId, modelUrl, tryOn, name }: { productId: string;
               </div>
 
               <div className="flex flex-wrap gap-2 border-t border-line pt-6">
-                {tryOn && (
-                  <button type="button" onClick={wearIt} className="rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper hover:bg-blue focus-ring">
-                    이 조합으로 메어보기 →
-                  </button>
-                )}
                 <button type="button" onClick={copyLink} className="rounded-full border border-ink/25 px-5 py-3 text-sm font-semibold hover:border-ink focus-ring">
                   {copied ? '링크 복사됨 ✓' : '조합 링크 복사'}
                 </button>
@@ -266,7 +243,7 @@ function RemixSection({ productId, modelUrl, tryOn, name }: { productId: string;
         <div className="mx-auto max-w-canvas">
           <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-6">
             <div>
-              <p className="eyebrow">03 · Card</p>
+              <p className="eyebrow">02 · Card</p>
               <h2 className="mt-3 font-display text-5xl lg:text-7xl">
                 What would you do <em>again?</em>
               </h2>

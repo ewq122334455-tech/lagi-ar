@@ -12,7 +12,7 @@ import { QRCodeImage } from '@/components/QRCode';
 import { BuyPanel } from '@/components/BuyPanel';
 import { ProductViewer } from '@/three/ProductViewer';
 import { canUseAR } from '@/utils/arAvailability';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
+import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { shippingLabel } from '@/utils/shipping';
 
 export default function ProductDetail() {
@@ -41,8 +41,8 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
   const arUrl = canUseAR(product)
     ? `${window.location.origin}${window.location.pathname}#/ar/${product.id}`
     : null;
-  const tryOnUrl = canUseTryOn(product)
-    ? `${window.location.origin}${window.location.pathname}#/try-on/${product.id}`
+  const tryOnUrl = aiTryOnEnabled(product)
+    ? `${window.location.origin}${window.location.pathname}#/ai-fit/${product.id}`
     : null;
 
   return (
@@ -116,7 +116,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               <InfoRow label="체험">
                 <span className="flex flex-wrap gap-1.5">
                   {product.model3D && <Pill>3D 보기</Pill>}
-                  {tryOnUrl && <Pill tone="lime">가상 피팅</Pill>}
+                  {tryOnUrl && <Pill tone="lime">AI 피팅</Pill>}
                   {product.remixModel && <Pill tone="orange">다시 조합</Pill>}
                 </span>
               </InfoRow>
@@ -224,7 +224,7 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
         <h2 className="text-xl font-bold tracking-[-0.03em]">휴대폰으로 체험하기</h2>
         <p className="mt-1 text-sm text-stone">QR을 휴대폰 카메라로 찍으면 바로 열립니다.</p>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
-          {tryOnUrl && <QrCard url={tryOnUrl} title="가상 피팅" text="카메라로 직접 메어보기" tone="bg-lime" />}
+          {tryOnUrl && <QrCard url={tryOnUrl} title="AI 피팅" text="내 사진으로 메어보기" tone="bg-lime" />}
           {arUrl && <QrCard url={arUrl} title="AR" text="내 공간에 가방 놓아보기" tone="bg-mist" />}
         </div>
       </section>

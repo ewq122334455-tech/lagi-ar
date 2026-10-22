@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { ProductCard } from '@/components/ProductCard';
 import { Loading } from '@/components/Loading';
 import { ErrorState } from '@/components/ErrorState';
-import { canUseTryOn } from '@/utils/tryOnAvailability';
+import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { productCover } from '@/utils/productImage';
 import type { Product } from '@/data/productTypes';
 
@@ -14,7 +14,7 @@ export default function Home() {
   const featured = products.filter((p) => p.featured);
   const picks = (featured.length > 0 ? featured : products).slice(0, 12);
   const hero = picks[0] ?? null;
-  const tryOnProducts = products.filter((p) => canUseTryOn(p));
+  const tryOnProducts = products.filter((p) => aiTryOnEnabled(p));
 
   return (
     <div className="pb-16">
@@ -44,18 +44,18 @@ export default function Home() {
         <section className="mx-4 mt-14 overflow-hidden rounded-xl bg-lime lg:mx-10">
           <div className="grid grid-cols-1 items-center gap-8 p-6 lg:grid-cols-12 lg:p-10">
             <div className="lg:col-span-4">
-              <p className="text-xs font-bold tracking-[0.2em]">VIRTUAL TRY-ON</p>
+              <p className="text-xs font-bold tracking-[0.2em]">AI FITTING</p>
               <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] lg:text-[32px] lg:leading-tight">
                 사기 전에,
                 <br />
-                카메라로 먼저 메어보세요
+                내 사진으로 먼저 메어보세요
               </h2>
-              <p className="mt-3 text-sm text-ink/70">손에 들기 · 어깨에 메기 · 크로스로 메기를 바꿔가며 확인할 수 있어요.</p>
+              <p className="mt-3 text-sm text-ink/70">사진 한 장이면 AI가 가방을 든 내 모습을 만들어 드려요. 손에 들기 · 어깨에 메기 · 크로스로 메기까지.</p>
               <Link
-                to={`/try-on/${tryOnProducts[0].id}`}
+                to={`/ai-fit/${tryOnProducts[0].id}`}
                 className="mt-5 inline-flex rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper hover:bg-blue focus-ring"
               >
-                지금 메어보기 →
+                AI 피팅 해보기 →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:col-span-8 lg:grid-cols-4">
@@ -169,17 +169,17 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
       ? [
           {
             key: 'tryon',
-            eyebrow: 'VIRTUAL TRY-ON',
+            eyebrow: 'AI FITTING',
             title: (
               <>
                 거울 대신
                 <br />
-                카메라로.
+                내 사진으로.
               </>
             ),
-            text: '앱 설치 없이, 휴대폰 카메라로 가방을 직접 메어보세요.',
-            cta: '메어보기',
-            to: `/try-on/${tryOnId}`,
+            text: '사진 한 장으로, AI가 가방을 든 내 모습을 만들어 드려요.',
+            cta: 'AI 피팅',
+            to: `/ai-fit/${tryOnId}`,
             className: 'bg-lime text-ink',
             image: cover,
           },
@@ -291,7 +291,7 @@ function QuickMenu({ hero, tryOnId }: { hero: Product | null; tryOnId: string | 
   const items: { label: string; to: string; external?: boolean; glyph: string; tone: string }[] = [
     { label: '랭킹', to: '/products?sort=ranking', glyph: 'TOP', tone: 'bg-blue text-paper' },
     { label: '전체 상품', to: '/products', glyph: 'ALL', tone: 'bg-mist text-ink' },
-    ...(tryOnId ? [{ label: '가상 피팅', to: `/try-on/${tryOnId}`, glyph: 'FIT', tone: 'bg-lime text-ink' }] : []),
+    ...(tryOnId ? [{ label: 'AI 피팅', to: `/ai-fit/${tryOnId}`, glyph: 'AI', tone: 'bg-lime text-ink' }] : []),
     { label: '다시 조합', to: '/again', glyph: '↻', tone: 'bg-orange text-paper' },
     { label: '다시 카드', to: '/again#card', glyph: 'CARD', tone: 'bg-cream text-ink' },
     ...(hero ? [{ label: '3D 보기', to: `/product/${hero.id}`, glyph: '3D', tone: 'bg-ink text-paper' }] : []),
