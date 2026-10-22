@@ -9,7 +9,7 @@ export default function About() {
         <div className="mx-auto max-w-canvas">
           <p className="eyebrow text-mist">ABOUT</p>
           <h1 className="mt-6">
-            <LagiLogo className="h-12 w-auto lg:h-16" />
+            <LagiLogo className="h-24 w-auto lg:h-32" />
           </h1>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import type { Product } from '@/data/productTypes';
+import type { CarryStyle, Product } from '@/data/productTypes';
 
 /** URL of the AI try-on Worker (server/tryon-worker). The build variable can override the deployed default. */
 export const AI_TRYON_URL: string = import.meta.env.VITE_TRYON_API_URL || 'https://lagi-tryon.lagi-official.workers.dev';
@@ -25,6 +25,13 @@ export async function photoToDataUrl(file: File, max = 1280): Promise<string> {
     URL.revokeObjectURL(url);
   }
 }
+
+/** How to wear a bag, as told to the AI — keyed like the camera try-on's carry styles. */
+export const CARRY_PROMPTS: Record<CarryStyle, string> = {
+  SHOULDER: 'with the handles resting on one shoulder',
+  HAND: 'held by the handles in one hand, arm relaxed at the side',
+  CROSSBODY: 'worn cross-body with the strap across the chest',
+};
 
 export interface AiTryOnInput {
   person: string;

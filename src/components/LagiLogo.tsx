@@ -1,25 +1,26 @@
-import { LOGO_PATHS, LOGO_VIEWBOX } from './logoPaths';
+import { useId } from 'react';
+import { EMBLEM_BODY, EMBLEM_CUTOUT, EMBLEM_VIEWBOX } from './logoPaths';
 
 /**
- * The LAGI wordmark — L, a crossbar-less Λ, G, I — redrawn as strokes from the brand graphic
- * (legacy-prototype/LAGI.png) so it stays sharp at any size and takes the surrounding text colour.
+ * The LAGI emblem from the brand's Illustrator file. It takes the surrounding text colour, and the
+ * L Λ G I letters are cut out (masked) so whatever is behind the logo shows through them.
  */
 export function LagiLogo({ className, title = 'LAGI' }: { className?: string; title?: string }) {
+  const mask = `lagi-cut-${useId().replace(/:/g, '')}`;
+  const [x, y, w, h] = EMBLEM_VIEWBOX.split(' ');
   return (
-    <svg
-      viewBox={`0 0 ${LOGO_VIEWBOX.width} ${LOGO_VIEWBOX.height}`}
-      className={className}
-      role="img"
-      aria-label={title}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-      strokeLinecap="butt"
-      strokeLinejoin="miter"
-    >
-      {LOGO_PATHS.map((d) => (
-        <path key={d} d={d} />
-      ))}
+    <svg viewBox={EMBLEM_VIEWBOX} className={className} role="img" aria-label={title} fill="currentColor">
+      <mask id={mask} maskUnits="userSpaceOnUse" x={x} y={y} width={w} height={h}>
+        <rect x={x} y={y} width={w} height={h} fill="#fff" />
+        {EMBLEM_CUTOUT.map((d) => (
+          <path key={d} d={d} fill="#000" />
+        ))}
+      </mask>
+      <g mask={`url(#${mask})`}>
+        {EMBLEM_BODY.map((d) => (
+          <path key={d} d={d} />
+        ))}
+      </g>
     </svg>
   );
 }
