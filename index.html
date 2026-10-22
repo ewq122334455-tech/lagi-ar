@@ -9,9 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Brand fonts: self-hosted files (see public/fonts/brand-fonts.css). -->
     <link rel="stylesheet" href="fonts/brand-fonts.css" />
-    <!-- Brand fonts via Adobe Fonts: set VITE_ADOBE_FONTS_KIT (a Web Project ID) to load Posterama 2001. -->
+    <!-- Brand fonts via Adobe Fonts: the LAGI Web Project (Posterama 2001). VITE_ADOBE_FONTS_KIT overrides it. -->
+    <link rel="preconnect" href="https://use.typekit.net" crossorigin />
+    <link rel="preconnect" href="https://p.typekit.net" crossorigin />
     <script type="module">
-      const kit = import.meta.env.VITE_ADOBE_FONTS_KIT;
+      const kit = import.meta.env.VITE_ADOBE_FONTS_KIT || 'uqf7oqq';
       if (kit) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
