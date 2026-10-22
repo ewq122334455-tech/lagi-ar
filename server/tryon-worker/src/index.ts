@@ -22,6 +22,8 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
+  /** Password for the cut-out studio (/cutouts) — set with `npx wrangler secret put ADMIN_KEY`. */
+  ADMIN_KEY?: string;
 }
 
 interface TryOnRequest {
@@ -55,8 +57,8 @@ function cors(origin: string | null, env: Env): Record<string, string> {
   const ok = origin && allowed.includes(origin);
   return {
     'Access-Control-Allow-Origin': ok ? origin : allowed[0],
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -217,6 +219,7 @@ export default {
       if (throttled(`auth:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
       return handleAuth(path, request, env.USERS, headers);
     }
+    if (path.startsWith('/cutout')) return handleCutout(path, request, env, headers);
     return tryOn(request, env, headers);
   },
 };
@@ -241,55 +244,143 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if (!person) return json({ error: '사진 형식을 읽을 수 없습니다.' }, 400, headers);
   if (person.data.length * 0.75 > MAX_PERSON_BYTES) return json({ error: '사진이 너무 큽니다.' }, 413, headers);
 
+  const product = await fetchProductImage(body.productImage, allowed);
+  if ('error' in product) return json({ error: product.error }, product.status, headers);
+
+  const image = await geminiImage(env, [
+    { text: buildPrompt(body) },
+    { inline_data: { mime_type: person.mime, data: person.data } },
+    { inline_data: { mime_type: product.mime, data: product.data } },
+  ]);
+  if (!image) return json({ error: 'AI가 이미지를 만들지 못했습니다. 다른 사진으로 시도해 주세요.' }, 502, headers);
+  return json({ image }, 200, headers);
+}
+
+/** Fetches a product photo — only ever from the LAGI site itself, never an arbitrary URL. */
+async function fetchProductImage(
+  url: string,
+  allowed: string[],
+): Promise<{ mime: string; data: string } | { error: string; status: number }> {
   let productUrl: URL;
   try {
-    productUrl = new URL(body.productImage);
+    productUrl = new URL(url);
   } catch {
-    return json({ error: 'invalid product image' }, 400, headers);
+    return { error: 'invalid product image', status: 400 };
   }
-  // Only fetch product images from the LAGI site itself — never arbitrary URLs.
-  if (!allowed.includes(productUrl.origin)) return json({ error: 'product image not allowed' }, 400, headers);
-  const productRes = await fetch(productUrl.toString());
-  if (!productRes.ok) return json({ error: '상품 이미지를 불러오지 못했습니다.' }, 502, headers);
-  const productMime = (productRes.headers.get('Content-Type') ?? 'image/jpeg').split(';')[0];
-  if (!/^image\/(jpeg|png|webp)$/.test(productMime)) return json({ error: 'unsupported product image' }, 400, headers);
-  const productBuf = await productRes.arrayBuffer();
-  if (productBuf.byteLength > MAX_PRODUCT_BYTES) return json({ error: 'product image too large' }, 413, headers);
+  if (!allowed.includes(productUrl.origin)) return { error: 'product image not allowed', status: 400 };
+  const res = await fetch(productUrl.toString());
+  if (!res.ok) return { error: '상품 이미지를 불러오지 못했습니다.', status: 502 };
+  const mime = (res.headers.get('Content-Type') ?? 'image/jpeg').split(';')[0];
+  if (!/^image\/(jpeg|png|webp)$/.test(mime)) return { error: 'unsupported product image', status: 400 };
+  const buf = await res.arrayBuffer();
+  if (buf.byteLength > MAX_PRODUCT_BYTES) return { error: 'product image too large', status: 413 };
+  return { mime, data: toBase64(buf) };
+}
 
-  const gemini = await fetch(
+type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
+
+/** One Gemini image-model call; returns the first image it produced as a data URL. */
+async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null> {
+  const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: buildPrompt(body) },
-              { inline_data: { mime_type: person.mime, data: person.data } },
-              { inline_data: { mime_type: productMime, data: toBase64(productBuf) } },
-            ],
-          },
-        ],
-        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-      }),
+      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } }),
     },
   );
-
-  if (!gemini.ok) {
-    const detail = await gemini.text();
-    console.log('gemini error', gemini.status, detail.slice(0, 500));
-    return json({ error: 'AI 합성에 실패했습니다. 잠시 후 다시 시도해 주세요.' }, 502, headers);
+  if (!res.ok) {
+    console.log('gemini error', res.status, (await res.text()).slice(0, 500));
+    return null;
   }
-  const result = (await gemini.json()) as {
+  const result = (await res.json()) as {
     candidates?: {
       content?: { parts?: { inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
     }[];
   };
   for (const part of result.candidates?.[0]?.content?.parts ?? []) {
     const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
-    if (img?.data) return json({ image: `data:${img.mimeType};base64,${img.data}` }, 200, headers);
+    if (img?.data) return `data:${img.mimeType};base64,${img.data}`;
   }
-  return json({ error: 'AI가 이미지를 만들지 못했습니다. 다른 사진으로 시도해 주세요.' }, 502, headers);
+  return null;
+}
+
+// ---- Cut-out studio: photoreal product cut-outs for the live camera try-on -------------------
+
+const MAX_CUTOUT_BYTES = 4 * 1024 * 1024;
+
+function cutoutPrompt(name: string, category: string) {
+  const kind = category.toLowerCase();
+  const pose = kind.includes('bag')
+    ? 'standing upright, seen straight from the front, with its handles or strap raised above the bag'
+    : kind === 'top'
+      ? 'seen straight from the front as if worn by an invisible mannequin (ghost mannequin), sleeves relaxed'
+      : kind === 'bottom'
+        ? 'seen straight from the front as if worn by an invisible mannequin (ghost mannequin), waistband at the top'
+        : 'seen straight from the front';
+  return [
+    `This is a photo of the product "${name}". Create a photorealistic studio cut-out of exactly this product: identical shape, colours, prints, text, materials, stitching and hardware.`,
+    `Show only the product, ${pose}, fully visible and centred, filling about 80% of the frame.`,
+    'Remove any person, hands, hangers, props and the original background.',
+    'Place it on a perfectly flat, uniform pure green (#00FF00) background with no shadow, gradient or texture. If the product itself contains bright green, use pure magenta (#FF00FF) instead.',
+    'Return only the image.',
+  ].join(' ');
+}
+
+function isAdmin(request: Request, env: Env) {
+  const key = request.headers.get('X-Admin-Key') ?? '';
+  return !!env.ADMIN_KEY && key.length > 0 && sameString(key, env.ADMIN_KEY);
+}
+
+async function handleCutout(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+  const id = /^\/cutout\/([a-z0-9-]{1,60})$/.exec(path)?.[1];
+
+  if (request.method === 'GET' && id) {
+    const raw = await env.USERS?.get(`cutout:${id}`);
+    if (!raw) return json({ error: 'not found' }, 404, headers);
+    return new Response(raw, {
+      status: 200,
+      headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+    });
+  }
+
+  if (!isAdmin(request, env)) return json({ error: '관리자 키가 맞지 않습니다.' }, 401, headers);
+  if (!env.USERS) return json({ error: '저장소(KV)가 연결되지 않았습니다.' }, 503, headers);
+
+  if (request.method === 'POST' && path === '/cutout/generate') {
+    if (!env.GEMINI_API_KEY) return json({ error: 'server not configured' }, 500, headers);
+    const body = (await request.json().catch(() => ({}))) as { productImage?: string; productName?: string; category?: string };
+    const product = await fetchProductImage(body.productImage ?? '', allowed);
+    if ('error' in product) return json({ error: product.error }, product.status, headers);
+    const image = await geminiImage(env, [
+      { text: cutoutPrompt(body.productName ?? 'product', body.category ?? '') },
+      { inline_data: { mime_type: product.mime, data: product.data } },
+    ]);
+    return image ? json({ image }, 200, headers) : json({ error: 'AI가 누끼를 만들지 못했습니다. 다시 시도해 주세요.' }, 502, headers);
+  }
+
+  if (request.method === 'PUT' && id) {
+    const body = (await request.json().catch(() => null)) as {
+      image?: string;
+      anchorLeft?: { x: number; y: number };
+      anchorRight?: { x: number; y: number };
+    } | null;
+    const img = parseDataUrl(body?.image ?? '');
+    const pt = (p?: { x: number; y: number }) => !!p && Number.isFinite(p.x) && Number.isFinite(p.y);
+    if (!img || img.mime !== 'image/png' || !pt(body?.anchorLeft) || !pt(body?.anchorRight))
+      return json({ error: 'invalid cut-out' }, 400, headers);
+    if (img.data.length * 0.75 > MAX_CUTOUT_BYTES) return json({ error: '이미지가 너무 큽니다.' }, 413, headers);
+    await env.USERS.put(
+      `cutout:${id}`,
+      JSON.stringify({ image: body!.image, anchorLeft: body!.anchorLeft, anchorRight: body!.anchorRight }),
+    );
+    return json({ ok: true }, 200, headers);
+  }
+
+  if (request.method === 'DELETE' && id) {
+    await env.USERS.delete(`cutout:${id}`);
+    return json({ ok: true }, 200, headers);
+  }
+  return json({ error: 'not found' }, 404, headers);
 }

@@ -128,7 +128,7 @@ export function SignupPage() {
   }
 
   return (
-    <AuthShell title="회원가입" subtitle="라기와 함께 다시, 새롭게.">
+    <AuthShell title="회원가입" subtitle="LAGI IN AGING — 오래 쓰고, 다시 고르는 사람들.">
       <form onSubmit={submit} className="space-y-4">
         <Input label="이름" autoComplete="name" required maxLength={30} value={form.name} onChange={set('name')} />
         <Input label="이메일" type="email" autoComplete="email" required value={form.email} onChange={set('email')} />

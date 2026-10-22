@@ -92,8 +92,7 @@ export function bodyPoints(landmarks: BodyLandmark[], width: number, height: num
 /** Exponential smoothing so the garment does not jitter with per-frame landmark noise. */
 export function smoothPoints(prev: BodyPoints | null, next: BodyPoints, alpha = 0.45): BodyPoints {
   if (!prev) return next;
-  const mix = (p: Pt | null, n: Pt | null): Pt | null =>
-    n && p ? { x: p.x + (n.x - p.x) * alpha, y: p.y + (n.y - p.y) * alpha } : n;
+  const mix = (p: Pt | null, n: Pt | null): Pt | null => (n && p ? { x: p.x + (n.x - p.x) * alpha, y: p.y + (n.y - p.y) * alpha } : n);
   return {
     shoulderL: mix(prev.shoulderL, next.shoulderL),
     shoulderR: mix(prev.shoulderR, next.shoulderR),
@@ -111,6 +110,10 @@ export interface FitAdjust {
   carry: CarryStyle;
   /** BAG only: the screen side the bag is carried on. */
   side: ScreenSide;
+  /** BAG only: pendulum swing about the hanging point, in radians (see BagSway). */
+  sway?: number;
+  /** BAG only: told where the bag hangs from and how tall it is on screen, to drive the swing. */
+  onHang?: (pivot: Pt, heightPx: number) => void;
 }
 
 /** Draws the garment onto the body. Returns false when the body points it needs are not visible. */
@@ -119,7 +122,7 @@ export function drawGarment(
   garment: HTMLImageElement,
   settings: TryOnSettings,
   body: BodyPoints,
-  adjust: FitAdjust
+  adjust: FitAdjust,
 ): boolean {
   if (!garment.naturalWidth || !garment.naturalHeight) return false;
   return settings.garmentType === 'BAG'
@@ -150,7 +153,7 @@ function drawClothing(
   garment: HTMLImageElement,
   settings: TryOnSettings,
   body: BodyPoints,
-  adjust: FitAdjust
+  adjust: FitAdjust,
 ): boolean {
   const bottom = settings.garmentType === 'BOTTOM';
   const bL = bottom ? body.hipL : body.shoulderL;
@@ -193,7 +196,7 @@ function drawBag(
   garment: HTMLImageElement,
   settings: TryOnSettings,
   body: BodyPoints,
-  adjust: FitAdjust
+  adjust: FitAdjust,
 ): boolean {
   const { shoulderL, shoulderR } = body;
   if (!shoulderL || !shoulderR) return false;
@@ -235,7 +238,14 @@ function drawBag(
   hang = add(hang, mul(up, -(settings.offsetY + adjust.offsetY) * span));
 
   const { gL, gR, mid } = imageAnchors(garment, settings);
-  const toScreen = (p: Pt): Pt => add(hang, mul(sub(p, mid), scale));
+  const sway = adjust.sway ?? 0;
+  const cos = Math.cos(sway);
+  const sin = Math.sin(sway);
+  const toScreen = (p: Pt): Pt => {
+    const d = mul(sub(p, mid), scale);
+    return add(hang, { x: d.x * cos - d.y * sin, y: d.x * sin + d.y * cos });
+  };
+  adjust.onHang?.(hang, garment.naturalHeight * scale);
 
   if (strapTo) {
     // The strap leaves from the bag end nearer the shoulder it goes over; the other end runs behind the back.
@@ -255,6 +265,7 @@ function drawBag(
 
   ctx.save();
   ctx.translate(hang.x, hang.y);
+  ctx.rotate(sway);
   ctx.scale(scale, scale);
   ctx.drawImage(garment, -mid.x, -mid.y);
   ctx.restore();

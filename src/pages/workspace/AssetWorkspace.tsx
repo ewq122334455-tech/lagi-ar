@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import type { Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product } from '@/data/productTypes';
 import { readLocalDrafts, writeLocalDraft, deleteLocalDraft, invalidateProductCache, loadProducts } from '@/data/productEngine';
@@ -101,10 +102,13 @@ export default function AssetWorkspace() {
         <p className="eyebrow">관리자 전용</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] lg:text-4xl">제품 등록</h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-graphite">
-          탭 순서대로 채우면 됩니다. 입력한 내용은 <strong>8. 미리보기 · 게시</strong>에서 “임시 저장”하면 이 브라우저에서
+          탭 순서대로 채우면 됩니다. 입력한 내용은 <strong>7. 미리보기 · 게시</strong>에서 “임시 저장”하면 이 브라우저에서
           바로 미리볼 수 있고, 실제 사이트에 올리려면 거기서 제품 파일(product.json)을 내려받아 GitHub에 올리면 됩니다.
           (방문자에게는 보이지 않는 페이지입니다.)
         </p>
+        <Link to="/cutouts" className="mt-4 inline-block text-sm font-semibold underline underline-offset-4">
+          카메라 피팅용 실사 누끼 만들기 →
+        </Link>
 
         {/* PRODUCT SELECTOR */}
         <div className="mt-10 flex flex-wrap items-end gap-4 border-y border-line py-6">

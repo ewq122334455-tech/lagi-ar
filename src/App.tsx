@@ -19,6 +19,7 @@ const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
 const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.SignupPage })));
 const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
+const CutoutStudio = lazy(() => import('@/pages/workspace/CutoutStudio'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
+            <Route path="/cutouts" element={<CutoutStudio />} />
             <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="/try-on/:id" element={<TryOnPage />} />

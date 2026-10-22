@@ -60,16 +60,16 @@ export function HeroVideo({ tryOnId }: { tryOnId: string | null }) {
         <p className={`text-[11px] font-bold tracking-[0.3em] text-paper/80 ${rise}`} style={step(0)}>
           LAGI — LOOK CLOSER, AGAIN
         </p>
-        <h1 className="mt-4 text-[13vw] font-bold leading-[0.95] tracking-[-0.05em] sm:text-7xl lg:text-[120px]">
+        <h1 className="mt-4 font-display text-[15vw] leading-[0.9] tracking-[-0.02em] sm:text-8xl lg:text-[132px]" aria-label="LAGI IN AGING">
           <span className={`block ${rise}`} style={step(1)}>
-            다시,
+            LAGI
           </span>
           <span className={`block ${rise}`} style={step(2)}>
-            새롭게.
+            IN AGING
           </span>
         </h1>
         <p className={`mt-5 max-w-md text-sm text-paper/85 lg:text-base ${rise}`} style={step(3)}>
-          버려진 재료가 다시 가방이 되고, 매일 입는 옷이 다시 새로워지는 곳.
+          시간이 쌓일수록 멋이 드는 것들. 쓰임을 다한 재료는 가방으로, 매일의 옷은 오래 입는 기본으로.
         </p>
         <div className={`mt-7 flex flex-wrap gap-2.5 ${rise}`} style={step(4)}>
           <Link to="/products" className="rounded-full bg-paper px-6 py-3.5 text-sm font-bold text-ink transition-transform hover:-translate-y-0.5 focus-ring">

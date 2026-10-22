@@ -37,8 +37,7 @@ export default function About() {
 
       <DetailSection eyebrow="BRAND HISTORY">
         <p className="max-w-2xl text-lg leading-relaxed text-graphite">
-          라기는 ‘다시’라는 이름처럼, 쓰임을 다한 밀가루 포대와 우유팩, 자동차 번호판 같은 재료를 모아 가방과 소품으로 다시 만들어
-          왔습니다. POPSICLUS와 함께한 데일리 라인부터 펼치면 돗자리가 되는 피크닉백까지, 하나의 재료와 물건이 두 번, 세 번 쓰이는
+          라기는 쓰임을 다한 밀가루 포대와 우유팩, 자동차 번호판 같은 재료를 모아 가방과 소품으로 만들어 왔습니다. POPSICLUS와 함께한 데일리 라인부터 펼치면 돗자리가 되는 피크닉백까지, 하나의 재료와 물건이 두 번, 세 번 쓰이는
           방법을 찾고 있어요.
         </p>
       </DetailSection>

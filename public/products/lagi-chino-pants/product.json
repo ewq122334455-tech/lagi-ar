@@ -81,56 +81,56 @@
         "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
       },
       "productLocation": {
-        "value": "전체",
+        "value": "앞판 · 뒤판",
         "status": "AI_DRAFT",
-        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+        "source": "AI 초안 (2026-10-22 개별 수정)"
       },
       "reasonForUse": {
-        "value": "매일 입어도 편안하도록 골랐어요.",
+        "value": "트윌 조직이 주름을 잘 잡아 줘 센터 주름이 오래 유지돼요.",
         "status": "AI_DRAFT",
-        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+        "source": "AI 초안 (2026-10-22 개별 수정)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "재단",
+      "title": "트윌 재단",
       "description": {
-        "value": "패턴에 맞춰 원단을 한 장씩 재단합니다.",
+        "value": "스트레이트 핏 패턴으로 재단합니다.",
         "status": "AI_DRAFT",
-        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+        "source": "AI 초안 (2026-10-22 개별 수정)"
       }
     },
     {
       "order": 2,
-      "title": "프레스",
+      "title": "봉제",
       "description": {
-        "value": "다리 중앙에 주름을 눌러 잡아 단정한 실루엣을 만듭니다.",
+        "value": "허리 벨트와 벨트 고리를 답니다.",
         "status": "AI_DRAFT",
-        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+        "source": "AI 초안 (2026-10-22 개별 수정)"
       }
     },
     {
       "order": 3,
-      "title": "마무리 검수",
+      "title": "센터 주름 프레스",
       "description": {
-        "value": "봉제선과 프린트 상태를 하나하나 확인합니다.",
+        "value": "다리 중앙에 주름을 눌러 단정한 선을 만듭니다.",
         "status": "AI_DRAFT",
-        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+        "source": "AI 초안 (2026-10-22 개별 수정)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "라기는 말레이·인도네시아어로 ‘다시’라는 뜻이에요. 한 번 입고 끝나는 옷이 아니라, 다시 꺼내 입고 싶은 기본을 생각하며 만들었습니다.",
+    "value": "출근할 때도, 주말에도 고민 없이 꺼내 입는 바지가 하나쯤 필요해요. 군더더기 없는 베이지 치노에 센터 주름 하나만 남겨 단정함을 살렸습니다.",
     "status": "AI_DRAFT",
-    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+    "source": "AI 초안 (2026-10-22 개별 수정)"
   },
   "lagiSelectionReason": {
-    "value": "라기 모티프와 컬러를 일상에서 가장 쉽게 입을 수 있는 아이템이라 골랐어요.",
+    "value": "어떤 라기 가방과 들어도 잘 어울리는 무난한 기본이라서요.",
     "status": "AI_DRAFT",
-    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+    "source": "AI 초안 (2026-10-22 개별 수정)"
   },
   "model3D": "",
   "animations": [],
@@ -165,5 +165,20 @@
         "label": "임의로 만든 샘플 상품입니다. 이름·가격·설명·이미지는 실제 상품이 정해지면 교체하세요."
       }
     ]
-  }
+  },
+  "tryOn": {
+    "garmentImage": "products/lagi-chino-pants/tryon/garment.png",
+    "garmentType": "BOTTOM",
+    "anchorLeft": {
+      "x": 0.28,
+      "y": 0.11
+    },
+    "anchorRight": {
+      "x": 0.72,
+      "y": 0.11
+    },
+    "fit": 1.0,
+    "offsetY": 0
+  },
+  "tryOnAvailable": true
 }
