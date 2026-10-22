@@ -1,0 +1,112 @@
+{
+  "id": "origami-picnic-bag",
+  "brandLabel": "LAGI × POPSICLUS",
+  "name": {
+    "value": "Origami 오리가미 피크닉백",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "category": {
+    "value": "Bag",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "price": {
+    "value": 87000,
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "돗자리 겸용 여행용 피크닉매트",
+    "status": "VERIFIED",
+    "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/origami-picnic-bag/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "dimensions": {
+    "widthCm": 60,
+    "heightCm": 33,
+    "depthCm": 14
+  },
+  "shipping": {
+    "fee": 0
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "model3D": "products/origami-picnic-bag/model/diagonal-L.glb",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "상품명·가격·배송비는 LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)에서 가져왔습니다. 정가 기준이며 할인가는 반영하지 않았습니다."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "치수(W600×H330×D140mm)와 3D 모델은 브랜드 3D 모델링 도면을 기준으로 만들었습니다."
+      },
+      {
+        "level": "OBSERVED",
+        "label": "도면 기준 L(W600×D140×H330)과 M(W360×D140×H190) 두 사이즈가 있으며, 3D 모델은 L 기준입니다. M 모델: model/diagonal-M.glb"
+      }
+    ]
+  },
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": true,
+  "featured": true,
+  "tryOn": {
+    "garmentImage": "products/origami-picnic-bag/tryon/bag.png",
+    "garmentType": "BAG",
+    "anchorLeft": {
+      "x": 0.425,
+      "y": 0.03
+    },
+    "anchorRight": {
+      "x": 0.574,
+      "y": 0.03
+    },
+    "fit": 1,
+    "offsetY": 0,
+    "carry": "SHOULDER",
+    "strapColor": "#1f1f1f"
+  },
+  "tryOnAvailable": true
+}

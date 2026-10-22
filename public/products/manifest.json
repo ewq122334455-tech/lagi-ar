@@ -1,3 +1,13 @@
 {
-  "products": ["product-001"]
+  "products": [
+    "daily-tote",
+    "daily-pouch-bag",
+    "origami-picnic-bag",
+    "plano-bag",
+    "modular-bag-s",
+    "milkpack-earphone-case",
+    "book-cover",
+    "glasses-case",
+    "product-001"
+  ]
 }
