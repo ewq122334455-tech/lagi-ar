@@ -191,17 +191,6 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
         </DetailSection>
       )}
 
-      {/* Sections with no brand-supplied content yet are listed once here instead of
-          each rendering an empty block — honest, without the page reading as unfinished. */}
-      {missingSections(product).length > 0 && (
-        <section id={product.process.length === 0 ? 'process' : undefined} className="scroll-mt-[var(--nav-height)] border-t border-line px-6 py-10 lg:px-10">
-          <div className="mx-auto flex max-w-canvas flex-wrap items-center gap-x-4 gap-y-2 text-sm text-stone">
-            <ContentBadge status="CONTENT_REQUIRED" />
-            <span>준비 중인 정보: {missingSections(product).join(' · ')}</span>
-          </div>
-        </section>
-      )}
-
       {/* EXPERIENCE — QR codes so a desktop visitor can continue on their phone */}
       <section id="experience" className="scroll-mt-[calc(var(--nav-height)+48px)] border-t border-line px-4 py-14 lg:px-10">
         <h2 className="text-xl font-bold tracking-[-0.03em]">휴대폰으로 체험하기</h2>
@@ -231,16 +220,6 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
       </section>
     </div>
   );
-}
-
-function missingSections(product: import('@/data/productTypes').Product): string[] {
-  const missing: string[] = [];
-  if (!product.description.value) missing.push('제품 설명');
-  if (product.materials.length === 0) missing.push('소재');
-  if (product.process.length === 0) missing.push('공정');
-  if (!product.lagiSelectionReason.value) missing.push('선정 이유');
-  if (!product.story.value) missing.push('이야기');
-  return missing;
 }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
