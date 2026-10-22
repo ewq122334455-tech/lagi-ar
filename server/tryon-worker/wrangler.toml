@@ -1,0 +1,9 @@
+name = "lagi-tryon"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Gemini image model. If Google renames it, change this and redeploy (see README).
+GEMINI_MODEL = "gemini-2.5-flash-image"
+# The LAGI site (and local dev). Only these origins may call the Worker or supply product images.
+ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io,http://localhost:5173,http://localhost:4173"

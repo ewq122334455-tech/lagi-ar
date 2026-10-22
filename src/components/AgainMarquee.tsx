@@ -24,7 +24,7 @@ export function AgainMarquee() {
     >
       <div className="animate-marquee flex w-max gap-10 whitespace-nowrap group-hover:[animation-play-state:paused]" aria-hidden="true">
         {[...row, ...row].map((w, i) => (
-          <span key={i} className={`flex items-center gap-10 text-3xl text-graphite lg:text-4xl ${/^[\x00-\x7f ]+$/.test(w) ? 'italic' : 'font-semibold'}`}>
+          <span key={i} className={`flex items-center gap-10 text-3xl text-graphite lg:text-4xl ${/^[ -~]+$/.test(w) ? 'italic' : 'font-semibold'}`}>
             {w}
             <span className="h-1.5 w-1.5 rounded-full bg-orange not-italic" />
           </span>
