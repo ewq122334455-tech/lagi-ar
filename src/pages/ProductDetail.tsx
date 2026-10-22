@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { useSpotlight } from '@/hooks/useSpotlight';
@@ -10,7 +9,7 @@ import { SpotlightMenu } from '@/components/SpotlightMenu';
 import { SpotlightPanel } from '@/components/SpotlightPanel';
 import { QRCodeImage } from '@/components/QRCode';
 import { BuyPanel } from '@/components/BuyPanel';
-import { ProductViewer } from '@/three/ProductViewer';
+import { ProductGallery } from '@/components/ProductGallery';
 import { canUseAR } from '@/utils/arAvailability';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { shippingLabel } from '@/utils/shipping';
@@ -37,7 +36,6 @@ export default function ProductDetail() {
 
 function ProductDetailView({ product }: { product: import('@/data/productTypes').Product }) {
   const { selected, selectedId, select, clear } = useSpotlight(product.hotspots);
-  const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const arUrl = canUseAR(product)
     ? `${window.location.origin}${window.location.pathname}#/ar/${product.id}`
     : null;
@@ -47,22 +45,12 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
 
   return (
     <div>
-      {/* PRODUCT HERO — viewer left, sticky buy column right */}
+      {/* PRODUCT HERO — photos left, sticky buy column right */}
       <section className="grid grid-cols-1 gap-6 px-0 pt-0 lg:grid-cols-12 lg:gap-10 lg:px-10 lg:pt-6">
         <div className="lg:col-span-7">
-          <div className="relative aspect-square w-full overflow-hidden bg-mist lg:rounded-xl">
-            <ProductViewer
-              className="absolute inset-0 h-full w-full"
-              modelUrl={product.model3D}
-              hotspots={product.hotspots}
-              selectedHotspotId={selectedId}
-              onSelectHotspot={select}
-              animations={product.animations}
-              activeAnimation={activeAnimation}
-              onSetAnimation={setActiveAnimation}
-            />
+          <ProductGallery product={product}>
             <SpotlightPanel hotspot={selected} onClose={clear} />
-          </div>
+          </ProductGallery>
         </div>
 
         <div className="px-4 lg:col-span-5 lg:px-0">
@@ -115,7 +103,6 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               )}
               <InfoRow label="체험">
                 <span className="flex flex-wrap gap-1.5">
-                  {product.model3D && <Pill>3D 보기</Pill>}
                   {tryOnUrl && <Pill tone="lime">AI 피팅</Pill>}
                   {product.remixModel && <Pill tone="orange">다시 조합</Pill>}
                 </span>

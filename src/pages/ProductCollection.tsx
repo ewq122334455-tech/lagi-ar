@@ -34,7 +34,6 @@ export default function ProductCollection() {
   const query = (searchParams.get('q') ?? '').trim().toLowerCase();
   const sort = (searchParams.get('sort') as SortKey) in SORT_LABELS ? (searchParams.get('sort') as SortKey) : 'recommended';
   const onlyTryOn = searchParams.get('filter') === 'tryon';
-  const [only3D, setOnly3D] = useState(false);
 
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(searchParams);
@@ -57,7 +56,6 @@ export default function ProductCollection() {
     const filtered = state.data
       .filter((p) => category === 'ALL' || p.category.value === category)
       .filter((p) => !onlyTryOn || aiTryOnEnabled(p))
-      .filter((p) => !only3D || !!p.model3D)
       .filter((p) => {
         if (!query) return true;
         const haystack = [p.name.value, p.shortDescription.value, p.category.value, p.id, ...p.hotspots.map((h) => h.title)]
@@ -73,7 +71,7 @@ export default function ProductCollection() {
     else if (sort === 'name') sorted.sort((a, b) => (a.name.value ?? '').localeCompare(b.name.value ?? '', 'ko'));
     else sorted.sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
     return sorted;
-  }, [state, category, sort, onlyTryOn, only3D, query]);
+  }, [state, category, sort, onlyTryOn, query]);
 
   const title = query ? `‘${searchParams.get('q')}’ 검색 결과` : sort === 'ranking' ? 'LAGI 랭킹' : onlyTryOn ? 'AI 피팅 가능 상품' : '전체 상품';
 
@@ -100,9 +98,6 @@ export default function ProductCollection() {
             <div className="no-scrollbar flex gap-2 overflow-x-auto">
               <Chip active={onlyTryOn} onClick={() => setParam('filter', onlyTryOn ? null : 'tryon')}>
                 AI 피팅
-              </Chip>
-              <Chip active={only3D} onClick={() => setOnly3D((v) => !v)}>
-                3D 보기
               </Chip>
             </div>
             <div className="no-scrollbar flex items-center gap-3 overflow-x-auto text-[13px]">
