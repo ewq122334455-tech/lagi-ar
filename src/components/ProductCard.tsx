@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { canUseTryOn } from '@/utils/tryOnAvailability';
 import { productCover, productDisplayName } from '@/utils/productImage';
+import { LagiLogo } from '@/components/LagiLogo';
 
 interface ProductCardProps {
   product: Product;
@@ -26,7 +27,9 @@ export function ProductCard({ product, rank }: ProductCardProps) {
             className="h-full w-full object-contain p-[12%] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm font-bold tracking-[0.3em] text-stone">LAGI</div>
+          <div className="flex h-full w-full items-center justify-center text-stone">
+            <LagiLogo className="h-5 w-auto" />
+          </div>
         )}
         {rank !== undefined && (
           <span

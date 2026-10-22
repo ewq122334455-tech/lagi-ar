@@ -13,6 +13,8 @@
   --lagi-orange: #c2662c;
   --lagi-lime: #deb457;
   /* Utility strip + main bar + category row (the bar collapses to two rows on mobile). */
+  --lagi-font: 'Posterama 2001', Posterama2001, Jost, YoonGothic, 'Yoon Gothic', '윤고딕', 'Pretendard Variable', Pretendard,
+    -apple-system, sans-serif;
   --nav-height: 148px;
   --tabbar-height: 0px;
 }
@@ -30,7 +32,7 @@ body {
   margin: 0;
   background: var(--lagi-paper);
   color: var(--lagi-ink);
-  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--lagi-font);
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.01em;
   word-break: keep-all;
@@ -95,29 +97,10 @@ button {
   top: 12px;
 }
 
-/* Display serif: Instrument Serif has a single weight, and Korean falls back to Pretendard —
-   keep Korean display text tight and medium so the two scripts sit together. */
+/* Display headlines share the brand stack; tighten tracking at large sizes. */
 .font-display {
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.02em;
-}
-.font-display:lang(ko) {
-  letter-spacing: -0.035em;
-}
-
-@media (max-width: 1199px) {
-  :root {
-    --nav-height: 100px;
-    --tabbar-height: 60px;
-  }
-}
-
-/* Hide scrollbars on horizontal chip/tab rows while keeping them scrollable. */
-.no-scrollbar {
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
 }
 
 @keyframes lagi-word {

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { LagiLogo } from '@/components/LagiLogo';
 
 const COLUMNS: { title: string; links: { label: string; to: string; external?: boolean }[] }[] = [
   {
@@ -32,9 +33,7 @@ export function Footer() {
     <footer className="mt-10 bg-mist px-4 pb-10 pt-12 text-graphite lg:px-10">
       <div className="flex flex-col gap-10 lg:flex-row lg:justify-between">
         <div>
-          <p className="flex items-center gap-1.5 text-xl font-black tracking-[0.12em] text-ink">
-            LAGI <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange" aria-hidden="true" />
-          </p>
+          <LagiLogo className="h-5 w-auto text-ink" />
           <p className="mt-2 text-sm">lagi = 다시 · Look closer, again.</p>
           <p className="mt-1 text-xs text-stone">구매와 결제는 공식 네이버 스마트스토어에서 진행됩니다.</p>
         </div>

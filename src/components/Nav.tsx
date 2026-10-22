@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
+import { LagiLogo } from '@/components/LagiLogo';
 
 /** Store categories. `match` decides which tab lights up for the current URL. */
 const TABS: { to: string; label: string; match: (path: string, search: string) => boolean }[] = [
@@ -48,9 +49,8 @@ export function Nav() {
 
         {/* Main bar */}
         <div className="flex h-14 items-center gap-4 px-4 lg:h-[68px] lg:gap-10 lg:px-10">
-          <Link to="/" className="flex shrink-0 items-center gap-1.5 focus-ring" aria-label="LAGI 홈">
-            <span className="text-2xl font-black tracking-[0.12em] lg:text-[28px]">LAGI</span>
-            <span className="mt-2 h-2 w-2 rounded-full bg-orange" aria-hidden="true" />
+          <Link to="/" className="flex shrink-0 items-center focus-ring" aria-label="LAGI 홈">
+            <LagiLogo className="h-[18px] w-auto lg:h-[22px]" />
           </Link>
 
           <form onSubmit={submitSearch} className="hidden max-w-xl flex-1 lg:block" role="search">
