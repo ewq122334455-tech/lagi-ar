@@ -45,7 +45,7 @@ function AgainHero() {
       <div className="mx-auto max-w-canvas">
         <p className="text-xs font-semibold tracking-[0.2em] text-paper/50">lagi · /ˈla.gi/ · adv.</p>
         <div className="mt-8 flex min-h-[1.1em] items-baseline gap-6 text-[22vw] font-medium leading-none tracking-[-0.04em] lg:text-[13vw]" aria-live="polite">
-          <span key={current.word} className={`animate-[lagi-word_1.6s_ease-in-out] ${/^[\x00-\x7f ]+$/.test(current.word) ? 'italic' : 'font-bold'}`}>
+          <span key={current.word} className={`animate-[lagi-word_1.6s_ease-in-out] ${/^[ -~]+$/.test(current.word) ? 'italic' : 'font-bold'}`}>
             {current.word}
           </span>
           <span className="hidden text-base font-normal not-italic tracking-normal text-paper/40 sm:inline lg:text-lg">{current.lang}</span>
