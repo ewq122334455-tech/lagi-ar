@@ -30,7 +30,7 @@ export function ProductCard({ product, rank }: ProductCardProps) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-stone">
-            <LagiLogo className="h-5 w-auto" />
+            <LagiLogo className="h-12 w-auto opacity-40" />
           </div>
         )}
         {rank !== undefined && (

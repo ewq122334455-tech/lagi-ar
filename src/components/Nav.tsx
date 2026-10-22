@@ -50,7 +50,7 @@ export function Nav() {
         {/* Main bar */}
         <div className="flex h-14 items-center gap-4 px-4 lg:h-[68px] lg:gap-10 lg:px-10">
           <Link to="/" className="flex shrink-0 items-center focus-ring" aria-label="LAGI 홈">
-            <LagiLogo className="h-[18px] w-auto lg:h-[22px]" />
+            <LagiLogo className="h-11 w-auto text-[#1D5198] lg:h-[54px]" />
           </Link>
 
           <form onSubmit={submitSearch} className="hidden max-w-xl flex-1 lg:block" role="search">

@@ -4,16 +4,10 @@ import { CARRY_STYLE_LABELS } from '@/utils/tryOnAvailability';
 import { PoseTracker } from './PoseTracker';
 import type { BodyLandmark } from './PoseTracker';
 import { bodyPoints, drawGarment, smoothPoints } from './garmentFit';
+import { CARRY_PROMPTS, aiTryOnEnabled, requestAiTryOn } from './aiTryOn';
 import type { BodyPoints, FitAdjust, ScreenSide } from './garmentFit';
 
-type TryOnState =
-  | 'ready-to-start'
-  | 'loading'
-  | 'camera-denied'
-  | 'camera-unavailable'
-  | 'engine-error'
-  | 'live'
-  | 'photo';
+type TryOnState = 'ready-to-start' | 'loading' | 'camera-denied' | 'camera-unavailable' | 'engine-error' | 'live' | 'photo';
 
 type Facing = 'user' | 'environment';
 
@@ -46,7 +40,12 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
   const photoLandmarksRef = useRef<BodyLandmark[] | null>(null);
   const pointsRef = useRef<BodyPoints | null>(null);
   const rafRef = useRef<number | null>(null);
-  const adjustRef = useRef<FitAdjust>({ fit: 1, offsetY: 0, carry: 'SHOULDER', side: 'R' });
+  const adjustRef = useRef<FitAdjust>({
+    fit: 1,
+    offsetY: 0,
+    carry: 'SHOULDER',
+    side: 'R',
+  });
   const showGarmentRef = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +60,11 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
   const [saving, setSaving] = useState(false);
   const [carry, setCarry] = useState<CarryStyle>(rawSettings.carry ?? 'SHOULDER');
   const [side, setSide] = useState<ScreenSide>('R');
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const canAi = aiTryOnEnabled(product);
 
   adjustRef.current = { fit, offsetY, carry, side };
   showGarmentRef.current = showGarment;
@@ -83,7 +87,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       trackerRef.current?.close();
       trackerRef.current = null;
     },
-    [stopCamera]
+    [stopCamera],
   );
 
   /** Loads the garment image and pose model once; both are reused across camera/photo modes. */
@@ -130,7 +134,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       ctx.restore();
       return placed;
     },
-    [settings]
+    [settings],
   );
 
   const startCamera = useCallback(
@@ -154,7 +158,11 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: nextFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: {
+            facingMode: nextFacing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
       } catch (e: any) {
@@ -197,7 +205,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       };
       rafRef.current = requestAnimationFrame(loop);
     },
-    [facing, prepare, renderFrame, stopCamera]
+    [facing, prepare, renderFrame, stopCamera],
   );
 
   const redrawPhoto = useCallback(() => {
@@ -230,7 +238,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
         URL.revokeObjectURL(url);
       }
     },
-    [prepare, redrawPhoto, stopCamera]
+    [prepare, redrawPhoto, stopCamera],
   );
 
   // Photo mode has no render loop — redraw when the adjustments change.
@@ -250,22 +258,73 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
     setSaving(true);
     try {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return;
-      const filename = `lagi-tryon-${product.id}.png`;
-      const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'LAGI 가상 피팅' }).catch(() => undefined);
-      } else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      }
+      if (blob) await shareBlob(blob, `lagi-tryon-${product.id}.png`, 'LAGI 가상 피팅');
     } finally {
       setSaving(false);
     }
   }, [product.id]);
+
+  /** The current camera frame (or uploaded photo) without the overlay, as the AI's person photo. */
+  const personFrame = useCallback((): string | null => {
+    const video = videoRef.current;
+    const photo = photoRef.current;
+    const live = state === 'live' && video && video.videoWidth > 0;
+    const src: CanvasImageSource | null = live ? video : photo;
+    const w = live ? video.videoWidth : (photo?.naturalWidth ?? 0);
+    const h = live ? video.videoHeight : (photo?.naturalHeight ?? 0);
+    if (!src || !w || !h) return null;
+    const scale = Math.min(1, 1280 / Math.max(w, h));
+    const out = document.createElement('canvas');
+    out.width = Math.round(w * scale);
+    out.height = Math.round(h * scale);
+    const ctx = out.getContext('2d')!;
+    // Keep what the visitor sees: the selfie camera is shown mirrored.
+    if (live && facing === 'user') {
+      ctx.translate(out.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(src, 0, 0, out.width, out.height);
+    return out.toDataURL('image/jpeg', 0.9);
+  }, [state, facing]);
+
+  const runAi = useCallback(async () => {
+    const person = personFrame();
+    if (!person) return;
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const where = side === 'R' ? 'on the right side of the photo' : 'on the left side of the photo';
+      const style = isBag ? `${CARRY_PROMPTS[carry]}, ${where}` : undefined;
+      setAiResult(await requestAiTryOn({ person, product, style }));
+    } catch (e) {
+      setAiError((e as Error).message);
+    } finally {
+      setAiBusy(false);
+    }
+  }, [personFrame, side, isBag, carry, product]);
+
+  // Live camera: count down 3-2-1 so the visitor can step back and pose; a photo goes straight away.
+  const startAi = useCallback(() => {
+    if (state === 'live') setCountdown(3);
+    else runAi();
+  }, [state, runAi]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      runAi();
+      return;
+    }
+    const t = window.setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [countdown, runAi]);
+
+  const saveAi = useCallback(async () => {
+    if (!aiResult) return;
+    const blob = await (await fetch(aiResult)).blob();
+    await shareBlob(blob, `lagi-ai-fit-${product.id}.png`, 'LAGI AI 피팅');
+  }, [aiResult, product.id]);
 
   const handleExit = useCallback(() => {
     stopCamera();
@@ -317,7 +376,8 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
             </button>
           </div>
           <p className="mt-6 max-w-xs text-xs text-mist/60">
-            영상과 사진은 이 기기 안에서만 처리되며 서버로 전송되지 않습니다.
+            실시간 화면은 이 기기 안에서만 처리됩니다. ‘AI로 진짜처럼 찍기’를 누를 때만 그 순간의 사진 한 장이 AI 합성을 위해 전송되며,
+            저장되지 않습니다.
           </p>
         </Overlay>
       )}
@@ -379,7 +439,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
           </p>
 
           {showAdjust && (
-            <div className="absolute inset-x-4 bottom-28 z-20 mx-auto max-w-sm space-y-4 bg-ink/80 p-5 backdrop-blur">
+            <div className="absolute inset-x-4 bottom-44 z-20 mx-auto max-w-sm space-y-4 bg-ink/80 p-5 backdrop-blur">
               <Slider label="크기" value={fit} min={0.7} max={1.5} step={0.01} onChange={setFit} />
               <Slider label="위치 (위 ↔ 아래)" value={offsetY} min={-0.6} max={0.6} step={0.01} onChange={setOffsetY} />
               <button
@@ -395,44 +455,120 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
             </div>
           )}
 
-          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-wrap justify-center gap-2 p-4">
-            <ControlButton
-              onPointerDown={() => setShowGarment(false)}
-              onPointerUp={() => setShowGarment(true)}
-              onPointerLeave={() => setShowGarment(true)}
-            >
-              누르고 비교
-            </ControlButton>
-            {isBag && (
-              <>
-                <ControlButton onClick={() => setCarry((c) => CARRY_ORDER[(CARRY_ORDER.indexOf(c) + 1) % CARRY_ORDER.length])}>
-                  {CARRY_STYLE_LABELS[carry]}
-                </ControlButton>
-                <ControlButton onClick={() => setSide((v) => (v === 'L' ? 'R' : 'L'))}>좌우 바꾸기</ControlButton>
-              </>
+          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 p-4">
+            {canAi && (
+              <button
+                type="button"
+                onClick={startAi}
+                disabled={aiBusy || countdown !== null}
+                className="rounded-full bg-lime px-7 py-4 text-base font-bold text-ink shadow-lg hover:brightness-95 focus-ring disabled:opacity-60"
+              >
+                ✦ AI로 진짜처럼 찍기
+              </button>
             )}
-            <ControlButton onClick={() => setShowAdjust((v) => !v)} pressed={showAdjust}>
-              핏 조절
-            </ControlButton>
-            {state === 'live' ? (
-              <ControlButton onClick={switchCamera}>카메라 전환</ControlButton>
-            ) : (
-              <ControlButton onClick={() => startCamera()}>카메라로</ControlButton>
-            )}
-            <ControlButton onClick={() => fileInputRef.current?.click()}>사진 올리기</ControlButton>
-            <button
-              type="button"
-              onClick={capture}
-              disabled={saving}
-              className="eyebrow bg-paper px-5 py-3 text-ink hover:bg-mist focus-ring disabled:opacity-50"
-            >
-              {saving ? '저장 중' : '촬영 · 저장'}
-            </button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <ControlButton
+                onPointerDown={() => setShowGarment(false)}
+                onPointerUp={() => setShowGarment(true)}
+                onPointerLeave={() => setShowGarment(true)}
+              >
+                누르고 비교
+              </ControlButton>
+              {isBag && (
+                <>
+                  <ControlButton onClick={() => setCarry((c) => CARRY_ORDER[(CARRY_ORDER.indexOf(c) + 1) % CARRY_ORDER.length])}>
+                    {CARRY_STYLE_LABELS[carry]}
+                  </ControlButton>
+                  <ControlButton onClick={() => setSide((v) => (v === 'L' ? 'R' : 'L'))}>좌우 바꾸기</ControlButton>
+                </>
+              )}
+              <ControlButton onClick={() => setShowAdjust((v) => !v)} pressed={showAdjust}>
+                핏 조절
+              </ControlButton>
+              {state === 'live' ? (
+                <ControlButton onClick={switchCamera}>카메라 전환</ControlButton>
+              ) : (
+                <ControlButton onClick={() => startCamera()}>카메라로</ControlButton>
+              )}
+              <ControlButton onClick={() => fileInputRef.current?.click()}>사진 올리기</ControlButton>
+              <button
+                type="button"
+                onClick={capture}
+                disabled={saving}
+                className="eyebrow bg-paper px-5 py-3 text-ink hover:bg-mist focus-ring disabled:opacity-50"
+              >
+                {saving ? '저장 중' : '화면 저장'}
+              </button>
+            </div>
           </div>
         </>
       )}
+
+      {countdown !== null && countdown > 0 && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <span
+            key={countdown}
+            className="text-[30vw] font-bold leading-none text-paper drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)] lg:text-[16vw]"
+          >
+            {countdown}
+          </span>
+        </div>
+      )}
+
+      {aiBusy && (
+        <Overlay>
+          <Spinner />
+          <p className="mt-4 text-base font-semibold">AI가 착용 사진을 만드는 중… (10~40초)</p>
+          <p className="mt-2 text-sm text-mist/70">카메라는 그대로 두셔도 돼요.</p>
+        </Overlay>
+      )}
+
+      {aiError && !aiBusy && (
+        <div className="absolute inset-x-4 top-20 z-30 mx-auto flex max-w-sm items-start gap-3 rounded-lg bg-orange px-4 py-3 text-sm text-paper">
+          <p className="flex-1">{aiError}</p>
+          <button type="button" onClick={() => setAiError(null)} className="font-bold focus-ring" aria-label="닫기">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {aiResult && (
+        <div className="absolute inset-0 z-40 flex flex-col bg-ink">
+          <img src={aiResult} alt="AI 피팅 결과" className="min-h-0 flex-1 object-contain" />
+          <div className="flex flex-wrap justify-center gap-2 p-4">
+            <button
+              type="button"
+              onClick={saveAi}
+              className="rounded-full bg-paper px-6 py-3 text-sm font-bold text-ink hover:bg-mist focus-ring"
+            >
+              사진 저장 · 공유
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiResult(null)}
+              className="rounded-full border border-paper/60 px-6 py-3 text-sm font-bold hover:border-paper focus-ring"
+            >
+              다시 찍기
+            </button>
+          </div>
+          <p className="pb-4 text-center text-xs text-mist/60">AI가 만든 참고용 이미지라 실제 크기·색감과 다를 수 있어요.</p>
+        </div>
+      )}
     </div>
   );
+}
+
+async function shareBlob(blob: Blob, filename: string, title: string) {
+  const file = new File([blob], filename, { type: blob.type || 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title }).catch(() => undefined);
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -446,11 +582,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function ControlButton({
-  children,
-  pressed,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { pressed?: boolean }) {
+function ControlButton({ children, pressed, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { pressed?: boolean }) {
   return (
     <button
       type="button"
@@ -514,11 +646,7 @@ function ErrorActions({ onRetry, onPhoto }: { onRetry: () => void; onPhoto: () =
 }
 
 function Overlay({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/90 px-8 text-center">
-      {children}
-    </div>
-  );
+  return <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/90 px-8 text-center">{children}</div>;
 }
 
 function Spinner() {

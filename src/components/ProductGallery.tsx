@@ -23,7 +23,7 @@ export function ProductGallery({ product, children }: { product: Product; childr
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-stone">
-            <LagiLogo className="h-6 w-auto" />
+            <LagiLogo className="h-16 w-auto opacity-40" />
           </div>
         )}
         {children}

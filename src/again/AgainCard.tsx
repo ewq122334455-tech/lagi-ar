@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LOGO_PATHS, LOGO_VIEWBOX } from '@/components/logoPaths';
+import { EMBLEM_BODY, EMBLEM_CUTOUT, EMBLEM_VIEWBOX } from '@/components/logoPaths';
 
 const THEMES = [
   { key: 'blue', bg: '#2e55a3', fg: '#f6f4ef', accent: '#deb457' },
@@ -177,14 +177,17 @@ function draw(
   ctx.textBaseline = 'alphabetic';
 
   // Header
-  // Logo, scaled from its own 25-unit-high artwork to ~30px.
-  const logoScale = 30 / LOGO_VIEWBOX.height;
+  // Emblem, ~72px tall; the letters are filled with the background so they read as cut out.
+  const [vx, vy, , vh] = EMBLEM_VIEWBOX.split(' ').map(Number);
+  const logoScale = 72 / vh;
   ctx.save();
-  ctx.translate(pad, pad - 6);
+  ctx.translate(pad, pad - 30);
   ctx.scale(logoScale, logoScale);
-  ctx.strokeStyle = theme.fg;
-  ctx.lineWidth = 3;
-  LOGO_PATHS.forEach((d) => ctx.stroke(new Path2D(d)));
+  ctx.translate(-vx, -vy);
+  ctx.fillStyle = theme.fg;
+  EMBLEM_BODY.forEach((d) => ctx.fill(new Path2D(d)));
+  ctx.fillStyle = theme.bg;
+  EMBLEM_CUTOUT.forEach((d) => ctx.fill(new Path2D(d)));
   ctx.restore();
   ctx.font = `italic 34px ${FONT}`;
   ctx.textAlign = 'right';
