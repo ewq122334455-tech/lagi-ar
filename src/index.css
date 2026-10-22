@@ -3,16 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --lagi-ink: #161514;
-  --lagi-paper: #f6f4ef;
-  --lagi-graphite: #45423d;
-  --lagi-stone: #8c877e;
-  --lagi-mist: #ebe7df;
-  --lagi-line: #dcd6cb;
+  --lagi-ink: #151515;
+  --lagi-paper: #ffffff;
+  --lagi-graphite: #4a4a4a;
+  --lagi-stone: #929292;
+  --lagi-mist: #f4f1ea;
+  --lagi-line: #e8e6e1;
   --lagi-blue: #2e55a3;
   --lagi-orange: #c2662c;
   --lagi-lime: #deb457;
-  --nav-height: 72px;
+  /* Utility strip + main bar + category row (the bar collapses to two rows on mobile). */
+  --nav-height: 148px;
+  --tabbar-height: 0px;
 }
 
 * {
@@ -101,6 +103,21 @@ button {
 }
 .font-display:lang(ko) {
   letter-spacing: -0.035em;
+}
+
+@media (max-width: 1199px) {
+  :root {
+    --nav-height: 100px;
+    --tabbar-height: 60px;
+  }
+}
+
+/* Hide scrollbars on horizontal chip/tab rows while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes lagi-word {
