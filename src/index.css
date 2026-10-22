@@ -72,6 +72,22 @@ button {
   outline-offset: 3px;
 }
 
+/* Mobile/tablet: two-row header and the bottom tab bar. */
+@media (max-width: 1199px) {
+  :root {
+    --nav-height: 101px;
+    --tabbar-height: 60px;
+  }
+}
+
+/* Hide scrollbars on horizontal chip/tab rows while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Large-screen exhibition mode */
 .exhibition-mode {
   --nav-height: 0px;

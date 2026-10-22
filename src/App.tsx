@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { Loading } from '@/components/Loading';
@@ -27,12 +27,16 @@ const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function SiteLayout() {
+  const { pathname } = useLocation();
   return (
     <div className="min-h-screen bg-paper text-ink">
       <a href="#main" className="skip-link">본문으로 건너뛰기</a>
       <Nav />
       <main id="main" style={{ paddingTop: 'var(--nav-height)' }}>
-        <Outlet />
+        {/* Each page fades in as it opens. */}
+        <div key={pathname} className="animate-[lagi-fade_0.5s_ease-out_both]">
+          <Outlet />
+        </div>
       </main>
       <div className="bg-mist" style={{ paddingBottom: 'var(--tabbar-height)' }}>
         <Footer />

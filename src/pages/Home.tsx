@@ -7,6 +7,10 @@ import { ErrorState } from '@/components/ErrorState';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { productCover } from '@/utils/productImage';
 import type { Product } from '@/data/productTypes';
+import { HeroVideo } from '@/components/HeroVideo';
+import { Reveal } from '@/components/Reveal';
+import { Motif } from '@/components/Motif';
+import { MOTIFS } from '@/components/motifs';
 
 export default function Home() {
   const state = useProducts();
@@ -14,11 +18,14 @@ export default function Home() {
   const featured = products.filter((p) => p.featured);
   const picks = (featured.length > 0 ? featured : products).slice(0, 12);
   const hero = picks[0] ?? null;
-  const tryOnProducts = products.filter((p) => aiTryOnEnabled(p));
+  const tryOnProducts = products.filter((p) => aiTryOnEnabled(p) && (p.category.value ?? '').toLowerCase() === 'bag');
+  const tops = products.filter((p) => p.category.value === 'Top');
+  const bottoms = products.filter((p) => p.category.value === 'Bottom');
 
   return (
     <div className="pb-16">
-      <BannerBento hero={hero} tryOnId={tryOnProducts[0]?.id ?? null} />
+      <HeroVideo tryOnId={tryOnProducts[0]?.id ?? null} />
+      <MotifStrip />
       <QuickMenu hero={hero} tryOnId={tryOnProducts[0]?.id ?? null} />
 
       {/* LAGI PICK */}
@@ -33,15 +40,24 @@ export default function Home() {
         {picks.length > 0 && (
           <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {picks.map((p, i) => (
-              <ProductCard key={p.id} product={p} rank={i + 1} />
+              <Reveal key={p.id} delay={(i % 6) * 70}>
+                <ProductCard product={p} rank={i + 1} />
+              </Reveal>
             ))}
           </div>
         )}
       </Section>
 
+      {(tops.length > 0 || bottoms.length > 0) && <WearSection tops={tops} bottoms={bottoms} />}
+
+      <Reveal>
+        <BannerBento hero={hero} tryOnId={tryOnProducts[0]?.id ?? null} />
+      </Reveal>
+
       {/* TRY-ON band */}
       {tryOnProducts.length > 0 && (
-        <section className="mx-4 mt-14 overflow-hidden rounded-xl bg-lime lg:mx-10">
+        <Reveal as="section" className="relative mx-4 mt-14 overflow-hidden rounded-xl bg-lime lg:mx-10">
+          <Motif index={7} color="#ffffff" className="pointer-events-none absolute -right-6 -top-6 h-40 w-auto opacity-40" />
           <div className="grid grid-cols-1 items-center gap-8 p-6 lg:grid-cols-12 lg:p-10">
             <div className="lg:col-span-4">
               <p className="text-xs font-bold tracking-[0.2em]">AI FITTING</p>
@@ -66,7 +82,7 @@ export default function Home() {
               ))}
             </div>
           </div>
-        </section>
+        </Reveal>
       )}
 
       {/* LOOK CLOSER details */}
@@ -98,7 +114,7 @@ export default function Home() {
       )}
 
       {/* Brand band */}
-      <section className="mx-4 mt-14 grid grid-cols-1 overflow-hidden rounded-xl lg:mx-10 lg:grid-cols-2">
+      <Reveal as="section" className="mx-4 mt-14 grid grid-cols-1 overflow-hidden rounded-xl lg:mx-10 lg:grid-cols-2">
         <Link to="/again" className="group flex flex-col justify-between gap-10 bg-blue p-7 text-paper focus-ring lg:p-10">
           <p className="text-xs font-bold tracking-[0.2em] text-paper/70">ABOUT THE NAME</p>
           <div>
@@ -129,7 +145,7 @@ export default function Home() {
             <span className="text-lg font-bold">공식 스토어 →</span>
           </a>
         </div>
-      </section>
+      </Reveal>
     </div>
   );
 }
@@ -300,16 +316,16 @@ function QuickMenu({ hero, tryOnId }: { hero: Product | null; tryOnId: string | 
   return (
     <nav aria-label="바로가기" className="px-4 pt-8 lg:px-10">
       <ul className="no-scrollbar flex gap-4 overflow-x-auto lg:justify-between lg:gap-2">
-        {items.map((it) => {
+        {items.map((it, i) => {
           const inner = (
             <>
-              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl text-[13px] font-black tracking-wide lg:h-16 lg:w-16 ${it.tone}`}>{it.glyph}</span>
+              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl text-[13px] font-black tracking-wide transition-transform duration-300 group-hover:-translate-y-1 lg:h-16 lg:w-16 ${it.tone}`}>{it.glyph}</span>
               <span className="text-xs font-medium">{it.label}</span>
             </>
           );
-          const cls = 'flex w-16 flex-col items-center gap-2 focus-ring lg:w-20';
+          const cls = 'group flex w-16 flex-col items-center gap-2 focus-ring lg:w-20';
           return (
-            <li key={it.label} className="shrink-0">
+            <Reveal as="li" key={it.label} delay={i * 50} className="shrink-0">
               {it.external ? (
                 <a href={it.to} target="_blank" rel="noopener noreferrer" className={cls}>
                   {inner}
@@ -319,7 +335,7 @@ function QuickMenu({ hero, tryOnId }: { hero: Product | null; tryOnId: string | 
                   {inner}
                 </Link>
               )}
-            </li>
+            </Reveal>
           );
         })}
       </ul>
@@ -339,10 +355,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="px-4 pt-14 lg:px-10">
-      <div className="mb-5 flex items-end justify-between gap-4">
+    <section className="px-4 pt-16 lg:px-10 lg:pt-20">
+      <Reveal className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-[-0.03em] lg:text-2xl">{title}</h2>
+          <h2 className="text-2xl font-bold tracking-[-0.04em] lg:text-[32px]">{title}</h2>
           {subtitle && <p className="mt-1 text-sm text-stone">{subtitle}</p>}
         </div>
         {more && (
@@ -350,8 +366,72 @@ function Section({
             {more.label} &gt;
           </Link>
         )}
-      </div>
+      </Reveal>
       {children}
+    </section>
+  );
+}
+
+/** A slow ribbon of the brand motifs between the hero and the shop. */
+function MotifStrip() {
+  const row = [...MOTIFS.keys(), ...MOTIFS.keys()];
+  return (
+    <div className="overflow-hidden border-b border-line bg-paper py-5" aria-hidden="true">
+      <div className="animate-marquee flex w-max items-center gap-14">
+        {[...row, ...row].map((m, i) => (
+          <Motif key={i} index={m} className="h-8 w-auto shrink-0 lg:h-10" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** New apparel line: T-shirts and pants, switchable with two tabs. */
+function WearSection({ tops, bottoms }: { tops: Product[]; bottoms: Product[] }) {
+  const [tab, setTab] = useState<'top' | 'bottom'>(tops.length > 0 ? 'top' : 'bottom');
+  const list = tab === 'top' ? tops : bottoms;
+  return (
+    <section className="relative mt-20 overflow-hidden bg-cream px-4 py-16 lg:px-10 lg:py-20">
+      <Motif index={2} className="pointer-events-none absolute -right-10 top-8 h-36 w-auto opacity-90 lg:h-52" />
+      <Reveal className="relative flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className="text-[11px] font-bold tracking-[0.3em] text-ink/60">NEW · LAGI WEAR</p>
+          <h2 className="mt-3 text-3xl font-bold tracking-[-0.04em] lg:text-5xl">
+            매일 입는 옷도,
+            <br />
+            다시 새롭게.
+          </h2>
+        </div>
+        <div className="flex gap-2" role="tablist" aria-label="의류 종류">
+          {(
+            [
+              ['top', '티셔츠', tops.length],
+              ['bottom', '팬츠', bottoms.length],
+            ] as const
+          ).map(([k, label, n]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={tab === k}
+              onClick={() => setTab(k)}
+              disabled={n === 0}
+              className={`rounded-full px-5 py-2.5 text-sm font-bold transition-colors focus-ring ${
+                tab === k ? 'bg-ink text-paper' : 'bg-paper/70 text-graphite hover:bg-paper'
+              }`}
+            >
+              {label} <span className="opacity-60">{n}</span>
+            </button>
+          ))}
+        </div>
+      </Reveal>
+      <div key={tab} className="relative mt-10 grid grid-cols-2 gap-x-3 gap-y-8 lg:grid-cols-4 lg:gap-x-5">
+        {list.map((p, i) => (
+          <div key={p.id} className="animate-[lagi-rise_0.7s_cubic-bezier(.2,.7,.2,1)_both]" style={{ animationDelay: `${i * 90}ms` }}>
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
