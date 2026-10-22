@@ -5,6 +5,10 @@ import { PoseTracker } from './PoseTracker';
 import type { BodyLandmark } from './PoseTracker';
 import { bodyPoints, drawGarment, smoothPoints } from './garmentFit';
 import { CARRY_PROMPTS, aiTryOnEnabled, requestAiTryOn } from './aiTryOn';
+import { PersonSegmenter } from './PersonSegmenter';
+import type { PersonMasks } from './PersonSegmenter';
+import { BagSway, RealismCompositor } from './realism';
+import { fetchCutout } from './cutouts';
 import type { BodyPoints, FitAdjust, ScreenSide } from './garmentFit';
 
 type TryOnState = 'ready-to-start' | 'loading' | 'camera-denied' | 'camera-unavailable' | 'engine-error' | 'live' | 'photo';
@@ -31,6 +35,8 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
     ...rawSettings,
     realWidthCm: rawSettings.realWidthCm || product.dimensions.widthCm,
   }));
+  // Swapped for the stored photoreal cut-out when there is one (see the cut-out studio).
+  const settingsRef = useRef(settings);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -47,6 +53,11 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
     side: 'R',
   });
   const showGarmentRef = useRef(true);
+  const segmenterRef = useRef<PersonSegmenter | null>(null);
+  const masksRef = useRef<PersonMasks | null>(null);
+  const compositorRef = useRef<RealismCompositor | null>(null);
+  const swayRef = useRef(new BagSway());
+  const hangRef = useRef<{ pivot: { x: number; y: number }; height: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [state, setState] = useState<TryOnState>('ready-to-start');
@@ -86,6 +97,8 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       stopCamera();
       trackerRef.current?.close();
       trackerRef.current = null;
+      segmenterRef.current?.close();
+      segmenterRef.current = null;
     },
     [stopCamera],
   );
@@ -93,7 +106,9 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
   /** Loads the garment image and pose model once; both are reused across camera/photo modes. */
   const prepare = useCallback(async () => {
     if (!garmentRef.current) {
-      garmentRef.current = await loadImage(settings.garmentImage).catch(() => {
+      const cutout = await fetchCutout(product.id);
+      if (cutout) settingsRef.current = { ...settings, garmentImage: cutout.image, anchorLeft: cutout.anchorLeft, anchorRight: cutout.anchorRight };
+      garmentRef.current = await loadImage(settingsRef.current.garmentImage).catch(() => {
         throw new Error('의상 이미지를 불러오지 못했습니다.');
       });
     }
@@ -104,7 +119,15 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       });
       trackerRef.current = tracker;
     }
-  }, [settings.garmentImage]);
+    if (!segmenterRef.current) {
+      // Optional: without it the garment is still drawn, just without silhouette/occlusion.
+      const segmenter = new PersonSegmenter();
+      segmenterRef.current = await segmenter.load().then(
+        () => segmenter,
+        () => null,
+      );
+    }
+  }, [settings, product.id]);
 
   const renderFrame = useCallback(
     (source: CanvasImageSource, width: number, height: number, mirrored: boolean, landmarks: BodyLandmark[] | null, smooth: boolean) => {
@@ -126,15 +149,41 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
 
       const next = landmarks ? bodyPoints(landmarks, width, height, mirrored) : null;
       pointsRef.current = next ? (smooth ? smoothPoints(pointsRef.current, next) : next) : null;
-      if (!pointsRef.current || !garmentRef.current) return false;
-      // While comparing, still run the placement (invisibly) so the "step back" guidance does not flash.
-      ctx.save();
-      if (!showGarmentRef.current) ctx.globalAlpha = 0;
-      const placed = drawGarment(ctx, garmentRef.current, settings, pointsRef.current, adjustRef.current);
-      ctx.restore();
+      const points = pointsRef.current;
+      if (!points || !garmentRef.current) return false;
+
+      // The garment goes onto its own layer first so it can be lit, shaded and tucked behind
+      // the face and hands before it joins the picture.
+      compositorRef.current ??= new RealismCompositor();
+      const comp = compositorRef.current;
+      const layer = comp.begin(width, height);
+      const current = settingsRef.current;
+      const isBag = current.garmentType === 'BAG';
+      const hang = hangRef.current;
+      const sway = isBag && smooth ? swayRef.current.update(hang?.pivot ?? null, hang?.height ?? 0) : 0;
+      hangRef.current = null;
+      const placed = drawGarment(layer, garmentRef.current, current, points, {
+        ...adjustRef.current,
+        sway,
+        onHang: (pivot, h) => (hangRef.current = { pivot, height: h }),
+      });
+      // While comparing, the placement still runs (invisibly) so the "step back" guidance does not flash.
+      if (placed && showGarmentRef.current) {
+        const a = adjustRef.current;
+        const span =
+          points.shoulderL && points.shoulderR
+            ? Math.hypot(points.shoulderR.x - points.shoulderL.x, points.shoulderR.y - points.shoulderL.y)
+            : width * 0.25;
+        comp.finish(ctx, source, width, height, mirrored, {
+          kind: isBag ? 'BAG' : current.garmentType === 'BOTTOM' ? 'BOTTOM' : 'TOP',
+          masks: masksRef.current,
+          span,
+          hand: isBag && a.carry === 'HAND' ? (a.side === 'L' ? points.handL : points.handR) : null,
+        });
+      }
       return placed;
     },
-    [settings],
+    [],
   );
 
   const startCamera = useCallback(
@@ -188,12 +237,19 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
       }
 
       setState('live');
+      swayRef.current.reset();
+      masksRef.current = null;
       let lastFound = false;
+      let frame = 0;
       const loop = async () => {
         const tracker = trackerRef.current;
         if (!tracker || !streamRef.current) return;
         if (video.readyState >= 2 && video.videoWidth > 0) {
           const landmarks = await tracker.detectVideo(video).catch(() => null);
+          // The body outline changes slowly; refreshing it every other frame keeps phones smooth.
+          if (segmenterRef.current && frame++ % 2 === 0) {
+            masksRef.current = (await segmenterRef.current.segmentVideo(video).catch(() => null)) ?? masksRef.current;
+          }
           if (!streamRef.current) return;
           const found = renderFrame(video, video.videoWidth, video.videoHeight, nextFacing === 'user', landmarks, true) ?? false;
           if (found !== lastFound) {
@@ -228,6 +284,7 @@ export function TryOnExperience({ product, settings: rawSettings, onExit }: TryO
         const photo = await loadImage(url);
         photoRef.current = photo;
         photoLandmarksRef.current = await trackerRef.current!.detectImage(photo);
+        masksRef.current = (await segmenterRef.current?.segmentImage(photo).catch(() => null)) ?? null;
         setState('photo');
         // Canvas is laid out by now; draw on the next frame.
         requestAnimationFrame(redrawPhoto);

@@ -1,4 +1,6 @@
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
+import type { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
+
+type WasmFileset = Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>;
 
 /**
  * Body-pose tracking for the camera try-on, backed by MediaPipe Pose Landmarker.
@@ -20,6 +22,14 @@ export interface BodyLandmark {
 
 export type RunningMode = 'VIDEO' | 'IMAGE';
 
+let filesetPromise: Promise<WasmFileset> | null = null;
+/** The MediaPipe WASM runtime, loaded once and shared by the pose tracker and the person segmenter. */
+export async function visionFileset(): Promise<WasmFileset> {
+  const { FilesetResolver: Resolver } = await import('@mediapipe/tasks-vision');
+  filesetPromise ??= Resolver.forVisionTasks(WASM_BASE);
+  return filesetPromise;
+}
+
 export class PoseTracker {
   private landmarker: PoseLandmarker | null = null;
   private mode: RunningMode = 'VIDEO';
@@ -27,8 +37,8 @@ export class PoseTracker {
 
   async load(): Promise<void> {
     if (this.landmarker) return;
-    const { FilesetResolver, PoseLandmarker } = await import('@mediapipe/tasks-vision');
-    const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
+    const { PoseLandmarker } = await import('@mediapipe/tasks-vision');
+    const fileset = await visionFileset();
     const create = (delegate: 'GPU' | 'CPU') =>
       PoseLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: POSE_MODEL, delegate },
