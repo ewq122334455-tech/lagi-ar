@@ -1,0 +1,33 @@
+/*
+ * LAGI brand fonts (self-hosted).
+ *
+ * Posterama 2001 (Latin) and 윤고딕 / Yoon Gothic (Hangul) are licensed fonts. Once you have a
+ * licence that allows web embedding, put the font files in this folder (public/fonts/) and
+ * uncomment the matching blocks below. The site's font stack already lists these family names
+ * first, so nothing else needs to change.
+ *
+ * @font-face {
+ *   font-family: 'Posterama 2001';
+ *   src: url('./Posterama2001-Regular.woff2') format('woff2');
+ *   font-weight: 400;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'Posterama 2001';
+ *   src: url('./Posterama2001-Bold.woff2') format('woff2');
+ *   font-weight: 700;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'YoonGothic';
+ *   src: url('./YoonGothic-Regular.woff2') format('woff2');
+ *   font-weight: 400;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'YoonGothic';
+ *   src: url('./YoonGothic-Bold.woff2') format('woff2');
+ *   font-weight: 700;
+ *   font-display: swap;
+ * }
+ */

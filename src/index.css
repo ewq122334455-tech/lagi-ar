@@ -13,7 +13,7 @@
   --lagi-orange: #c2662c;
   --lagi-lime: #deb457;
   /* Utility strip + main bar + category row (the bar collapses to two rows on mobile). */
-  --lagi-font: 'Posterama 2001', Posterama2001, Jost, YoonGothic, 'Yoon Gothic', '윤고딕', 'Pretendard Variable', Pretendard,
+  --lagi-font: 'Posterama 2001', posterama-2001, Posterama2001, Jost, YoonGothic, 'Yoon Gothic', '윤고딕', 'Pretendard Variable', Pretendard,
     -apple-system, sans-serif;
   --nav-height: 148px;
   --tabbar-height: 0px;

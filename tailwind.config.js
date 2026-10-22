@@ -35,9 +35,9 @@ export default {
         // fonts, so each falls back to its closest free match — Jost (geometric Latin) and Pretendard
         // (Hangul) — until the font files are added. Latin fonts come first: they have no Hangul, so
         // Korean characters fall through to the Korean fonts automatically.
-        sans: ['"Posterama 2001"', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
-        heading: ['"Posterama 2001"', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
-        display: ['"Posterama 2001"', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        sans: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        heading: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
+        display: ['"Posterama 2001"', 'posterama-2001', 'Posterama2001', 'Jost', '"YoonGothic"', '"Yoon Gothic"', '"윤고딕"', '"Pretendard Variable"', 'Pretendard', '-apple-system', 'sans-serif'],
       },
       letterSpacing: {
         widest2: '0.28em',
