@@ -1,7 +1,7 @@
 import type { Product } from '@/data/productTypes';
 
-/** URL of the AI try-on Worker (server/tryon-worker). Empty until it is deployed and configured. */
-export const AI_TRYON_URL: string = import.meta.env.VITE_TRYON_API_URL ?? '';
+/** URL of the AI try-on Worker (server/tryon-worker). The build variable can override the deployed default. */
+export const AI_TRYON_URL: string = import.meta.env.VITE_TRYON_API_URL || 'https://lagi-tryon.lagi-official.workers.dev';
 
 /** AI fitting needs only a product photo to show the visitor. */
 export function aiTryOnEnabled(product: Pick<Product, 'images'>): boolean {
