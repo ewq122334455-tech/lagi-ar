@@ -20,9 +20,9 @@ npx wrangler deploy
 배포가 끝나면 `https://lagi-tryon.<계정이름>.workers.dev` 같은 주소가 나옵니다.
 
 ## 3. 사이트에 연결하기
-GitHub 저장소 → **Settings → Secrets and variables → Actions → Variables** 에
-`TRYON_API_URL` 이름으로 2번 주소를 추가하고, Actions에서 배포를 다시 실행하면
-상품 페이지에 "AI로 입어보기" 버튼이 나타납니다.
+현재 주소 `https://lagi-tryon.lagi-official.workers.dev` 는 `src/tryon/aiTryOn.ts` 에 기본값으로 들어 있습니다.
+주소가 바뀌면 그 값을 고치거나, GitHub 저장소 → **Settings → Secrets and variables → Actions → Variables** 에
+`TRYON_API_URL` 이름으로 새 주소를 넣고 배포를 다시 실행하세요.
 
 ## 참고
 - 모델 이름이 바뀌면 `wrangler.toml`의 `GEMINI_MODEL`을 바꾸고 `npx wrangler deploy` 하세요.
