@@ -37,11 +37,6 @@ export function validateProduct(product: Product): ValidationIssue[] {
     }
   }
 
-  if (product.arAvailable) {
-    if (!product.model3D) issues.push({ level: 'error', message: 'AR을 켰지만 3D 모델이 없습니다.' });
-    if (!product.arSettings) issues.push({ level: 'error', message: 'AR 보정값(scale/position/rotation)이 없습니다.' });
-  }
-
   product.hotspots.forEach((h, i) => {
     if (!h.title.trim()) issues.push({ level: 'warning', message: `디테일 포인트 #${i + 1}: 이름이 없습니다.` });
     if (!h.description.value) issues.push({ level: 'warning', message: `디테일 포인트 "${h.title || i + 1}": 설명이 비어 있습니다.` });

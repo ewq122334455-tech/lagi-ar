@@ -13,8 +13,6 @@ const ProductDetail = lazy(() => import('@/pages/ProductDetail'));
 const About = lazy(() => import('@/pages/About'));
 const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
-const ARLanding = lazy(() => import('@/pages/ARLanding'));
-const ARExperiencePage = lazy(() => import('@/pages/ARExperiencePage'));
 const Again = lazy(() => import('@/pages/Again'));
 const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
@@ -55,13 +53,11 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/materials" element={<Materials />} />
             <Route path="/story" element={<Story />} />
-            <Route path="/ar" element={<ARLanding />} />
             <Route path="/again" element={<Again />} />
             <Route path="/ai-fit/:id" element={<AiFitPage />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-          <Route path="/ar/:id" element={<ARExperiencePage />} />
           <Route path="/try-on/:id" element={<TryOnPage />} />
           <Route path="/exhibition" element={<Exhibition />} />
         </Routes>

@@ -10,7 +10,6 @@ import { SpotlightPanel } from '@/components/SpotlightPanel';
 import { QRCodeImage } from '@/components/QRCode';
 import { BuyPanel } from '@/components/BuyPanel';
 import { ProductGallery } from '@/components/ProductGallery';
-import { canUseAR } from '@/utils/arAvailability';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { shippingLabel } from '@/utils/shipping';
 
@@ -36,9 +35,6 @@ export default function ProductDetail() {
 
 function ProductDetailView({ product }: { product: import('@/data/productTypes').Product }) {
   const { selected, selectedId, select, clear } = useSpotlight(product.hotspots);
-  const arUrl = canUseAR(product)
-    ? `${window.location.origin}${window.location.pathname}#/ar/${product.id}`
-    : null;
   const tryOnUrl = aiTryOnEnabled(product)
     ? `${window.location.origin}${window.location.pathname}#/ai-fit/${product.id}`
     : null;
@@ -212,7 +208,6 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
         <p className="mt-1 text-sm text-stone">QR을 휴대폰 카메라로 찍으면 바로 열립니다.</p>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
           {tryOnUrl && <QrCard url={tryOnUrl} title="AI 피팅" text="내 사진으로 메어보기" tone="bg-lime" />}
-          {arUrl && <QrCard url={arUrl} title="AR" text="내 공간에 가방 놓아보기" tone="bg-mist" />}
         </div>
       </section>
 

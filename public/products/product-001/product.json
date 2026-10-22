@@ -39,7 +39,7 @@
   },
   "model3D": "products/product-001/model/modular-zipper-bag.glb",
   "animations": [],
-  "arTarget": "products/product-001/ar/targets.mind",
+  "arTarget": "",
   "arSettings": {
     "scale": 1,
     "position": {
@@ -184,9 +184,8 @@
     "strapColor": "#c9434f"
   },
   "tryOnAvailable": true,
-  "arAvailable": true,
+  "arAvailable": false,
   "threeDAvailable": true,
   "featured": false,
-  "remixModel": "products/product-001/model/lagi-bag.glb",
-  "arTargetPreview": "products/product-001/ar/target-preview.png"
+  "remixModel": "products/product-001/model/lagi-bag.glb"
 }
