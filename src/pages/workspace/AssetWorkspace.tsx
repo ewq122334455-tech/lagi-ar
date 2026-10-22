@@ -17,7 +17,7 @@ type Tab = (typeof TABS)[number];
 const TAB_LABELS: Record<Tab, string> = {
   BASIC: '1. 기본 정보',
   IMAGES: '2. 사진',
-  '3D & AR': '3. 3D · AR',
+  '3D & AR': '3. 3D',
   HOTSPOTS: '4. 디테일 포인트',
   'MATERIAL & PROCESS': '5. 소재 · 공정',
   'AI ANALYSIS': '6. 메모 · 분석',
@@ -442,53 +442,6 @@ function ThreeDArTab({ product, update }: { product: Product; update: <K extends
           </label>
         </div>
 
-        <hr className="hairline" />
-
-        <div>
-          <p className="eyebrow mb-2">AR 인식 이미지 (.mind) — 선택</p>
-          <p className="mb-3 text-xs leading-relaxed text-stone">
-            휴대폰 카메라로 <strong>특정 이미지(라벨·포스터·제품 카드 등)를 비추면 그 위에 3D 제품이 나타나게</strong> 하는
-            파일입니다. 비워두면 이미지 없이 카메라 화면에 바로 제품을 띄웁니다.
-            <br />
-            만드는 법: 이미지를{' '}
-            <a href="https://hiukim.github.io/mind-ar-js-doc/tools/compile" target="_blank" rel="noopener noreferrer" className="underline">
-              MindAR 변환 사이트
-            </a>
-            에 올려 .mind 파일을 받고 → GitHub의 <code>public/products/{product.id}/ar/</code> 폴더에 올린 뒤 → 아래에 경로를 적으세요.
-          </p>
-          <TextInput
-            className="w-full"
-            value={product.arTarget}
-            onChange={(e) => update('arTarget', e.target.value.trim())}
-            placeholder={`products/${product.id}/ar/targets.mind`}
-          />
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="AR 크기 배율">
-            <NumberInput
-              value={product.arSettings.scale}
-              step={0.1}
-              onChange={(e) => update('arSettings', { ...product.arSettings, scale: Number(e.target.value) })}
-            />
-          </Field>
-          {(['x', 'y', 'z'] as const).map((axis) => (
-            <Field key={axis} label={`위치 ${axis === 'x' ? '좌우' : axis === 'y' ? '위아래' : '앞뒤'} (${axis.toUpperCase()})`}>
-              <NumberInput
-                value={product.arSettings.position[axis]}
-                step={0.1}
-                onChange={(e) =>
-                  update('arSettings', { ...product.arSettings, position: { ...product.arSettings.position, [axis]: Number(e.target.value) } })
-                }
-              />
-            </Field>
-          ))}
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={product.arAvailable} onChange={(e) => update('arAvailable', e.target.checked)} />
-          사이트에 AR 켜기
-        </label>
       </div>
 
       <div>
@@ -532,7 +485,7 @@ function HotspotsTab({ product, update }: { product: Product; update: <K extends
       </button>
       <p className="max-w-2xl text-xs leading-relaxed text-stone">
         3D 모델 위에 동그란 점으로 표시되고, 누르면 설명이 열리는 포인트입니다(예: 지퍼, 손잡이). 위치(X 좌우 · Y 높이 · Z
-        앞뒤)는 ‘3. 3D · AR’ 탭 미리보기를 보면서 숫자를 조금씩 바꿔 맞추세요.
+        앞뒤)는 ‘3. 3D’ 탭 미리보기를 보면서 숫자를 조금씩 바꿔 맞추세요.
       </p>
 
       {product.hotspots.length === 0 && <p className="text-sm text-stone">등록된 포인트가 없습니다.</p>}
@@ -787,7 +740,7 @@ function PreviewPublishTab({
             받은 <code>product.json</code>을 올립니다(같은 이름의 파일이 있으면 덮어씁니다).
           </li>
           <li>
-            사진·3D·AR 파일을 같은 폴더 안의 <code>images/</code>, <code>model/</code>, <code>ar/</code> 폴더에 올립니다.
+            사진·3D 파일을 같은 폴더 안의 <code>images/</code>, <code>model/</code> 폴더에 올립니다.
           </li>
           <li>
             새 제품이면 <code>public/products/manifest.json</code>의 목록에 <code>"{product.id}"</code>를 추가합니다.
@@ -802,9 +755,6 @@ function PreviewPublishTab({
         <div className="flex flex-wrap gap-3">
           <a href={`#/product/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
             제품 페이지 →
-          </a>
-          <a href={`#/ar/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
-            AR →
           </a>
           <a href={`#/ai-fit/${product.id}`} className="eyebrow border border-line px-4 py-2.5 hover:border-ink focus-ring">
             AI 피팅 →

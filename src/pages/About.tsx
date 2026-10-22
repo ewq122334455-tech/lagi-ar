@@ -1,4 +1,3 @@
-import { ContentBadge } from '@/components/ContentBadge';
 import { DetailSection } from '@/components/DetailSection';
 import { LagiLogo } from '@/components/LagiLogo';
 
@@ -37,17 +36,26 @@ export default function About() {
       </DetailSection>
 
       <DetailSection eyebrow="BRAND HISTORY">
-        <ContentBadge status="CONTENT_REQUIRED" />
-        <p className="mt-3 max-w-xl text-sm text-graphite">
-          브랜드 히스토리는 아직 공급되지 않았습니다. 브랜드가 제공하는 자료가 추가되면 이 섹션에 반영됩니다.
+        <p className="max-w-2xl text-lg leading-relaxed text-graphite">
+          라기는 ‘다시’라는 이름처럼, 쓰임을 다한 밀가루 포대와 우유팩, 자동차 번호판 같은 재료를 모아 가방과 소품으로 다시 만들어
+          왔습니다. POPSICLUS와 함께한 데일리 라인부터 펼치면 돗자리가 되는 피크닉백까지, 하나의 재료와 물건이 두 번, 세 번 쓰이는
+          방법을 찾고 있어요.
         </p>
       </DetailSection>
 
       <DetailSection eyebrow="PHILOSOPHY">
-        <ContentBadge status="CONTENT_REQUIRED" />
-        <p className="mt-3 max-w-xl text-sm text-graphite">
-          브랜드 철학 및 지속가능성 관련 주장은 아직 공급되지 않았습니다. 확인되지 않은 내용은 생성하지 않습니다.
-        </p>
+        <ul className="grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3">
+          {[
+            ['다시 보기', '버려질 재료를 한 번 더 들여다보고, 그 안의 그래픽과 질감을 디자인으로 살립니다.'],
+            ['다시 쓰기', '세척하고 재단해 매일 들고 다닐 수 있는 물건으로 다시 쓰임을 줍니다.'],
+            ['다시 고르기', '한 번 쓰고 끝나는 물건이 아니라, 다시 손이 가는 물건을 만듭니다.'],
+          ].map(([t, d]) => (
+            <li key={t} className="border-t border-line pt-5">
+              <p className="text-lg font-bold">{t}</p>
+              <p className="mt-2 text-sm leading-relaxed text-graphite">{d}</p>
+            </li>
+          ))}
+        </ul>
       </DetailSection>
     </div>
   );

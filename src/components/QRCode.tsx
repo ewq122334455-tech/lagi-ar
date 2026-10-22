@@ -20,5 +20,5 @@ export function QRCodeImage({ value, size = 168 }: { value: string; size?: numbe
     return <div className="animate-pulse bg-mist" style={{ width: size, height: size }} aria-hidden="true" />;
   }
 
-  return <img src={dataUrl} alt="AR 체험 QR 코드" width={size} height={size} className="bg-paper" />;
+  return <img src={dataUrl} alt="QR 코드" width={size} height={size} className="bg-paper" />;
 }

@@ -171,6 +171,9 @@ export function BuyPanel({ product }: { product: Product }) {
             카메라로 거울처럼 보기 <span className="text-xs font-medium text-ink/60">실시간</span>
           </Link>
         )}
+        {product.sample ? (
+          <p className="flex h-12 items-center justify-center rounded-md bg-mist text-sm font-bold text-graphite">출시 예정 · 곧 만나요</p>
+        ) : (
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -189,6 +192,7 @@ export function BuyPanel({ product }: { product: Product }) {
             {soldOut ? '품절' : '구매하기'}
           </button>
         </div>
+        )}
       </div>
 
     </div>

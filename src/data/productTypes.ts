@@ -198,4 +198,6 @@ export interface Product {
   /** Editorial switch for the camera try-on, mirroring arAvailable. */
   tryOnAvailable?: boolean;
   featured?: boolean;
+  /** Placeholder product made up for layout; not on sale yet, so it cannot be bought. */
+  sample?: boolean;
 }

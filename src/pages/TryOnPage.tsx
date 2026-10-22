@@ -26,7 +26,7 @@ export default function TryOnPage() {
   const product = state.data;
   const exit = () => navigate(`/product/${product.id}`);
 
-  // Unlike AR, a missing try-on garment is not something the visitor can work around —
+  // A missing try-on garment is not something the visitor can work around —
   // say so plainly rather than opening the camera onto nothing.
   if (!product.tryOn?.garmentImage) {
     return (

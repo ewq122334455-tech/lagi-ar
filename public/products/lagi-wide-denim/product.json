@@ -1,0 +1,169 @@
+{
+  "id": "lagi-wide-denim",
+  "brandLabel": "LAGI",
+  "sample": true,
+  "name": {
+    "value": "와이드 데님 팬츠",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "category": {
+    "value": "Bottom",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "price": {
+    "value": 79000,
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "여유로운 통의 미드 블루 와이드 데님",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "description": {
+    "value": "허벅지부터 밑단까지 넉넉하게 떨어지는 와이드 실루엣의 데님 팬츠예요. 옐로 스티치로 클래식한 디테일을 살렸고, 티셔츠 한 장과 입어도 스타일이 완성됩니다.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "images": [
+    "products/lagi-wide-denim/images/main.jpg"
+  ],
+  "gallery": [
+    "products/lagi-wide-denim/images/detail.jpg"
+  ],
+  "colors": [
+    "#3B5A85"
+  ],
+  "variants": [
+    {
+      "id": "lagi-wide-denim-s",
+      "size": "S",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-wide-denim-m",
+      "size": "M",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-wide-denim-l",
+      "size": "L",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-wide-denim-xl",
+      "size": "XL",
+      "color": null,
+      "stock": null
+    }
+  ],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [
+    {
+      "name": {
+        "value": "코튼 데님",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "characteristics": {
+        "value": "입을수록 몸에 맞게 길이 드는 원단이에요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "productLocation": {
+        "value": "전체",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "reasonForUse": {
+        "value": "매일 입어도 편안하도록 골랐어요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    }
+  ],
+  "process": [
+    {
+      "order": 1,
+      "title": "재단",
+      "description": {
+        "value": "패턴에 맞춰 원단을 한 장씩 재단합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    },
+    {
+      "order": 2,
+      "title": "워싱",
+      "description": {
+        "value": "미드 블루 톤이 나오도록 원단을 워싱합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    },
+    {
+      "order": 3,
+      "title": "마무리 검수",
+      "description": {
+        "value": "봉제선과 프린트 상태를 하나하나 확인합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    }
+  ],
+  "details": [],
+  "story": {
+    "value": "라기는 말레이·인도네시아어로 ‘다시’라는 뜻이에요. 한 번 입고 끝나는 옷이 아니라, 다시 꺼내 입고 싶은 기본을 생각하며 만들었습니다.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "lagiSelectionReason": {
+    "value": "라기 모티프와 컬러를 일상에서 가장 쉽게 입을 수 있는 아이템이라 골랐어요.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": true,
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "임의로 만든 샘플 상품입니다. 이름·가격·설명·이미지는 실제 상품이 정해지면 교체하세요."
+      }
+    ]
+  }
+}

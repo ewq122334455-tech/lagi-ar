@@ -23,8 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "업사이클링 소재로 하나하나 손으로 만든 북커버예요. 아끼는 책을 감싸 오래 깨끗하게 지켜 주고, 들고 다닐 때 북케이스로도 쓸 수 있습니다.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
   },
   "images": [
     "products/book-cover/images/main.jpg"
@@ -40,16 +41,69 @@
     "fee": 3000,
     "freeOver": 50000
   },
-  "materials": [],
-  "process": [],
+  "materials": [
+    {
+      "name": {
+        "value": "업사이클링 소재",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      },
+      "characteristics": {
+        "value": "책을 감싸기 좋게 유연해요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      },
+      "productLocation": {
+        "value": "커버 전체",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      },
+      "reasonForUse": {
+        "value": "버려질 소재에 다시 쓰임을 주기 위해 골랐어요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      }
+    }
+  ],
+  "process": [
+    {
+      "order": 1,
+      "title": "재단",
+      "description": {
+        "value": "책 크기에 맞게 재단합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      }
+    },
+    {
+      "order": 2,
+      "title": "핸드메이드 봉제",
+      "description": {
+        "value": "한 장씩 손으로 박음질합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      }
+    },
+    {
+      "order": 3,
+      "title": "마무리 검수",
+      "description": {
+        "value": "책이 잘 들어가는지 확인합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+      }
+    }
+  ],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "라기(lagi)는 말레이·인도네시아어로 ‘다시’라는 뜻이에요. 쓰임을 다한 재료에 다시 쓰임을 찾아 주고, 한 번 더 보고 오래 쓰고 싶은 물건을 만듭니다.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "좋아하는 책을 다시 펼치고 싶게 만드는 물건이라서요.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
   },
   "model3D": "products/book-cover/model/document.glb",
   "animations": [],

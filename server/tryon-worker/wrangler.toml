@@ -7,3 +7,7 @@ compatibility_date = "2025-01-01"
 GEMINI_MODEL = "gemini-2.5-flash-image"
 # The LAGI site (and local dev). Only these origins may call the Worker or supply product images.
 ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io,http://localhost:5173,http://localhost:4173"
+
+# Member accounts and login sessions. With no id, `wrangler deploy` creates the namespace on first deploy.
+[[kv_namespaces]]
+binding = "USERS"
