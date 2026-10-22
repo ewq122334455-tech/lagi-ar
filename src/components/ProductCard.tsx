@@ -44,6 +44,7 @@ export function ProductCard({ product, rank }: ProductCardProps) {
         )}
         <div className="absolute bottom-2 left-2 flex gap-1">
           {tryOn && <Tag className="bg-lime text-ink">AI 피팅</Tag>}
+          {product.sample && <Tag className="bg-paper/90 text-ink">출시 예정</Tag>}
         </div>
       </div>
 

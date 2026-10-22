@@ -13,6 +13,13 @@ const BAG_STYLES = [
   { key: 'hand', label: '손에 들기', prompt: 'held by the handles in one hand, arm relaxed at the side' },
   { key: 'cross', label: '크로스로 메기', prompt: 'worn cross-body with the strap across the chest' },
 ] as const;
+const TOP_STYLES = [
+  { key: 'wear', label: '입어보기', prompt: 'worn as the person’s top, replacing only the top they are wearing now' },
+  { key: 'tuck', label: '넣어 입기', prompt: 'worn as the person’s top tucked into their trousers, replacing only the top they are wearing now' },
+] as const;
+const BOTTOM_STYLES = [
+  { key: 'wear', label: '입어보기', prompt: 'worn as the person’s trousers, replacing only the trousers, shorts or skirt they are wearing now' },
+] as const;
 const ACC_STYLES = [
   { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
   { key: 'clip', label: '가방에 걸기', prompt: 'clipped or hanging from the bag or belt loop the person is carrying' },
@@ -28,8 +35,8 @@ export default function AiFitPage() {
 }
 
 function AiFit({ product }: { product: Product }) {
-  const isBag = (product.category.value ?? '').toLowerCase().includes('bag');
-  const styles = isBag ? BAG_STYLES : ACC_STYLES;
+  const category = (product.category.value ?? '').toLowerCase();
+  const styles = category.includes('bag') ? BAG_STYLES : category === 'top' ? TOP_STYLES : category === 'bottom' ? BOTTOM_STYLES : ACC_STYLES;
   const [style, setStyle] = useState<string>(styles[0].key);
   const [photo, setPhoto] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);

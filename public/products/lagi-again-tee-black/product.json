@@ -1,0 +1,169 @@
+{
+  "id": "lagi-again-tee-black",
+  "brandLabel": "LAGI",
+  "sample": true,
+  "name": {
+    "value": "AGAIN 오버핏 티셔츠 블랙",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "category": {
+    "value": "Top",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "price": {
+    "value": 42000,
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "‘다시’의 의미를 담은 오버핏 블랙 티셔츠",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "description": {
+    "value": "라기(lagi)는 ‘다시’라는 뜻이에요. 블랙 오버핏 바디에 옐로 모티프와 AGAIN 레터링을 더했습니다. 어깨선이 살짝 떨어지는 실루엣으로 데님, 카고 팬츠 어디에나 잘 어울려요.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "images": [
+    "products/lagi-again-tee-black/images/main.jpg"
+  ],
+  "gallery": [
+    "products/lagi-again-tee-black/images/detail.jpg"
+  ],
+  "colors": [
+    "#1D1D1F"
+  ],
+  "variants": [
+    {
+      "id": "lagi-again-tee-black-s",
+      "size": "S",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-again-tee-black-m",
+      "size": "M",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-again-tee-black-l",
+      "size": "L",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-again-tee-black-xl",
+      "size": "XL",
+      "color": null,
+      "stock": null
+    }
+  ],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [
+    {
+      "name": {
+        "value": "헤비 코튼 저지",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "characteristics": {
+        "value": "두께감이 있어 한 장만 입어도 비치지 않아요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "productLocation": {
+        "value": "전체",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      },
+      "reasonForUse": {
+        "value": "매일 입어도 편안하도록 골랐어요.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    }
+  ],
+  "process": [
+    {
+      "order": 1,
+      "title": "재단",
+      "description": {
+        "value": "패턴에 맞춰 원단을 한 장씩 재단합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    },
+    {
+      "order": 2,
+      "title": "수성 잉크 프린트",
+      "description": {
+        "value": "부드러운 촉감을 위해 수성 잉크로 프린트합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    },
+    {
+      "order": 3,
+      "title": "마무리 검수",
+      "description": {
+        "value": "봉제선과 프린트 상태를 하나하나 확인합니다.",
+        "status": "AI_DRAFT",
+        "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+      }
+    }
+  ],
+  "details": [],
+  "story": {
+    "value": "라기는 말레이·인도네시아어로 ‘다시’라는 뜻이에요. 한 번 입고 끝나는 옷이 아니라, 다시 꺼내 입고 싶은 기본을 생각하며 만들었습니다.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "lagiSelectionReason": {
+    "value": "라기 모티프와 컬러를 일상에서 가장 쉽게 입을 수 있는 아이템이라 골랐어요.",
+    "status": "AI_DRAFT",
+    "source": "AI 초안 · 임의 샘플 상품 (2026-10-22)"
+  },
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": true,
+  "imageAnalysis": {
+    "observations": [
+      {
+        "level": "OBSERVED",
+        "label": "임의로 만든 샘플 상품입니다. 이름·가격·설명·이미지는 실제 상품이 정해지면 교체하세요."
+      }
+    ]
+  }
+}

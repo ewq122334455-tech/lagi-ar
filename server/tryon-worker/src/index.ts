@@ -85,7 +85,7 @@ function buildPrompt(r: TryOnRequest) {
     'Create one photorealistic photo of the SAME person from image 1 naturally wearing or carrying the product from image 2' +
       (r.style ? `, ${r.style}` : '') +
       '.',
-    "Keep the person's face, identity, body shape, pose, hair, outfit and the background exactly as in image 1.",
+    "Keep the person's face, identity, body shape, pose, hair and the background exactly as in image 1, and keep the rest of their outfit unchanged.",
     'Reproduce the product faithfully: same shape, colours, prints, text, materials, hardware and proportions as in image 2. Ignore any person or background in image 2.',
     r.size
       ? `The product's real size is ${r.size}; scale it realistically to the person's body.`
