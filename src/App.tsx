@@ -31,7 +31,9 @@ function SiteLayout() {
       <main id="main" style={{ paddingTop: 'var(--nav-height)' }}>
         <Outlet />
       </main>
-      <Footer />
+      <div className="bg-mist" style={{ paddingBottom: 'var(--tabbar-height)' }}>
+        <Footer />
+      </div>
       <CartDrawer />
     </div>
   );

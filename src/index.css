@@ -3,16 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --lagi-ink: #161514;
-  --lagi-paper: #f6f4ef;
-  --lagi-graphite: #45423d;
-  --lagi-stone: #8c877e;
-  --lagi-mist: #ebe7df;
-  --lagi-line: #dcd6cb;
+  --lagi-ink: #151515;
+  --lagi-paper: #ffffff;
+  --lagi-graphite: #4a4a4a;
+  --lagi-stone: #929292;
+  --lagi-mist: #f4f1ea;
+  --lagi-line: #e8e6e1;
   --lagi-blue: #2e55a3;
   --lagi-orange: #c2662c;
   --lagi-lime: #deb457;
-  --nav-height: 72px;
+  /* Utility strip + main bar + category row (the bar collapses to two rows on mobile). */
+  --lagi-font: 'Posterama 2001', posterama-2001, Posterama2001, Jost, YoonGothic, 'Yoon Gothic', '윤고딕', 'Pretendard Variable', Pretendard,
+    -apple-system, sans-serif;
+  --nav-height: 148px;
+  --tabbar-height: 0px;
 }
 
 * {
@@ -28,7 +32,7 @@ body {
   margin: 0;
   background: var(--lagi-paper);
   color: var(--lagi-ink);
-  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--lagi-font);
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.01em;
   word-break: keep-all;
@@ -93,14 +97,10 @@ button {
   top: 12px;
 }
 
-/* Display serif: Instrument Serif has a single weight, and Korean falls back to Pretendard —
-   keep Korean display text tight and medium so the two scripts sit together. */
+/* Display headlines share the brand stack; tighten tracking at large sizes. */
 .font-display {
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.02em;
-}
-.font-display:lang(ko) {
-  letter-spacing: -0.035em;
 }
 
 @keyframes lagi-word {

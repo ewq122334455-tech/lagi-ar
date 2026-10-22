@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { useCart } from '@/commerce/CartContext';
-import { canUseAR } from '@/utils/arAvailability';
 import { canUseTryOn } from '@/utils/tryOnAvailability';
 
 function uniq(values: (string | null)[]): string[] {
@@ -77,10 +76,10 @@ export function BuyPanel({ product }: { product: Product }) {
   }
 
   return (
-    <div className="mt-10">
+    <div className="mt-6">
       {colors.length > 0 && (
         <fieldset className="mb-6">
-          <legend className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-stone">
+          <legend className="mb-2 text-[13px] text-stone">
             색상
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -90,7 +89,7 @@ export function BuyPanel({ product }: { product: Product }) {
                 type="button"
                 onClick={() => setColor(c)}
                 aria-pressed={color === c}
-                className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-semibold focus-ring ${
+                className={`rounded-md border px-4 py-2 text-sm font-semibold focus-ring ${
                   color === c ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                 }`}
               >
@@ -103,7 +102,7 @@ export function BuyPanel({ product }: { product: Product }) {
 
       {sizes.length > 0 && (
         <fieldset className="mb-6">
-          <legend className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-stone">
+          <legend className="mb-2 text-[13px] text-stone">
             사이즈
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -117,7 +116,7 @@ export function BuyPanel({ product }: { product: Product }) {
                   type="button"
                   onClick={() => setSize(s)}
                   aria-pressed={size === s}
-                  className={`rounded-full border-2 px-5 py-2 font-heading text-sm font-semibold focus-ring ${
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold focus-ring ${
                     size === s ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
                   } ${out ? 'text-stone line-through' : ''}`}
                 >
@@ -130,8 +129,8 @@ export function BuyPanel({ product }: { product: Product }) {
       )}
 
       <div className="mb-6">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-stone">수량</p>
-        <div className="flex w-fit items-center rounded-full border border-line">
+        <p className="mb-2 text-[13px] text-stone">수량</p>
+        <div className="flex w-fit items-center rounded-md border border-line">
           <button
             type="button"
             aria-label="수량 줄이기"
@@ -154,47 +153,35 @@ export function BuyPanel({ product }: { product: Product }) {
 
       {error && <p className="mb-4 text-sm text-orange">{error}</p>}
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={buyNow}
-          disabled={soldOut}
-          className="inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 font-heading text-sm font-semibold text-paper transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {soldOut ? '품절' : '바로 구매'}
-        </button>
-        <button
-          type="button"
-          onClick={addToCart}
-          disabled={soldOut}
-          className="inline-flex items-center gap-2 rounded-full border border-ink px-8 py-4 font-heading text-sm font-semibold transition-transform hover:-translate-y-0.5 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          장바구니
-        </button>
-        {canUseAR(product) && (
-          <Link
-            to={`/ar/${product.id}`}
-            className="inline-flex items-center gap-2 rounded-full border border-blue px-8 py-4 font-heading text-sm font-semibold text-blue transition-transform hover:-translate-y-0.5 focus-ring"
-          >
-            AR로 보기
-          </Link>
-        )}
+      <div className="flex flex-col gap-2">
         {canUseTryOn(product) && (
           <Link
             to={`/try-on/${product.id}`}
-            className="inline-flex items-center gap-2 rounded-full bg-blue px-8 py-4 font-heading text-sm font-semibold text-paper transition-transform hover:-translate-y-0.5 focus-ring"
+            className="flex h-12 items-center justify-center gap-2 rounded-md bg-lime text-sm font-bold text-ink hover:brightness-95 focus-ring"
           >
-            가상으로 입어보기
+            카메라로 메어보기
           </Link>
         )}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={addToCart}
+            disabled={soldOut}
+            className="h-12 rounded-md border border-ink text-sm font-bold hover:bg-mist focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            장바구니
+          </button>
+          <button
+            type="button"
+            onClick={buyNow}
+            disabled={soldOut}
+            className="h-12 rounded-md bg-blue text-sm font-bold text-paper hover:bg-[#244789] focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {soldOut ? '품절' : '구매하기'}
+          </button>
+        </div>
       </div>
 
-      {product.price.value === null && (
-        <p className="mt-4 text-xs leading-relaxed text-stone">
-          판매가가 아직 등록되지 않았습니다. 결제 단계에서 공식 스마트스토어의 실제 판매가를
-          확인해 주세요.
-        </p>
-      )}
     </div>
   );
 }

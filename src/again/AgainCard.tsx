@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LOGO_PATHS, LOGO_VIEWBOX } from '@/components/logoPaths';
 
 const THEMES = [
   { key: 'blue', bg: '#2e55a3', fg: '#f6f4ef', accent: '#deb457' },
@@ -9,6 +10,9 @@ const THEMES = [
 ] as const;
 
 const EXAMPLES = ['그 바다에 가기', '처음처럼 시작하기', '좋아하는 노래 듣기', '엄마랑 여행 가기', '같은 가방 메고 나가기'];
+
+/** Same brand stack as the site (see tailwind.config.js). */
+const FONT = `"Posterama 2001", posterama-2001, Posterama2001, Jost, YoonGothic, "Yoon Gothic", "윤고딕", "Pretendard Variable", Pretendard, sans-serif`;
 
 const W = 1080;
 const H = 1350;
@@ -47,9 +51,9 @@ export function AgainCard({ getBagImage, bagKey }: AgainCardProps) {
     let cancelled = false;
     // Canvas text only uses web fonts that are already loaded.
     Promise.all([
-      document.fonts.load('italic 200px "Instrument Serif"'),
-      document.fonts.load('600 80px "Pretendard Variable"'),
-      document.fonts.load('800 200px "Pretendard Variable"'),
+      document.fonts.load(`italic 34px ${FONT}`),
+      document.fonts.load(`600 80px ${FONT}`, '다시'),
+      document.fonts.load(`800 200px ${FONT}`, '다시'),
     ])
       .catch(() => undefined)
       .then(() => {
@@ -173,11 +177,16 @@ function draw(
   ctx.textBaseline = 'alphabetic';
 
   // Header
-  ctx.font = '700 34px "Pretendard Variable", Pretendard, sans-serif';
-  ctx.letterSpacing = '8px';
-  ctx.fillText('LAGI', pad, pad + 20);
-  ctx.letterSpacing = '0px';
-  ctx.font = 'italic 34px "Instrument Serif", serif';
+  // Logo, scaled from its own 25-unit-high artwork to ~30px.
+  const logoScale = 30 / LOGO_VIEWBOX.height;
+  ctx.save();
+  ctx.translate(pad, pad - 6);
+  ctx.scale(logoScale, logoScale);
+  ctx.strokeStyle = theme.fg;
+  ctx.lineWidth = 3;
+  LOGO_PATHS.forEach((d) => ctx.stroke(new Path2D(d)));
+  ctx.restore();
+  ctx.font = `italic 34px ${FONT}`;
   ctx.textAlign = 'right';
   ctx.fillText('lagi = again', W - pad, pad + 20);
   ctx.textAlign = 'left';
@@ -192,7 +201,7 @@ function draw(
   }
 
   // Korean has no true italic, so "다시," stays upright and heavy rather than synthetically slanted.
-  ctx.font = '800 200px "Pretendard Variable", Pretendard, sans-serif';
+  ctx.font = `800 200px ${FONT}`;
   ctx.letterSpacing = '-10px';
   ctx.fillStyle = theme.accent;
   ctx.fillText('다시,', pad - 8, 640);
@@ -201,16 +210,16 @@ function draw(
   // The visitor's line, wrapped to fit.
   ctx.fillStyle = theme.fg;
   const fontSize = text.length > 16 ? 84 : 104;
-  ctx.font = `600 ${fontSize}px "Pretendard Variable", Pretendard, sans-serif`;
+  ctx.font = `600 ${fontSize}px ${FONT}`;
   const lines = wrap(ctx, text, W - pad * 2);
   lines.slice(0, 3).forEach((line, i) => ctx.fillText(line, pad, 800 + i * fontSize * 1.18));
 
   // Footer
   ctx.globalAlpha = 0.7;
-  ctx.font = '500 30px "Pretendard Variable", Pretendard, sans-serif';
+  ctx.font = `500 30px ${FONT}`;
   ctx.fillText('lagi — 말레이·인도네시아어로 ‘다시’', pad, H - pad - 44);
   const date = new Date();
-  ctx.font = 'italic 34px "Instrument Serif", serif';
+  ctx.font = `italic 34px ${FONT}`;
   ctx.fillText(`Look closer, again. — ${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`, pad, H - pad);
   ctx.globalAlpha = 1;
 }

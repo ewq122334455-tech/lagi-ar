@@ -37,7 +37,10 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
   const [state, setState] = useState<ARState>('ready-to-start');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
-  const markerless = !product.arTarget;
+  // Visitors who don't have the target image to hand can switch to markerless placement.
+  const [forceMarkerless, setForceMarkerless] = useState(false);
+  const markerless = !product.arTarget || forceMarkerless;
+  const [showTarget, setShowTarget] = useState(false);
 
   const cleanup = useCallback(async () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -56,7 +59,8 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
     onExit();
   }, [cleanup, onExit]);
 
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (opts?: { markerless?: boolean }) => {
+    const markerless = opts?.markerless ?? (!product.arTarget || forceMarkerless);
     if (!containerRef.current) return;
     setState('requesting-camera');
     setErrorMessage(null);
@@ -125,7 +129,14 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
         setErrorMessage('3D 모델을 불러오지 못했습니다.');
       }
     }
-  }, [product, markerless]);
+  }, [product, forceMarkerless]);
+
+  const switchToMarkerless = useCallback(async () => {
+    await cleanup();
+    setForceMarkerless(true);
+    setShowTarget(false);
+    handleStart({ markerless: true });
+  }, [cleanup, handleStart]);
 
   const handleTap = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -178,13 +189,27 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
           <p className="mt-3 max-w-xs text-sm text-mist/80">
             카메라 접근 권한이 필요합니다. 실물 제품을 화면 안에 비춰주세요.
           </p>
-          <button
-            type="button"
-            onClick={handleStart}
-            className="eyebrow mt-8 border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring"
-          >
-            카메라 시작
-          </button>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleStart()}
+              className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring"
+            >
+              카메라 시작
+            </button>
+            {product.arTarget && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForceMarkerless(true);
+                  handleStart({ markerless: true });
+                }}
+                className="eyebrow border border-paper/40 px-7 py-4 text-mist hover:border-paper hover:text-paper focus-ring"
+              >
+                이미지 없이 바로 보기
+              </button>
+            )}
+          </div>
         </Overlay>
       )}
 
@@ -210,7 +235,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
             브라우저 설정에서 이 사이트의 카메라 권한을 허용한 뒤 다시 시도해 주세요.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={handleStart} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
+            <button type="button" onClick={() => handleStart()} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
               다시 시도
             </button>
             <button type="button" onClick={handleExit} className="eyebrow border border-paper/40 px-7 py-4 text-mist hover:border-paper hover:text-paper focus-ring">
@@ -237,7 +262,7 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
           <h2 className="mt-3 text-xl font-medium">AR을 시작하지 못했습니다</h2>
           <p className="mt-3 max-w-xs text-sm text-mist/80">{errorMessage ?? '알 수 없는 오류가 발생했습니다.'}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={handleStart} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
+            <button type="button" onClick={() => handleStart()} className="eyebrow border border-paper px-7 py-4 hover:bg-paper hover:text-ink focus-ring">
               다시 시도
             </button>
             <button type="button" onClick={handleExit} className="eyebrow border border-paper/40 px-7 py-4 text-mist hover:border-paper hover:text-paper focus-ring">
@@ -255,11 +280,53 @@ export function ARExperience({ product, onExit }: ARExperienceProps) {
             </p>
           ) : (
             <>
-              <div className="h-48 w-48 rounded-full border border-paper/50" />
-              <p className="eyebrow">타겟 이미지를 비춰 주세요</p>
+              {product.arTargetPreview ? (
+                <img
+                  src={product.arTargetPreview}
+                  alt="카메라로 비출 이미지"
+                  className="h-36 w-36 rounded-xl border border-paper/40 object-cover opacity-90"
+                />
+              ) : (
+                <div className="h-48 w-48 rounded-full border border-paper/50" />
+              )}
+              <p className="max-w-xs rounded-full bg-ink/70 px-5 py-3 text-sm text-paper">
+                {product.arTargetPreview ? '이 이미지를 카메라로 비추면 가방이 나타납니다' : '등록된 인식 이미지를 카메라로 비춰 주세요'}
+              </p>
+              <div className="pointer-events-auto mt-2 flex flex-wrap justify-center gap-2">
+                {product.arTargetPreview && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTarget(true)}
+                    className="rounded-full border border-paper/50 bg-ink/60 px-4 py-2.5 text-xs font-semibold text-paper backdrop-blur focus-ring"
+                  >
+                    이미지 크게 보기
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={switchToMarkerless}
+                  className="rounded-full bg-paper px-4 py-2.5 text-xs font-semibold text-ink focus-ring"
+                >
+                  이미지 없이 바로 보기
+                </button>
+              </div>
             </>
           )}
         </div>
+      )}
+
+      {showTarget && product.arTargetPreview && (
+        <button
+          type="button"
+          onClick={() => setShowTarget(false)}
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-paper p-6 text-ink"
+          aria-label="닫기"
+        >
+          <img src={product.arTargetPreview} alt="AR 인식 이미지" className="max-h-[75dvh] w-auto max-w-full object-contain" />
+          <span className="text-sm text-graphite">
+            다른 기기 화면에 이 이미지를 띄우거나 인쇄해서 비춰 주세요 · 화면을 누르면 닫힙니다
+          </span>
+        </button>
       )}
 
       {state === 'found' && (
