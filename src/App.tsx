@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Routes, Route, Outlet, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { Loading } from '@/components/Loading';
@@ -16,6 +16,7 @@ const Story = lazy(() => import('@/pages/Story'));
 const ARLanding = lazy(() => import('@/pages/ARLanding'));
 const ARExperiencePage = lazy(() => import('@/pages/ARExperiencePage'));
 const Again = lazy(() => import('@/pages/Again'));
+const TryOnPage = lazy(() => import('@/pages/TryOnPage'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
@@ -61,7 +62,7 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="/ar/:id" element={<ARExperiencePage />} />
-          <Route path="/try-on/:id" element={<TryOnRedirect />} />
+          <Route path="/try-on/:id" element={<TryOnPage />} />
           <Route path="/exhibition" element={<Exhibition />} />
         </Routes>
       </Suspense>
@@ -70,8 +71,3 @@ export default function App() {
   );
 }
 
-/** Old camera try-on links (QR codes already shared) now open the AI fitting. */
-function TryOnRedirect() {
-  const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/ai-fit/${id}`} replace />;
-}
