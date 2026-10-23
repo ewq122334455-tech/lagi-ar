@@ -1,12 +1,17 @@
-# LAGI 리빌드 — 진행 상태
+# LAGI 리빌드 — 진행 상태 (2026-10-23)
 
-| 단계 | 상태 | 메모 |
+| 단계 | 상태 | 문서 |
 |---|---|---|
-| PHASE 01 레퍼런스 분석 | **막힘** | 작업 환경의 네트워크 정책이 `bureau-dimanche.framer.website` 접속을 거부함 (Playwright: `ERR_TUNNEL_CONNECTION_FAILED`, curl: CONNECT 403). 측정·캡처 0건. 분석 결과로 쓸 수 있는 수치 없음 |
-| PHASE 02 기존 사이트 감사 | 완료 | `01-existing-site-audit.md` |
-| PHASE 03~10 | 대기 | 레퍼런스 접근이 열린 뒤 진행 (디자인 시스템 수치는 분석 근거가 있어야 함) |
+| 01 레퍼런스 분석 | 완료 (네트워크 허용 후 Playwright로 직접 측정) | `02-reference-analysis.md` |
+| 02 기존 사이트 감사 | 완료 | `01-existing-site-audit.md` |
+| 03–05 브랜드·구조·디자인 시스템 | 완료 | `03-design-system.md` |
+| 06–07 개발 (홈 갤러리·페이지·기능 이식) | 완료 | `04-build-and-qa.md` |
+| 08–10 반응형·QA·시각 비교 | 완료 (자동화 범위) | `04-build-and-qa.md` |
+| 실행·배포 | — | `05-run-deploy.md` |
 
-## 접근을 열려면
-클라우드 환경 설정 → Network access 에서 아래 도메인을 허용 (패키지 매니저 허용은 유지):
-- `bureau-dimanche.framer.website`
-- `framerusercontent.com` (Framer 사이트의 이미지·폰트·스크립트가 보통 여기서 로드됨 — 실제 사용 도메인은 접속 후 확인 필요)
+## 남은 것 (자료 필요)
+- 상품별 스마트스토어 주소
+- 상품별 확정 소재·설명
+- 고해상도 상품 사진
+- 공식 Light Gray 컬러 코드 (현재 레퍼런스 측정값 #F1F1F1 사용)
+- 실기기·Safari 테스트
