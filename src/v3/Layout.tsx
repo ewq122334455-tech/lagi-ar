@@ -7,9 +7,9 @@ import { OFFICIAL_LINKS } from './data';
 import './tokens.css';
 
 export const NAV = [
-  { to: '/discover', label: '디스커버' },
-  { to: '/why', label: '왜 라기' },
-  { to: '/about', label: '어바웃' },
+  { to: '/discover', label: 'Discover' },
+  { to: '/why', label: 'Why LAGI' },
+  { to: '/about', label: 'About' },
 ] as const;
 
 /**
@@ -39,7 +39,7 @@ export function V3Layout() {
   return (
     <div className="v3 min-h-screen">
       <a href="#main" className="skip-link">
-        본문으로 건너뛰기
+        Skip to content
       </a>
       <Header />
       <main id="main" className={isHome ? 'relative z-[2] h-[100svh] overflow-hidden bg-[var(--c-gray)]' : 'sheet'}>
@@ -73,53 +73,53 @@ function Header() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between px-page">
-        <Link to="/" aria-label="LAGI 홈" className="flex items-center">
+        <Link to="/" aria-label="LAGI home" className="flex items-center">
           <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
         </Link>
-        <nav aria-label="주요 메뉴" className="t-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="t-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} className="tag" aria-current={pathname.startsWith(n.to) ? 'page' : undefined}>
               {n.label}
             </NavLink>
           ))}
           <NavLink to="/contact" className="tag tag-ink">
-            연락하기
+            Contact
           </NavLink>
         </nav>
         <div className="t-nav flex items-center gap-1">
           <Link to={user ? '/account' : '/login'} className="tag hidden lg:inline-block">
-            {user ? `${user.name}님` : '로그인'}
+            {user ? user.name : 'Log in'}
           </Link>
-          <Link to="/cart" className="tag" aria-label={`장바구니, ${count}개`}>
-            장바구니 <span className="tabular-nums">{count}</span>
+          <Link to="/cart" className="tag" aria-label={`Cart, ${count} items`}>
+            Cart <span className="tabular-nums">{count}</span>
           </Link>
           <button type="button" className="tag lg:hidden" aria-expanded={open} aria-controls="v3-menu" onClick={() => setOpen(true)}>
-            메뉴
+            Menu
           </button>
         </div>
       </header>
 
       {open && (
-        <div id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
+        <div id="v3-menu" role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
           <div className="flex h-16 items-center justify-between">
             <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
-            <button type="button" onClick={() => setOpen(false)} className="t-nav tag" aria-label="메뉴 닫기">
-              닫기
+            <button type="button" onClick={() => setOpen(false)} className="t-nav tag" aria-label="Close menu">
+              Close
             </button>
           </div>
-          <nav className="mt-10 flex flex-col items-start gap-3" aria-label="모바일 메뉴">
-            {[{ to: '/', label: '홈' }, ...NAV].map((n) => (
+          <nav className="mt-10 flex flex-col items-start gap-3" aria-label="Mobile">
+            {[{ to: '/', label: 'Home' }, ...NAV].map((n) => (
               <Link key={n.to} to={n.to} className="t-h3 bg-[var(--c-label)] px-2 pb-1 pt-1.5">
                 {n.label}
               </Link>
             ))}
             <Link to="/contact" className="t-h3 bg-[var(--c-ink)] px-2 pb-1 pt-1.5 text-[var(--c-white)]">
-              연락하기
+              Contact
             </Link>
           </nav>
           <div className="t-label mt-auto flex gap-6 border-t border-[var(--c-ink)] pt-5">
-            <Link to={user ? '/account' : '/login'}>{user ? `${user.name}님` : '로그인'}</Link>
-            <Link to="/cart">장바구니 {count}</Link>
+            <Link to={user ? '/account' : '/login'}>{user ? user.name : 'Log in'}</Link>
+            <Link to="/cart">Cart {count}</Link>
           </div>
         </div>
       )}
@@ -138,17 +138,17 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
       </span>
       <div className="t-label relative flex items-end justify-between gap-8">
         <div>
-          <p className="t-nav mb-2">연락</p>
+          <p className="t-nav mb-2">Contact</p>
           <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="block opacity-80 hover:opacity-100">
-            스마트스토어
+            Smart Store
           </a>
           <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="block opacity-80 hover:opacity-100">
-            인스타그램
+            Instagram
           </a>
         </div>
         <div className="text-right">
-          <p className="t-nav mb-2">바로가기</p>
-          {[{ to: '/', label: '홈' }, ...NAV, { to: '/contact', label: '연락하기' }].map((n) => (
+          <p className="t-nav mb-2">Navigation</p>
+          {[{ to: '/', label: 'Home' }, ...NAV, { to: '/contact', label: 'Contact' }].map((n) => (
             <Link key={n.to} to={n.to} className="block opacity-80 hover:opacity-100">
               {n.label}
             </Link>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CATEGORY_KO, price, useImageRatios, useRealProducts } from '../data';
+import { CATEGORY_LABEL, price, useImageRatios, useRealProducts } from '../data';
 
 /** All products on sale, as an editorial grid (reference: Projects). Filter by category via ?c=. */
 export default function Discover() {
@@ -14,9 +14,9 @@ export default function Discover() {
   return (
     <div className="px-page pb-32 pt-page">
       <div className="flex flex-wrap items-start justify-between gap-8">
-        <h1 className="t-display">디스커버</h1>
+        <h1 className="t-display">DISCOVER</h1>
         <div className="flex gap-6">
-          <p className="t-value">분류</p>
+          <p className="t-value">Category</p>
           <ul className="t-value">
             {[null, ...categories].map((c) => (
               <li key={c ?? 'all'}>
@@ -26,7 +26,7 @@ export default function Discover() {
                   aria-pressed={active === c}
                   className={active === c ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}
                 >
-                  {c ? CATEGORY_KO[c] ?? c : '전체'} <span className="tabular-nums">{c ? products.filter((p) => p.category.value === c).length : products.length}</span>
+                  {c ? CATEGORY_LABEL[c] ?? c : 'All'} <span className="tabular-nums">{c ? products.filter((p) => p.category.value === c).length : products.length}</span>
                 </button>
               </li>
             ))}
@@ -34,7 +34,7 @@ export default function Discover() {
         </div>
       </div>
 
-      {loading && <p className="t-label mt-20">불러오는 중</p>}
+      {loading && <p className="t-label mt-20">Loading…</p>}
       {error && <p className="t-label mt-20">{error}</p>}
 
       <ul className="mt-20 grid grid-cols-1 gap-x-[var(--gap)] gap-y-14 md:grid-cols-2 lg:mt-28 lg:grid-cols-3">

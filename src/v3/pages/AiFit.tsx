@@ -5,13 +5,13 @@ import { useRealProducts } from '../data';
 
 const STYLES = {
   bag: [
-    { key: 'shoulder', label: '어깨에 메기', prompt: CARRY_PROMPTS.SHOULDER },
-    { key: 'hand', label: '손에 들기', prompt: CARRY_PROMPTS.HAND },
-    { key: 'cross', label: '크로스로 메기', prompt: CARRY_PROMPTS.CROSSBODY },
+    { key: 'shoulder', label: 'On the shoulder', prompt: CARRY_PROMPTS.SHOULDER },
+    { key: 'hand', label: 'In the hand', prompt: CARRY_PROMPTS.HAND },
+    { key: 'cross', label: 'Cross-body', prompt: CARRY_PROMPTS.CROSSBODY },
   ],
   acc: [
-    { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
-    { key: 'clip', label: '가방에 걸기', prompt: 'clipped or hanging from the bag or belt loop the person is carrying' },
+    { key: 'hand', label: 'In the hand', prompt: 'held naturally in one hand in front of the body' },
+    { key: 'clip', label: 'On a bag', prompt: 'clipped or hanging from the bag or belt loop the person is carrying' },
   ],
 };
 
@@ -30,7 +30,7 @@ export default function AiFit() {
   const cam = useRef<HTMLInputElement>(null);
   const album = useRef<HTMLInputElement>(null);
 
-  if (!p) return <p className="t-label px-page pt-page">불러오는 중</p>;
+  if (!p) return <p className="t-label px-page pt-page">Loading…</p>;
 
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -41,7 +41,7 @@ export default function AiFit() {
     try {
       setPhoto(await photoToDataUrl(f));
     } catch {
-      setError('사진을 읽지 못했어요. 다른 사진으로 해 주세요.');
+      setError('Could not read that photo. Please try another one.');
     }
   }
   async function run() {
@@ -63,30 +63,30 @@ export default function AiFit() {
       <Link to={`/product/${p.id}`} className="t-label text-[var(--c-mute)] hover:text-[var(--c-ink)]">
         ← {p.name.value}
       </Link>
-      <h1 className="t-display mt-4">AI로 입어보기</h1>
+      <h1 className="t-display mt-4">TRY ON WITH AI</h1>
       <div className="rule mt-14 grid grid-cols-1 gap-[var(--gap)] pt-6 md:grid-cols-2">
         <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]">
-          {shown ? <img src={shown} alt={result && !before ? 'AI 결과' : '내 사진'} className="h-full w-full object-contain" /> : <p className="t-body px-8 text-center text-[var(--c-mute)]">정면에 가까운 전신·상반신 사진을 올려 주세요.</p>}
-          {busy && <p className="t-value absolute inset-0 flex items-center justify-center bg-[var(--c-ink)]/70 text-[var(--c-white)]">AI가 만드는 중… (10~40초)</p>}
+          {shown ? <img src={shown} alt={result && !before ? 'AI result' : 'Your photo'} className="h-full w-full object-contain" /> : <p className="t-body px-8 text-center text-[var(--c-mute)]">Add a front-facing full-body or upper-body photo.</p>}
+          {busy && <p className="t-value absolute inset-0 flex items-center justify-center bg-[var(--c-ink)]/70 text-[var(--c-white)]">Creating your image… (10–40 s)</p>}
           {result && (
             <button type="button" className="t-nav tag tag-ink absolute bottom-3 left-3" onPointerDown={() => setBefore(true)} onPointerUp={() => setBefore(false)} onPointerLeave={() => setBefore(false)}>
-              누르고 원본 보기
+              Hold to see original
             </button>
           )}
         </div>
         <div>
           <input ref={cam} type="file" accept="image/*" capture="user" className="hidden" onChange={pick} />
           <input ref={album} type="file" accept="image/*" className="hidden" onChange={pick} />
-          <p className="t-label text-[var(--c-mute)]">1. 사진</p>
+          <p className="t-label text-[var(--c-mute)]">1. Photo</p>
           <div className="t-nav mt-2 flex gap-2">
             <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => cam.current?.click()}>
-              사진 찍기
+              Take a photo
             </button>
             <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => album.current?.click()}>
-              앨범에서 선택
+              Choose from album
             </button>
           </div>
-          <p className="t-label mt-8 text-[var(--c-mute)]">2. 착용 방식</p>
+          <p className="t-label mt-8 text-[var(--c-mute)]">2. How to wear it</p>
           <div className="t-nav mt-2 flex flex-wrap gap-2">
             {styles.map((s) => (
               <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'tag-ink' : ''}`}>
@@ -95,10 +95,10 @@ export default function AiFit() {
             ))}
           </div>
           <button type="button" onClick={run} disabled={!photo || busy || !AI_TRYON_URL} className="t-nav tag tag-ink mt-8 px-5 py-3 disabled:opacity-40">
-            {result ? '다시 만들기' : 'AI 피팅 시작'}
+            {result ? 'Try again' : 'Start AI fitting'}
           </button>
           {error && <p className="t-label mt-4 text-[var(--c-blue)]">{error}</p>}
-          <p className="t-caption mt-8 max-w-sm text-[var(--c-mute)]">사진은 AI 합성을 위해 Google Gemini로 전송되며 라기 서버에 저장되지 않습니다. AI가 만든 참고용 이미지라 실제 크기·색감과 다를 수 있어요.</p>
+          <p className="t-caption mt-8 max-w-sm text-[var(--c-mute)]">Your photo is sent to Google Gemini to create the image and is not stored by LAGI. The result is an AI preview; size and colour may differ from the real product.</p>
         </div>
       </div>
     </div>

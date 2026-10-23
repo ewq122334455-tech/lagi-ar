@@ -214,8 +214,8 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       role="region"
-      aria-roledescription="갤러리"
-      aria-label="라기 제품 갤러리. 휠, 드래그, 방향키로 넘길 수 있어요"
+      aria-roledescription="gallery"
+      aria-label="LAGI product gallery — scroll, drag or use the arrow keys"
     >
       {g &&
         products.map((p, i) => (
@@ -252,14 +252,14 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
           <p className="t-value mt-1">{current.name.value}</p>
           <p className="t-label tabular-nums">{price(current.price.value)}</p>
           <div className="pointer-events-auto mt-3 flex gap-1 t-nav md:justify-end">
-            <button type="button" className="tag" onClick={() => step(-1)} aria-label="이전 제품">
+            <button type="button" className="tag" onClick={() => step(-1)} aria-label="Previous product">
               ←
             </button>
-            <button type="button" className="tag" onClick={() => step(1)} aria-label="다음 제품">
+            <button type="button" className="tag" onClick={() => step(1)} aria-label="Next product">
               →
             </button>
             <button type="button" className="tag tag-ink" onClick={() => navigate(`/product/${current.id}`)}>
-              자세히
+              View
             </button>
           </div>
         </div>

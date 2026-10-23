@@ -10,3 +10,4 @@ export const WHY_LAGI = [
 ] as const;
 
 export const WHY_LAGI_RULE = '모든 제품은 네 가지 기준을 모두 충족해야 합니다.';
+export const WHY_LAGI_RULE_EN = 'Every product must meet all four.';

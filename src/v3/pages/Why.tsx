@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
+import { WHY_LAGI, WHY_LAGI_RULE_EN } from '@/content/whyLagi';
 
 /**
  * WHY LAGI (reference: Method). On wide screens the four criteria travel sideways as the page
@@ -43,9 +43,9 @@ export default function Why() {
 
   const intro = (
     <div className="w-full shrink-0 lg:w-[34vw]">
-      <h1 className="t-display">왜 라기</h1>
-      <p className="t-body mt-6 max-w-sm">라기가 제품을 고르는 네 가지 기준입니다.</p>
-      <p className="t-body mt-2 max-w-sm font-semibold">{WHY_LAGI_RULE}</p>
+      <h1 className="t-display">WHY LAGI</h1>
+      <p className="t-body mt-6 max-w-sm">The four criteria LAGI uses to select every product.</p>
+      <p className="t-body mt-2 max-w-sm font-semibold">{WHY_LAGI_RULE_EN}</p>
     </div>
   );
 
