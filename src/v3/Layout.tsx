@@ -15,20 +15,23 @@ export const NAV = [
 
 /**
  * Site frame: a white content sheet over a fixed black footer that is revealed as the sheet
- * scrolls away (the sheet's bottom corners round off).
+ * scrolls away (the sheet's bottom corners round off). The home page is one screen with no
+ * footer, like the reference.
  */
 export function V3Layout() {
   const { pathname } = useLocation();
+  const isHome = pathname === '/';
   const footerRef = useRef<HTMLElement>(null);
   const [footerH, setFooterH] = useState(0);
 
   useLayoutEffect(() => {
+    if (isHome) return;
     const el = footerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(() => setFooterH(el.offsetHeight));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [isHome]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -40,13 +43,17 @@ export function V3Layout() {
         본문으로 건너뛰기
       </a>
       <Header />
-      <main id="main" className="sheet">
-        <div key={pathname} className="enter">
+      <main id="main" className={isHome ? 'relative z-[2] h-[100svh] overflow-hidden bg-[var(--c-gray)]' : 'sheet'}>
+        <div key={pathname} className={isHome ? 'h-full' : 'enter'}>
           <Outlet />
         </div>
       </main>
-      <div aria-hidden="true" style={{ height: footerH }} />
-      <Footer ref={footerRef} />
+      {!isHome && (
+        <>
+          <div aria-hidden="true" style={{ height: footerH }} />
+          <Footer ref={footerRef} />
+        </>
+      )}
     </div>
   );
 }

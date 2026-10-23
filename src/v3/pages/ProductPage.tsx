@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
-import { Point } from '../MotifCrop';
+import { Point } from '../Point';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useImageRatios, useRealProducts } from '../data';
 
 /** Close-up crops of the main photo: a uniform zoom around a focal point, never stretched. */
