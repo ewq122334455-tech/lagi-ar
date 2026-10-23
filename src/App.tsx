@@ -25,6 +25,21 @@ const Checkout = lazy(() => import('@/pages/Checkout'));
 const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
+// New site (v3). The previous site is kept intact under /classic.
+const V3Layout = lazy(() => import('@/v3/Layout').then((m) => ({ default: m.V3Layout })));
+const V3Home = lazy(() => import('@/v3/pages/Home'));
+const V3Discover = lazy(() => import('@/v3/pages/Discover'));
+const V3Product = lazy(() => import('@/v3/pages/ProductPage'));
+const V3Why = lazy(() => import('@/v3/pages/Why'));
+const V3About = lazy(() => import('@/v3/pages/About'));
+const V3Contact = lazy(() => import('@/v3/pages/Contact'));
+const V3Cart = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CartPage })));
+const V3Checkout = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CheckoutPage })));
+const V3AiFit = lazy(() => import('@/v3/pages/AiFit'));
+const V3Login = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.LoginPage })));
+const V3Signup = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.SignupPage })));
+const V3Account = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.AccountPage })));
+
 function SiteLayout() {
   const { pathname } = useLocation();
   return (
@@ -52,26 +67,49 @@ export default function App() {
       <CartProvider>
       <Suspense fallback={<Loading label="LAGI" />}>
         <Routes>
+          <Route element={<V3Layout />}>
+            <Route path="/" element={<V3Home />} />
+            <Route path="/discover" element={<V3Discover />} />
+            <Route path="/product/:id" element={<V3Product />} />
+            <Route path="/why" element={<V3Why />} />
+            <Route path="/about" element={<V3About />} />
+            <Route path="/contact" element={<V3Contact />} />
+            <Route path="/cart" element={<V3Cart />} />
+            <Route path="/checkout" element={<V3Checkout />} />
+            <Route path="/ai-fit/:id" element={<V3AiFit />} />
+            <Route path="/login" element={<V3Login />} />
+            <Route path="/signup" element={<V3Signup />} />
+            <Route path="/account" element={<V3Account />} />
+          </Route>
+          {/* Old addresses that were shared before the rebuild. */}
+          <Route path="/products" element={<Navigate to="/discover" replace />} />
+          <Route path="/materials" element={<Navigate to="/about" replace />} />
+          <Route path="/story" element={<Navigate to="/about" replace />} />
+          <Route path="/again" element={<Navigate to="/" replace />} />
+          <Route path="/v2" element={<Navigate to="/" replace />} />
+          <Route path="/try-on/:id" element={<TryOnRedirect />} />
+
+          {/* Previous site, preserved as it was. */}
+          <Route path="/classic" element={<SiteLayout />}>
+            <Route index element={<Home />} />
+            <Route path="products" element={<ProductCollection />} />
+            <Route path="product/:id" element={<ProductDetail />} />
+            <Route path="about" element={<About />} />
+            <Route path="materials" element={<Materials />} />
+            <Route path="story" element={<Story />} />
+            <Route path="cart" element={<Cart />} />
+            <Route path="checkout" element={<Checkout />} />
+            <Route path="ai-fit/:id" element={<AiFitPage />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="signup" element={<SignupPage />} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="v2" element={<RedesignHome />} />
+          </Route>
           <Route element={<SiteLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/products" element={<ProductCollection />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/materials" element={<Materials />} />
-            <Route path="/story" element={<Story />} />
-            <Route path="/again" element={<Navigate to="/" replace />} />
-            <Route path="/ai-fit/:id" element={<AiFitPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/account" element={<AccountPage />} />
             <Route path="/workspace" element={<AssetWorkspace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-          <Route path="/try-on/:id" element={<TryOnRedirect />} />
           <Route path="/exhibition" element={<Exhibition />} />
-          <Route path="/v2" element={<RedesignHome />} />
         </Routes>
       </Suspense>
       </CartProvider>
