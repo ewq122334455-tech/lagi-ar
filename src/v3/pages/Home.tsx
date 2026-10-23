@@ -17,7 +17,9 @@ export default function Home() {
   const ratios = useImageRatios(products);
   const ready = products.length > 0 && products.every((p) => ratios[p.id]);
   const [film, setFilm] = useState(false);
-  const hero = products[0];
+  // A different product from the gallery's first card, so the first two screens don't repeat a photo.
+  const hero = products[3] ?? products[0];
+  const again = products[0];
 
   return (
     <div>
@@ -97,11 +99,11 @@ export default function Home() {
       </section>
 
       {/* 05 AGAIN EXPERIENCE */}
-      {hero && (
+      {again && (
         <section className="mt-28 bg-[var(--c-gray)] px-page py-20 lg:mt-44 lg:py-32" aria-labelledby="again-title">
           <div className="grid grid-cols-1 items-center gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
             <Link to="/again" className="group block lg:col-span-6" aria-label="AI 이미지 합성 시작">
-              <MotifCrop src={hero.images[0]} motif={0} className="w-full" />
+              <MotifCrop src={again.images[0]} motif={0} className="w-full" />
               <span className="t-caption kr mt-3 block text-[var(--c-mute)]">사진에 마우스를 올리면 전체가 보입니다 — 일부에서 전체로, 다시 보기.</span>
             </Link>
             <div className="lg:col-span-5 lg:col-start-8">

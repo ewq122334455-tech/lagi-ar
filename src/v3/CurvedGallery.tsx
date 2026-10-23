@@ -331,7 +331,7 @@ export function CurvedGallery({
         <div
           className={`pointer-events-none absolute z-[120] w-[min(320px,60vw)] ${
             scrollMode
-              ? 'bottom-6 right-[var(--page-x)] text-right'
+              ? 'bottom-6 right-[var(--page-x)] bg-[rgba(241,241,241,0.92)] p-2 text-right'
               : 'left-[var(--page-x)] top-20 md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right'
           }`}
         >
@@ -360,7 +360,7 @@ export function CurvedGallery({
   return (
     <section ref={sectionRef} aria-label="DISCOVER" className="relative bg-[var(--c-gray)]" style={{ height: `${Math.max(2, n) * 55 + 100}svh` }}>
       <div className="sticky top-0 h-[100svh] overflow-hidden">
-        <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[125] lg:top-24">
+        <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[125] bg-[rgba(241,241,241,0.92)] p-2 pl-0 lg:top-24">
           <p className="t-label t-mark text-[var(--c-mute)]">02</p>
           <h2 className="t-h2 t-mark mt-1">DISCOVER</h2>
           <p className="t-caption kr mt-2 max-w-[18rem] text-[var(--c-mute)]">스크롤하면 제품이 차례로 앞으로 나옵니다. 사진을 누르면 상세 페이지로 들어갑니다.</p>

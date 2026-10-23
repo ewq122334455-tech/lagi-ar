@@ -87,7 +87,7 @@
 :where(.v3 .tag) { display: inline-block; padding: 5px 8px 4px; transition: background-color var(--dur-fast) linear; }
 .v3 .tag:hover, .v3 .tag[aria-current='page'] { background-color: var(--c-label); }
 .v3 .tag-ink { background: var(--c-ink); color: var(--c-white); }
-.v3 .tag-ink:hover { background: var(--c-blue); }
+.v3 .tag-ink:hover, .v3 .tag-ink[aria-current='page'] { background: var(--c-blue); color: var(--c-white); }
 .v3 .rule { border-top: 2px solid var(--c-line); }
 .v3 .rule-1 { border-top: 1px solid var(--c-line); }
 .v3 :focus-visible { outline: 2px solid var(--c-blue); outline-offset: 3px; }

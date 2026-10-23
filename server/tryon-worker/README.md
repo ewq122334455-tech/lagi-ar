@@ -42,3 +42,16 @@ npx wrangler deploy
 - `POST /auth/signup` {name, email, password, agree, marketing} · `POST /auth/login` {email, password}
 - `GET /auth/me` · `POST /auth/logout` (헤더 `Authorization: Bearer <token>`)
 
+
+## 주문 · 결제 (토스페이먼츠)
+- `POST /orders` — 주문서를 받아 **공개된 제품 데이터(`PRODUCTS_BASE_URL`)에서 가격을 다시 읽어** 금액을 계산하고 미결제 주문을 만든다(하루 뒤 자동 삭제).
+- `POST /payments/confirm` — 결제 성공 페이지가 보낸 `paymentKey · orderId · amount`를 확인하고 토스 승인 API를 호출한다. 금액이 다르면 거절, 같은 결제의 재요청은 같은 결과.
+- `GET /admin/orders` — 결제된 주문 목록. `Authorization: Bearer <ADMIN_TOKEN>` 필요.
+
+설정:
+```
+npx wrangler secret put TOSS_SECRET_KEY   # 토스 결제위젯 시크릿 키 (test_gsk_… / live_gsk_…)
+npx wrangler secret put ADMIN_TOKEN       # 주문 조회용 임의의 긴 문자열
+npx wrangler deploy                       # ORDERS 저장소 자동 생성
+```
+사이트 쪽 클라이언트 키는 GitHub 저장소 변수 `TOSS_CLIENT_KEY`에 넣는다(공개용 키).
