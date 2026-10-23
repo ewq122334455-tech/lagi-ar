@@ -51,8 +51,8 @@ export default function Why() {
   const intro = (
     <div className="w-full shrink-0 lg:w-[34vw]">
       <h1 className="t-display t-mark">WHY LAGI</h1>
-      <p className="t-lead kr mt-6 max-w-sm">라기가 모든 제품을 고르는 네 가지 기준입니다.</p>
-      <p className="t-body kr mt-2 max-w-sm font-bold">{WHY_LAGI_RULE}</p>
+      <p className="t-en mt-6 max-w-sm">Four criteria. Every product meets all four.</p>
+      <p className="t-kr-sub mt-3 max-w-sm">라기가 모든 제품을 고르는 네 가지 기준입니다. {WHY_LAGI_RULE}</p>
       <dl className="mt-10 max-w-sm space-y-4">
         {QUESTIONS.map((x) => (
           <div key={x.q} className="rule-1 pt-3">

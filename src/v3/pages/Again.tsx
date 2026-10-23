@@ -138,8 +138,9 @@ export default function Again() {
           <h1 className="t-display t-mark mt-3">AGAIN</h1>
         </div>
         <div className="lg:col-span-5 lg:self-end">
-          <p className="t-lead kr">내 사진 위에 라기 제품을 올려, 일상 속에서 다시 보는 모습을 미리 봅니다.</p>
-          <p className="t-caption kr mt-2 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
+          <p className="t-en">See it again, on you.</p>
+          <p className="t-kr-sub mt-3">내 사진 위에 라기 제품을 올려, 일상 속에서 다시 보는 모습을 미리 봅니다.</p>
+          <p className="t-caption kr mt-1 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
         </div>
       </header>
 

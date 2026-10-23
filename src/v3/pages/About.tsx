@@ -4,8 +4,8 @@ import { BrandFilmSection } from '../BrandFilm';
 import { RibbonCanvas } from '../RibbonCanvas';
 import { ROLES } from '@/content/roles';
 
-const STATEMENT =
-  '라기는 리사이클링 제품을 발견하고, 선별하고, 소개하고, 연결하는 큐레이션 브랜드입니다. 제품을 직접 만들지 않습니다. 가치 있는 제품을 고르고, 새로운 관점에서 다시 발견하도록 돕습니다.';
+const STATEMENT_EN = 'We discover, select, introduce and connect recycled products.';
+const STATEMENT_KR = '라기는 리사이클링 제품을 발견하고, 고르고, 소개하고, 연결하는 큐레이션 브랜드입니다.';
 
 /** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
 export default function About() {
@@ -51,13 +51,16 @@ export default function About() {
         </h1>
       </section>
 
-      <p ref={textRef} className="t-h1 kr relative z-10 -mt-[14svh] px-page lg:ml-[48%] lg:w-[48%] lg:-mt-[20svh]">
-        {STATEMENT.split(' ').map((w, i) => (
-          <span key={i} className="transition-opacity duration-300">
-            {w}{' '}
-          </span>
-        ))}
-      </p>
+      <div className="relative z-10 -mt-[12svh] px-page lg:ml-[56%] lg:w-[38%] lg:-mt-[18svh]">
+        <p ref={textRef} className="t-en">
+          {STATEMENT_EN.split(' ').map((w, i) => (
+            <span key={i} className="transition-opacity duration-300">
+              {w}{' '}
+            </span>
+          ))}
+        </p>
+        <p className="t-kr-sub mt-4 max-w-[26rem]">{STATEMENT_KR}</p>
+      </div>
 
       <div className="mt-24 lg:mt-36">
         <BrandFilmSection />
