@@ -167,6 +167,11 @@ export default function ProductPage() {
               <button type="button" className="tag w-full bg-[var(--c-white)] px-4 py-3.5 text-center" onClick={() => addToCart()}>
                 {added ? '장바구니에 담았습니다' : '장바구니 담기'}
               </button>
+              {aiTryOnEnabled(p) && (
+                <Link to={`/again?p=${p.id}`} className="tag w-full bg-[var(--c-blue)] px-4 py-3.5 text-center text-[var(--c-white)] hover:bg-[var(--c-ink)]">
+                  AI 이미지 합성 · 내 사진에 입혀 보기
+                </Link>
+              )}
               <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="tag w-full border border-[var(--c-ink)] px-4 py-3.5 text-center">
                 스마트스토어에서 구매
               </a>

@@ -93,6 +93,7 @@ function toBase64(buf: ArrayBuffer) {
 }
 
 function buildPrompt(r: TryOnRequest) {
+  r = { ...r, style: r.style?.slice(0, 200), productName: r.productName?.slice(0, 120) };
   const what = [r.productName, r.category].filter(Boolean).join(', ');
   return [
     'You are a virtual fitting room. Image 1 is a photo of a person. Image 2 shows a product' + (what ? ` (${what})` : '') + '.',
@@ -442,7 +443,7 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if (!env.GEMINI_API_KEY) return json({ error: 'server not configured' }, 500, headers);
 
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-  if (throttled(ip)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+  if (throttled(ip, 10)) return json({ error: '요청이 많습니다. 1분 뒤에 다시 시도해 주세요.' }, 429, headers);
 
   let body: TryOnRequest;
   try {
@@ -463,7 +464,7 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
     { inline_data: { mime_type: person.mime, data: person.data } },
     { inline_data: { mime_type: product.mime, data: product.data } },
   ]);
-  if (!image) return json({ error: 'AI가 이미지를 만들지 못했습니다. 다른 사진으로 시도해 주세요.' }, 502, headers);
+  if (!image) return json({ error: '이번에는 AI가 이미지를 만들지 못했습니다. 얼굴과 몸이 잘 보이는 밝은 사진으로 다시 시도해 주세요.' }, 502, headers);
   return json({ image }, 200, headers);
 }
 
@@ -490,28 +491,42 @@ async function fetchProductImage(
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
-/** One Gemini image-model call; returns the first image it produced as a data URL. */
+/**
+ * Gemini image call with retries. The image model sometimes answers with text only, is briefly
+ * overloaded (429/503) or blocks one attempt; asking again usually works, so up to three tries are
+ * made before giving up. The first try asks for an image only, later tries also allow text.
+ */
 async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } }),
-    },
-  );
-  if (!res.ok) {
-    console.log('gemini error', res.status, (await res.text()).slice(0, 500));
-    return null;
-  }
-  const result = (await res.json()) as {
-    candidates?: {
-      content?: { parts?: { inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
-    }[];
-  };
-  for (const part of result.candidates?.[0]?.content?.parts ?? []) {
-    const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
-    if (img?.data) return `data:${img.mimeType};base64,${img.data}`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 800 * attempt));
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+        }),
+      },
+    );
+    if (!res.ok) {
+      console.log('gemini error', attempt, res.status, (await res.text()).slice(0, 300));
+      // A bad request will not get better by repeating it — unless it was the image-only setting.
+      if (res.status === 400 && attempt > 0) return null;
+      continue;
+    }
+    const result = (await res.json()) as {
+      candidates?: {
+        finishReason?: string;
+        content?: { parts?: { inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
+      }[];
+    };
+    for (const part of result.candidates?.[0]?.content?.parts ?? []) {
+      const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
+      if (img?.data) return `data:${img.mimeType};base64,${img.data}`;
+    }
+    console.log('gemini no image', attempt, result.candidates?.[0]?.finishReason);
   }
   return null;
 }

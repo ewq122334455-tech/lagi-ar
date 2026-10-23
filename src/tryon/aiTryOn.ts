@@ -59,6 +59,6 @@ export async function requestAiTryOn({ person, product, style, signal }: AiTryOn
     }),
   });
   const body = (await res.json().catch(() => ({}))) as { image?: string; error?: string };
-  if (!res.ok || !body.image) throw new Error(body.error ?? 'AI 피팅에 실패했습니다.');
+  if (!res.ok || !body.image) throw Object.assign(new Error(body.error ?? 'AI 이미지 합성에 실패했습니다.'), { status: res.status });
   return body.image;
 }
