@@ -1,38 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Hotspot, HotspotCategory, MaterialEntry, ProcessStep, Product } from '@/data/productTypes';
+import type { MaterialEntry, ProcessStep, Product } from '@/data/productTypes';
 import { readLocalDrafts, writeLocalDraft, deleteLocalDraft, invalidateProductCache, loadProducts } from '@/data/productEngine';
 import { createEmptyProduct } from './emptyProduct';
 import { validateProduct } from './validateProduct';
 import { Field, TextInput, TextArea, NumberInput, SelectInput } from './fields';
 import { ContentBadge } from '@/components/ContentBadge';
-import { ProductViewer } from '@/three/ProductViewer';
 import { getAIProvider } from '@/ai/AIProvider';
-import { getThreeDGenerationProvider } from '@/ai/ThreeDGenerationProvider';
 import type { Observation } from '@/utils/contentStatus';
-import { modelFormatOf } from '@/utils/modelFile';
 
-const TABS = ['BASIC', 'IMAGES', '3D & AR', 'HOTSPOTS', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
+const TABS = ['BASIC', 'IMAGES', 'MATERIAL & PROCESS', 'AI ANALYSIS', 'PREVIEW & PUBLISH'] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   BASIC: '1. 기본 정보',
   IMAGES: '2. 사진',
-  '3D & AR': '3. 3D',
-  HOTSPOTS: '4. 디테일 포인트',
-  'MATERIAL & PROCESS': '5. 소재 · 공정',
-  'AI ANALYSIS': '6. 메모 · 분석',
-  'PREVIEW & PUBLISH': '7. 미리보기 · 게시',
+  'MATERIAL & PROCESS': '3. 소재 · 공정',
+  'AI ANALYSIS': '4. 메모 · 분석',
+  'PREVIEW & PUBLISH': '5. 미리보기 · 게시',
 };
 
-const CATEGORIES: HotspotCategory[] = ['MATERIAL', 'DETAIL', 'CRAFT', 'PROCESS', 'STRUCTURE', 'FUNCTION'];
-const CATEGORY_LABELS: Record<HotspotCategory, string> = {
-  MATERIAL: '소재',
-  DETAIL: '디테일',
-  CRAFT: '만듦새',
-  PROCESS: '공정',
-  STRUCTURE: '구조',
-  FUNCTION: '기능',
-};
 const LEVEL_LABELS: Record<Observation['level'], string> = {
   OBSERVED: '확인된 사실',
   INFERRED: '추정',
@@ -160,8 +146,6 @@ export default function AssetWorkspace() {
         <div className="mt-10">
           {tab === 'BASIC' && <BasicTab product={product} update={update} />}
           {tab === 'IMAGES' && <ImagesTab product={product} update={update} />}
-          {tab === '3D & AR' && <ThreeDArTab product={product} update={update} />}
-          {tab === 'HOTSPOTS' && <HotspotsTab product={product} update={update} />}
           {tab === 'MATERIAL & PROCESS' && <MaterialProcessTab product={product} update={update} />}
           {tab === 'AI ANALYSIS' && <AIAnalysisTab product={product} update={update} />}
           {tab === 'PREVIEW & PUBLISH' && (
@@ -347,193 +331,6 @@ function ImageGrid({ urls, onRemove }: { urls: string[]; onRemove: (i: number) =
           </button>
         </div>
       ))}
-    </div>
-  );
-}
-
-function ThreeDArTab({ product, update }: { product: Product; update: <K extends keyof Product>(k: K, v: Product[K]) => void }) {
-  const [generating, setGenerating] = useState(false);
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null);
-  const threeDProvider = getThreeDGenerationProvider();
-
-  function handleModelUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const format = modelFormatOf(file);
-    if (!format) {
-      window.alert('.glb 또는 .gltf 파일만 업로드할 수 있습니다.');
-      e.target.value = '';
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    update('model3D', url);
-    update('model3DAsset', { filename: file.name, format, mimeType: file.type || undefined, url });
-    update('threeDAvailable', true);
-  }
-
-  async function requestGeneration() {
-    setGenerating(true);
-    setGenerationMessage(null);
-    const result = await threeDProvider.generate({ imageUrls: product.images, prompt: product.name.value ?? product.id, productId: product.id });
-    setGenerating(false);
-    setGenerationMessage(
-      result.status === 'unavailable'
-        ? result.errorMessage ?? '3D 생성 서비스가 연결되어 있지 않습니다.'
-        : `상태: ${result.status}`
-    );
-    if (result.modelUrl) {
-      update('model3D', result.modelUrl);
-      // Generated via a URL, not a local File — clear any stale upload metadata so
-      // validation reads this URL's own extension instead of a previous upload's filename.
-      update('model3DAsset', undefined);
-      update('threeDAvailable', true);
-    }
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-      <div className="flex flex-col gap-6">
-        <div>
-          <p className="eyebrow mb-2">3D 모델 파일 (.glb)</p>
-          <p className="mb-3 text-xs leading-relaxed text-stone">
-            .glb는 제품을 360° 돌려볼 수 있는 3D 파일입니다(Tripo·Meshy 같은 AI 3D 생성 툴이나 3D 프로그램에서 내보냄).
-            파일을 고르면 오른쪽에서 바로 미리볼 수 있습니다. 실제 사이트에 올리려면 파일을 GitHub의{' '}
-            <code>public/products/{product.id}/model/</code> 폴더에 올리고, 아래 칸에 그 경로를 적으세요.
-            10MB가 넘는 파일은 휴대폰에서 느리니 줄여서 올리는 것을 권장합니다.
-          </p>
-          <input type="file" accept=".glb,.gltf" onChange={handleModelUpload} className="text-sm" />
-          <TextInput
-            className="mt-3 w-full"
-            value={product.model3D.startsWith('blob:') ? '' : product.model3D}
-            onChange={(e) => {
-              update('model3D', e.target.value.trim());
-              update('model3DAsset', undefined);
-            }}
-            placeholder={`products/${product.id}/model/bag.glb`}
-          />
-          {product.model3DAsset && (
-            <p className="mt-2 text-xs text-stone">
-              미리보기 중: {product.model3DAsset.filename} · <span className="uppercase">{product.model3DAsset.format}</span>
-            </p>
-          )}
-        </div>
-
-        <div className="border border-dashed border-line p-5">
-          <p className="eyebrow mb-2">AI로 3D 만들기 (서버 연결 필요)</p>
-          <p className="mb-3 text-xs text-graphite">
-            {threeDProvider.available ? '연결됨' : '아직 3D 생성 서버가 연결되어 있지 않아 사용할 수 없습니다.'}
-          </p>
-          <button
-            type="button"
-            onClick={requestGeneration}
-            disabled={generating || product.images.length === 0}
-            className="eyebrow border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {generating ? '요청 중...' : 'AI로 3D 생성 요청'}
-          </button>
-          {product.images.length === 0 && <p className="mt-2 text-xs text-stone">먼저 ‘2. 사진’ 탭에서 사진을 추가하세요.</p>}
-          {generationMessage && <p className="mt-3 text-sm text-graphite">{generationMessage}</p>}
-        </div>
-
-        <div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={product.threeDAvailable} onChange={(e) => update('threeDAvailable', e.target.checked)} />
-            사이트에 3D 보기 켜기
-          </label>
-        </div>
-
-      </div>
-
-      <div>
-        <p className="eyebrow mb-2">3D 미리보기</p>
-        <ProductViewer
-          className="aspect-square w-full"
-          modelUrl={product.model3D}
-          hotspots={product.hotspots}
-          selectedHotspotId={null}
-          onSelectHotspot={() => {}}
-        />
-      </div>
-    </div>
-  );
-}
-
-function HotspotsTab({ product, update }: { product: Product; update: <K extends keyof Product>(k: K, v: Product[K]) => void }) {
-  function addHotspot() {
-    const h: Hotspot = {
-      id: `hotspot-${Date.now().toString().slice(-5)}`,
-      title: '',
-      category: 'DETAIL',
-      position: { x: 0, y: 0, z: 0.3 },
-      description: { value: null, status: 'CONTENT_REQUIRED' },
-    };
-    update('hotspots', [...product.hotspots, h]);
-  }
-
-  function updateHotspot(index: number, next: Hotspot) {
-    update('hotspots', product.hotspots.map((h, i) => (i === index ? next : h)));
-  }
-
-  function removeHotspot(index: number) {
-    update('hotspots', product.hotspots.filter((_, i) => i !== index));
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      <button type="button" onClick={addHotspot} className="eyebrow w-fit border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper focus-ring">
-        + 디테일 포인트 추가
-      </button>
-      <p className="max-w-2xl text-xs leading-relaxed text-stone">
-        3D 모델 위에 동그란 점으로 표시되고, 누르면 설명이 열리는 포인트입니다(예: 지퍼, 손잡이). 위치(X 좌우 · Y 높이 · Z
-        앞뒤)는 ‘3. 3D’ 탭 미리보기를 보면서 숫자를 조금씩 바꿔 맞추세요.
-      </p>
-
-      {product.hotspots.length === 0 && <p className="text-sm text-stone">등록된 포인트가 없습니다.</p>}
-
-      <div className="flex flex-col gap-6">
-        {product.hotspots.map((h, i) => (
-          <div key={h.id} className="grid grid-cols-1 gap-4 border border-line p-5 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="이름">
-              <TextInput value={h.title} onChange={(e) => updateHotspot(i, { ...h, title: e.target.value })} />
-            </Field>
-            <Field label="종류">
-              <SelectInput value={h.category} onChange={(e) => updateHotspot(i, { ...h, category: e.target.value as HotspotCategory })}>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </SelectInput>
-            </Field>
-            <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-              {(['x', 'y', 'z'] as const).map((axis) => (
-                <Field key={axis} label={`${axis.toUpperCase()} (${axis === 'x' ? '좌우' : axis === 'y' ? '높이' : '앞뒤'})`}>
-                  <NumberInput
-                    value={h.position[axis]}
-                    step={0.05}
-                    onChange={(e) => updateHotspot(i, { ...h, position: { ...h.position, [axis]: Number(e.target.value) } })}
-                  />
-                </Field>
-              ))}
-            </div>
-            <Field label="설명" hint="">
-              <TextArea
-                className="sm:col-span-2 lg:col-span-3"
-                value={h.description.value ?? ''}
-                onChange={(e) =>
-                  updateHotspot(i, {
-                    ...h,
-                    description: { value: e.target.value || null, status: e.target.value ? 'VERIFIED' : 'CONTENT_REQUIRED', source: 'Entered in Product Workspace' },
-                  })
-                }
-              />
-            </Field>
-            <button type="button" onClick={() => removeHotspot(i)} className="eyebrow h-fit self-end border border-line px-4 py-2.5 hover:border-ink focus-ring">
-              삭제
-            </button>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -740,7 +537,7 @@ function PreviewPublishTab({
             받은 <code>product.json</code>을 올립니다(같은 이름의 파일이 있으면 덮어씁니다).
           </li>
           <li>
-            사진·3D 파일을 같은 폴더 안의 <code>images/</code>, <code>model/</code> 폴더에 올립니다.
+            사진을 같은 폴더 안의 <code>images/</code> 폴더에 올립니다.
           </li>
           <li>
             새 제품이면 <code>public/products/manifest.json</code>의 목록에 <code>"{product.id}"</code>를 추가합니다.

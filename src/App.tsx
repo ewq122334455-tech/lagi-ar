@@ -19,7 +19,6 @@ const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default
 const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
 const RedesignHome = lazy(() => import('@/redesign/RedesignHome'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
-const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
 const Checkout = lazy(() => import('@/pages/Checkout'));
 const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
@@ -109,7 +108,7 @@ export default function App() {
             <Route path="/workspace" element={<AssetWorkspace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-          <Route path="/exhibition" element={<Exhibition />} />
+          <Route path="/exhibition" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
       </CartProvider>
