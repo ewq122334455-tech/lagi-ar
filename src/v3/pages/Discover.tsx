@@ -17,7 +17,8 @@ export default function Discover() {
         <div>
           <p className="t-label t-mark text-[var(--c-mute)]">Discover</p>
           <h1 className="t-display t-mark mt-2">DISCOVER</h1>
-          <p className="t-lead kr mt-4 text-[var(--c-mute)]">라기가 선별한 리사이클링 제품</p>
+          <p className="t-en mt-4">Recycled products, selected by LAGI.</p>
+          <p className="t-kr-sub mt-2">라기가 선별한 리사이클링 제품</p>
         </div>
         <div className="flex gap-6">
           <p className="t-value kr">분류</p>

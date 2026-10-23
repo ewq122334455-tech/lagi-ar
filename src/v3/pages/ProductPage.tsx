@@ -142,7 +142,7 @@ export default function ProductPage() {
         <aside className="md:col-span-5 lg:col-span-4 lg:col-start-9" aria-label="구매">
           <div className="rounded-[var(--radius-card)] bg-[var(--c-gray)] p-5 md:sticky md:top-24 lg:p-7">
             <p className="t-caption kr text-[var(--c-mute)]">가격</p>
-            <p className="t-h2 kr mt-1 tabular-nums">{price(p.price.value)}</p>
+            <p className="t-h1 kr mt-1 tabular-nums">{price(p.price.value)}</p>
             {p.shipping && <p className="t-caption kr mt-2 text-[var(--c-mute)]">{shippingText(p.shipping)}</p>}
 
             <div className="rule-1 mt-6 flex items-center justify-between pt-4">

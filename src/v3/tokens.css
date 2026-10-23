@@ -14,12 +14,17 @@
   --radius-card: 4px;
   --radius-sheet: 50px;
 
-  --t-display: 56px;
-  --t-h1: 30px;
-  --t-h2: 36px;
-  --t-h3: 22px;
-  --t-lead: 20px;
-  --t-body: 15px;
+  /*
+   * Scale: one loud size (display) against a quiet, tight set below it. Mid sizes are kept
+   * deliberately small — Hangul reads larger than Latin at the same px.
+   */
+  --t-display: 52px;
+  --t-h1: 22px;
+  --t-h2: 26px;
+  --t-h3: 17px;
+  --t-lead: 16px;
+  --t-body: 14px;
+  --t-en: 20px;
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -41,24 +46,26 @@
 }
 @media (min-width: 810px) {
   .v3 {
-    --t-display: 72px;
-    --t-h1: 44px;
-    --t-h2: 44px;
-    --t-h3: 26px;
-    --t-lead: 24px;
-    --t-body: 16px;
+    --t-display: 68px;
+    --t-h1: 26px;
+    --t-h2: 30px;
+    --t-h3: 18px;
+    --t-lead: 17px;
+    --t-body: 14px;
+    --t-en: 24px;
   }
 }
 @media (min-width: 1200px) {
   .v3 {
     --top: 128px;
     --radius-card: 8px;
-    --t-display: 96px;
-    --t-h1: 56px;
-    --t-h2: 60px;
-    --t-h3: 30px;
-    --t-lead: 28px;
-    --t-body: 17px;
+    --t-display: 92px;
+    --t-h1: 30px;
+    --t-h2: 36px;
+    --t-h3: 20px;
+    --t-lead: 18px;
+    --t-body: 15px;
+    --t-en: 30px;
   }
 }
 
@@ -67,15 +74,18 @@
  * Hangul sizes keep a slightly negative tracking; Latin labels (Posterama, caps) are tracked out.
  */
 .v3 .t-display { font-size: var(--t-display); font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
-.v3 .t-h1 { font-size: var(--t-h1); font-weight: 500; line-height: 1.25; letter-spacing: -0.02em; }
-.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
-.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
-.v3 .t-lead { font-size: var(--t-lead); font-weight: 500; line-height: 1.5; letter-spacing: -0.01em; }
+.v3 .t-h1 { font-size: var(--t-h1); font-weight: 600; line-height: 1.3; letter-spacing: -0.02em; }
+.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; }
+.v3 .t-lead { font-size: var(--t-lead); font-weight: 500; line-height: 1.6; letter-spacing: -0.01em; }
 .v3 .t-body { font-size: var(--t-body); font-weight: 400; line-height: 1.75; letter-spacing: -0.005em; }
-.v3 .t-value { font-size: 15px; font-weight: 700; line-height: 1.4; letter-spacing: 0.01em; }
-.v3 .t-label { font-size: 12px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
-.v3 .t-nav { font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: 0.1em; }
-.v3 .t-caption { font-size: 13px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
+/* English statement line (Posterama, light) with a smaller, quieter Korean line under it. */
+.v3 .t-en { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); font-size: var(--t-en); font-weight: 400; line-height: 1.2; letter-spacing: 0.01em; }
+.v3 .t-kr-sub { font-family: var(--font-kr); font-size: var(--t-body); font-weight: 400; line-height: 1.7; color: rgba(15, 15, 15, 0.55); }
+.v3 .t-value { font-size: 14px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.v3 .t-label { font-size: 11px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
+.v3 .t-nav { font-size: 12px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em; }
+.v3 .t-caption { font-size: 12px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
 /* Brand words in Latin (DISCOVER, WHY LAGI …): Posterama, tracked out. */
 .v3 .t-mark { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); letter-spacing: 0.06em; }
 /* Korean-only text: skip Posterama so Latin inside Korean sentences reads in Pretendard. */

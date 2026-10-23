@@ -9,7 +9,8 @@ export default function Contact() {
   return (
     <div className="px-page pb-32 pt-page">
       <h1 className="t-display t-mark">CONTACT</h1>
-      <p className="t-lead kr mt-4 text-[var(--c-mute)]">라기의 공식 채널입니다. 주문 · 배송 문의는 스마트스토어 문의하기를 이용해 주세요.</p>
+      <p className="t-en mt-4">Official channels.</p>
+      <p className="t-kr-sub mt-2">라기의 공식 채널입니다. 주문 · 배송 문의는 스마트스토어 문의하기를 이용해 주세요.</p>
       <dl className="rule mt-16 grid grid-cols-1 gap-[var(--gap)] pt-4 md:grid-cols-2 lg:mt-24">
         {rows.map((r) => (
           <div key={r.label}>
