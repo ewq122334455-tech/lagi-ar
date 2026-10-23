@@ -105,3 +105,12 @@
   .v3 .enter { animation: none; }
   .v3 * { transition-duration: 0ms !important; }
 }
+
+/* Product page arrival after the gallery's zoom-in: the hero settles from the zoomed card. */
+@keyframes v3-arrive { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+.v3 .arrive { animation: v3-arrive 700ms var(--ease-out) both; transform-origin: 50% 40%; }
+@keyframes v3-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.v3 .rise { animation: v3-rise var(--dur-slow) var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .v3 .arrive, .v3 .rise { animation: none; }
+}

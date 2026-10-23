@@ -76,6 +76,9 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
   const [g, setG] = useState<Geometry | null>(null);
   const [front, setFront] = useState(0);
   const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Opening a product: the chain first brings it to the front, then it grows into the page.
+  const opening = useRef<{ i: number; phase: 'travel' | 'zoom'; t: number; done?: boolean } | null>(null);
+  const [zooming, setZooming] = useState(false);
 
   useLayoutEffect(() => {
     const update = () => setG(geometry());
@@ -105,22 +108,53 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     let raf = 0;
     let lastFront = -1;
     const paint = () => {
-      pos.current = reduced ? target.current : pos.current + (target.current - pos.current) * 0.09;
+      pos.current = reduced ? target.current : pos.current + (target.current - pos.current) * (opening.current ? 0.14 : 0.09);
       if (Math.abs(target.current - pos.current) < 0.0005) pos.current = target.current;
+      const op = opening.current;
+      const now = performance.now();
+      if (op?.phase === 'travel' && (Math.abs(target.current - pos.current) < 0.01 || now - op.t > 1100)) {
+        op.phase = 'zoom';
+        op.t = now;
+        setZooming(true);
+      }
+      // Zoom phase: 0 → 1 over 560ms (ease-in-out).
+      const zr = op?.phase === 'zoom' ? clamp((now - op.t) / 560, 0, 1) : 0;
+      const z = zr < 0.5 ? 2 * zr * zr : 1 - (-2 * zr + 2) ** 2 / 2;
+      if (op?.phase === 'zoom' && zr >= 1 && !op.done) {
+        op.done = true;
+        try {
+          sessionStorage.setItem('lagi-opened', products[op.i].id);
+        } catch {
+          // fine without the entrance hand-off
+        }
+        navigate(`/product/${products[op.i].id}`);
+      }
       for (let i = 0; i < n; i++) {
         const el = cardRefs.current[i];
         if (!el) continue;
         let d = (((i - pos.current + 2) % n) + n) % n - 2; // wrap: the chain is endless
         if (n <= 3) d = i - pos.current;
-        const { x, y, s, rot } = place(d, g);
+        const pl = place(d, g);
+        let { x, y, s, rot } = pl;
+        let fade = 1;
+        if (op?.phase === 'zoom') {
+          if (i === op.i) {
+            // The chosen product grows toward the centre, straightening as it comes.
+            x += (g.vw / 2 - x) * z;
+            y += (g.vh * 0.56 - y) * z;
+            s *= 1 + (g.mobile ? 0.18 : 0.42) * z;
+            rot *= 1 - z;
+          } else fade = 1 - z;
+        }
         const visible = d > -1.6 && d < 5.6;
         el.style.visibility = visible ? 'visible' : 'hidden';
         if (!visible) continue;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${rot.toFixed(2)}deg) scale(${s.toFixed(4)})`;
         el.style.zIndex = String(100 - Math.round(d * 10));
-        el.style.opacity = String(clamp(d > 0 ? (5.6 - d) / 1.2 : (d + 1.6) / 0.5, 0, 1));
+        el.style.opacity = String(clamp(d > 0 ? (5.6 - d) / 1.2 : (d + 1.6) / 0.5, 0, 1) * fade);
+        if (op?.phase === 'zoom' && i === op.i) el.style.zIndex = '140';
         const img = el.firstElementChild as HTMLElement | null;
-        if (img) img.style.clipPath = crop(d, i);
+        if (img) img.style.clipPath = op?.phase === 'zoom' && i === op.i ? 'none' : crop(d, i);
       }
       const f = ((Math.round(pos.current) % n) + n) % n;
       if (f !== lastFront) {
@@ -131,7 +165,18 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     };
     raf = requestAnimationFrame(paint);
     return () => cancelAnimationFrame(raf);
-  }, [g, n, reduced]);
+  }, [g, n, reduced, navigate, products]);
+
+  const open = (i: number) => {
+    if (opening.current) return;
+    if (reduced) {
+      navigate(`/product/${products[i].id}`);
+      return;
+    }
+    window.clearTimeout(snapTimer.current);
+    bringToFront(i);
+    opening.current = { i, phase: 'travel', t: performance.now() };
+  };
 
   // Wheel and trackpad.
   useEffect(() => {
@@ -139,6 +184,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     if (!stage) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      if (opening.current) return;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
       const delta = (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * unit;
       if (reduced) {
@@ -154,7 +200,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
 
   // Drag (mouse) and swipe (touch/pen) through pointer events.
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || opening.current) return;
     drag.current = { x: e.clientX, y: e.clientY, start: target.current, moved: false, lastX: e.clientX, lastY: e.clientY, lastT: performance.now(), v: 0 };
     window.clearTimeout(snapTimer.current);
   };
@@ -228,7 +274,9 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
             draggable={false}
             onFocus={() => bringToFront(i)}
             onClick={(e) => {
-              if (drag.current?.moved) e.preventDefault();
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // new tab / window: leave it to the browser
+              e.preventDefault();
+              if (!drag.current?.moved) open(i);
             }}
             aria-label={`${p.name.value}, ${price(p.price.value)}`}
             className="absolute left-0 top-0 block will-change-transform"
@@ -244,6 +292,12 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
           </Link>
         ))}
 
+      {/* While a product opens, everything but the photo steps back. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-[130] bg-[var(--c-white)] transition-opacity duration-[560ms] ease-[cubic-bezier(.65,0,.35,1)]"
+        style={{ opacity: zooming ? 0.92 : 0 }}
+      />
       {current && (
         <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[120] w-[min(320px,60vw)] md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right">
           <p className="t-caption tabular-nums text-[var(--c-mute)]">
@@ -258,7 +312,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
             <button type="button" className="tag" onClick={() => step(1)} aria-label="Next product">
               →
             </button>
-            <button type="button" className="tag tag-ink" onClick={() => navigate(`/product/${current.id}`)}>
+            <button type="button" className="tag tag-ink" onClick={() => open(front)}>
               View
             </button>
           </div>
