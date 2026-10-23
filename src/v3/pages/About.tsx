@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { CATEGORY_LABEL, useRealProducts } from '../data';
 import { BrandFilmSection } from '../BrandFilm';
 import { RibbonCanvas } from '../RibbonCanvas';
+import { ROLES } from '@/content/roles';
 
 const STATEMENT =
-  'LAGI is a curation brand that discovers, selects, introduces and connects recycled products. We do not make them ourselves — we choose products of value and help you discover them again, from a new point of view.';
+  '라기는 리사이클링 제품을 발견하고, 선별하고, 소개하고, 연결하는 큐레이션 브랜드입니다. 제품을 직접 만들지 않습니다. 가치 있는 제품을 고르고, 새로운 관점에서 다시 발견하도록 돕습니다.';
 
 /** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
 export default function About() {
@@ -43,14 +44,14 @@ export default function About() {
     <div className="pb-32">
       <section className="relative h-[100svh] min-h-[560px] overflow-hidden" aria-label="LAGI in AGAIN">
         {ribbon.length > 0 && <RibbonCanvas images={ribbon} className="absolute inset-0" />}
-        <h1 className="t-display pointer-events-none relative z-10 px-page pt-page lg:pl-[8%]">
+        <h1 className="t-display t-mark pointer-events-none relative z-10 px-page pt-page lg:pl-[8%]">
           LAGI
           <br />
           in AGAIN
         </h1>
       </section>
 
-      <p ref={textRef} className="t-h1 relative z-10 -mt-[14svh] px-page lg:ml-[48%] lg:w-[48%] lg:-mt-[20svh]">
+      <p ref={textRef} className="t-h1 kr relative z-10 -mt-[14svh] px-page lg:ml-[48%] lg:w-[48%] lg:-mt-[20svh]">
         {STATEMENT.split(' ').map((w, i) => (
           <span key={i} className="transition-opacity duration-300">
             {w}{' '}
@@ -63,17 +64,19 @@ export default function About() {
       </div>
 
       <section className="rule mx-[var(--page-x)] mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 pt-6 lg:mt-36 lg:grid-cols-12 [&>*]:min-w-0">
-        <h2 className="t-h1 lg:col-span-12">Information</h2>
+        <h2 className="t-h1 kr lg:col-span-12">정보</h2>
         <div className="lg:col-span-4">
-          <h3 className="t-h3">Role</h3>
+          <h3 className="t-h3 kr">역할</h3>
           <ul className="t-body mt-4 text-[var(--c-mute)]">
-            {['Discover', 'Select', 'Introduce', 'Connect'].map((r) => (
-              <li key={r}>{r}</li>
+            {ROLES.map((r) => (
+              <li key={r.key} className="kr">
+                <span className="t-mark">{r.key}</span> · {r.kr} — {r.text}
+              </li>
             ))}
           </ul>
         </div>
         <div className="lg:col-span-4">
-          <h3 className="t-h3">Categories</h3>
+          <h3 className="t-h3 kr">분류</h3>
           <ul className="t-body mt-4 text-[var(--c-mute)]">
             {categories.map((c) => (
               <li key={c}>{CATEGORY_LABEL[c] ?? c}</li>
@@ -82,7 +85,7 @@ export default function About() {
         </div>
         {collabs.length > 0 && (
           <div className="lg:col-span-4">
-            <h3 className="t-h3">Collaboration</h3>
+            <h3 className="t-h3 kr">협업 브랜드</h3>
             <ul className="t-body mt-4 text-[var(--c-mute)]">
               {collabs.map((c) => (
                 <li key={c}>{c}</li>
@@ -95,7 +98,7 @@ export default function About() {
       <div className="mt-32 overflow-hidden border-y border-[var(--c-ink)] py-5 lg:mt-48" aria-hidden="true">
         <div className="animate-marquee t-h1 flex w-max gap-12 whitespace-nowrap">
           {Array.from({ length: 8 }, (_, i) => (
-            <span key={i}>LAGI in AGAIN · Discover it again</span>
+            <span key={i} className="t-mark">LAGI in AGAIN · Discover it again</span>
           ))}
         </div>
       </div>

@@ -30,6 +30,7 @@ jobs:
           VITE_ADOBE_FONTS_KIT: ${{ vars.ADOBE_FONTS_KIT }}
           # AI try-on Worker URL (server/tryon-worker). The "AI로 입어보기" button appears once set.
           VITE_TRYON_API_URL: ${{ vars.TRYON_API_URL }}
+          VITE_TOSS_CLIENT_KEY: ${{ vars.TOSS_CLIENT_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

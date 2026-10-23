@@ -1,5 +1,6 @@
 import type { VerifiableField, Observation } from '@/utils/contentStatus';
-import type { ModelFormat } from '@/utils/modelFile';
+/** Legacy 3D file format kept only so old product.json files still type-check. */
+type ModelFormat = 'glb' | 'gltf';
 
 export type HotspotCategory =
   | 'MATERIAL'
