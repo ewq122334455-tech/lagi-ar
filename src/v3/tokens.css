@@ -28,13 +28,12 @@
   --dur-slow: 900ms;
 
   /*
-   * Latin: Posterama 2001 (Adobe Fonts kit — weights 400 and 700; an all-caps display cut).
-   * Hangul: Yoon 윤고딕 100 Std (licensed). It is used wherever it is installed; for every visitor
-   * to see it, its web-licensed font files must be added in public/fonts/brand-fonts.css.
-   * Posterama has no Hangul, so Korean characters fall through to the Hangul fonts.
+   * Korean first: Hangul is set in Pretendard (loaded for every visitor from jsDelivr).
+   * Latin brand words and interface labels use Posterama 2001 (Adobe Fonts kit, weights 400/700,
+   * caps-only); it has no Hangul, so every Korean character falls through to Pretendard.
    */
-  font-family: 'posterama-2001', 'Posterama 2001', 'LAGI Hangul', 'Yoon 윤고딕 100 Std', 'YoonGothic100Std', 'Yoon Gothic 100 Std',
-    '윤고딕100Std', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  font-family: 'posterama-2001', 'Posterama 2001', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  --font-kr: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   color: var(--c-ink);
   background: var(--c-ink);
   -webkit-font-smoothing: antialiased;
@@ -65,18 +64,22 @@
 
 /*
  * Type hierarchy: strong (700, large, tight) against weak (400, small, tracked out).
- * Posterama 2001 is caps-only, so small text gets positive tracking to stay readable.
+ * Hangul sizes keep a slightly negative tracking; Latin labels (Posterama, caps) are tracked out.
  */
-.v3 .t-display { font-size: var(--t-display); font-weight: 700; line-height: 0.92; letter-spacing: -0.01em; }
-.v3 .t-h1 { font-size: var(--t-h1); font-weight: 400; line-height: 1.15; letter-spacing: 0; }
-.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 0.95; letter-spacing: 0; }
-.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1.05; letter-spacing: 0.02em; }
-.v3 .t-lead { font-size: var(--t-lead); font-weight: 400; line-height: 1.4; letter-spacing: 0.01em; }
-.v3 .t-body { font-size: var(--t-body); font-weight: 400; line-height: 1.6; letter-spacing: 0.02em; }
-.v3 .t-value { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: 0.04em; }
-.v3 .t-label { font-size: 12px; font-weight: 400; line-height: 1.4; letter-spacing: 0.14em; }
+.v3 .t-display { font-size: var(--t-display); font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.v3 .t-h1 { font-size: var(--t-h1); font-weight: 500; line-height: 1.25; letter-spacing: -0.02em; }
+.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+.v3 .t-lead { font-size: var(--t-lead); font-weight: 500; line-height: 1.5; letter-spacing: -0.01em; }
+.v3 .t-body { font-size: var(--t-body); font-weight: 400; line-height: 1.75; letter-spacing: -0.005em; }
+.v3 .t-value { font-size: 15px; font-weight: 700; line-height: 1.4; letter-spacing: 0.01em; }
+.v3 .t-label { font-size: 12px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
 .v3 .t-nav { font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: 0.1em; }
-.v3 .t-caption { font-size: 12px; font-weight: 400; line-height: 1.55; letter-spacing: 0.06em; }
+.v3 .t-caption { font-size: 13px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
+/* Brand words in Latin (DISCOVER, WHY LAGI …): Posterama, tracked out. */
+.v3 .t-mark { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); letter-spacing: 0.06em; }
+/* Korean-only text: skip Posterama so Latin inside Korean sentences reads in Pretendard. */
+.v3 .kr { font-family: var(--font-kr); }
 
 .v3 .px-page { padding-left: var(--page-x); padding-right: var(--page-x); }
 .v3 .pt-page { padding-top: var(--top); }

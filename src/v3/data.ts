@@ -34,16 +34,19 @@ export function useImageRatios(products: Product[]) {
 }
 
 /** Display names for the store's category values. */
-export const CATEGORY_LABEL: Record<string, string> = { Bag: 'Bags', 'Acc.': 'Accessories', Acc: 'Accessories' };
+export const CATEGORY_LABEL: Record<string, string> = { Bag: '가방', 'Acc.': '소품', Acc: '소품' };
 
 export const OFFICIAL_LINKS = {
   store: 'https://smartstore.naver.com/lagi_official',
   instagram: 'https://www.instagram.com/lagi.official/',
 } as const;
 
-export const price = (n: number | null | undefined) => (n == null ? '' : `₩${n.toLocaleString('en-US')}`);
+export const price = (n: number | null | undefined) => (n == null ? '' : `${n.toLocaleString('ko-KR')}원`);
 
 export function shippingText(s: { fee: number; freeOver?: number }) {
-  if (s.fee === 0) return 'Free shipping';
-  return `${price(s.fee)}${s.freeOver ? ` · free over ${price(s.freeOver)}` : ''}`;
+  if (s.fee === 0) return '무료배송';
+  return `배송비 ${price(s.fee)}${s.freeOver ? ` · ${price(s.freeOver)} 이상 무료` : ''}`;
 }
+
+/** Maker named in the store's brand line ("LAGI × POPSICLUS" → "POPSICLUS"), if any. */
+export const makerOf = (brandLabel: string | null | undefined) => (brandLabel?.includes('×') ? brandLabel.split('×')[1].trim() : null);

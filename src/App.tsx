@@ -34,7 +34,9 @@ const V3About = lazy(() => import('@/v3/pages/About'));
 const V3Contact = lazy(() => import('@/v3/pages/Contact'));
 const V3Cart = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CartPage })));
 const V3Checkout = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CheckoutPage })));
-const V3AiFit = lazy(() => import('@/v3/pages/AiFit'));
+const V3CheckoutSuccess = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CheckoutSuccessPage })));
+const V3CheckoutFail = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CheckoutFailPage })));
+const V3Again = lazy(() => import('@/v3/pages/Again'));
 const V3Login = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.LoginPage })));
 const V3Signup = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.SignupPage })));
 const V3Account = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.AccountPage })));
@@ -75,7 +77,10 @@ export default function App() {
             <Route path="/contact" element={<V3Contact />} />
             <Route path="/cart" element={<V3Cart />} />
             <Route path="/checkout" element={<V3Checkout />} />
-            <Route path="/ai-fit/:id" element={<V3AiFit />} />
+            <Route path="/checkout/success" element={<V3CheckoutSuccess />} />
+            <Route path="/checkout/fail" element={<V3CheckoutFail />} />
+            <Route path="/again" element={<V3Again />} />
+            <Route path="/ai-fit/:id" element={<TryOnRedirect />} />
             <Route path="/login" element={<V3Login />} />
             <Route path="/signup" element={<V3Signup />} />
             <Route path="/account" element={<V3Account />} />
@@ -84,7 +89,6 @@ export default function App() {
           <Route path="/products" element={<Navigate to="/discover" replace />} />
           <Route path="/materials" element={<Navigate to="/about" replace />} />
           <Route path="/story" element={<Navigate to="/about" replace />} />
-          <Route path="/again" element={<Navigate to="/" replace />} />
           <Route path="/v2" element={<Navigate to="/" replace />} />
           <Route path="/try-on/:id" element={<TryOnRedirect />} />
 
@@ -120,5 +124,5 @@ export default function App() {
 /** Old camera try-on links and QR codes now open the AI fitting. */
 function TryOnRedirect() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/ai-fit/${id}`} replace />;
+  return <Navigate to={`/again?p=${id}`} replace />;
 }

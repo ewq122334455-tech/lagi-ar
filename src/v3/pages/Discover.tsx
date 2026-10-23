@@ -14,10 +14,14 @@ export default function Discover() {
   return (
     <div className="px-page pb-32 pt-page">
       <div className="flex flex-wrap items-start justify-between gap-8">
-        <h1 className="t-display">DISCOVER</h1>
+        <div>
+          <p className="t-label t-mark text-[var(--c-mute)]">Discover</p>
+          <h1 className="t-display t-mark mt-2">DISCOVER</h1>
+          <p className="t-lead kr mt-4 text-[var(--c-mute)]">라기가 선별한 리사이클링 제품</p>
+        </div>
         <div className="flex gap-6">
-          <p className="t-value">Category</p>
-          <ul className="t-value">
+          <p className="t-value kr">분류</p>
+          <ul className="t-value kr">
             {[null, ...categories].map((c) => (
               <li key={c ?? 'all'}>
                 <button
@@ -26,7 +30,7 @@ export default function Discover() {
                   aria-pressed={active === c}
                   className={active === c ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}
                 >
-                  {c ? CATEGORY_LABEL[c] ?? c : 'All'} <span className="tabular-nums">{c ? products.filter((p) => p.category.value === c).length : products.length}</span>
+                  {c ? CATEGORY_LABEL[c] ?? c : '전체'} <span className="tabular-nums">{c ? products.filter((p) => p.category.value === c).length : products.length}</span>
                 </button>
               </li>
             ))}
@@ -34,8 +38,8 @@ export default function Discover() {
         </div>
       </div>
 
-      {loading && <p className="t-label mt-20">Loading…</p>}
-      {error && <p className="t-label mt-20">{error}</p>}
+      {loading && <p className="t-caption kr mt-20">불러오는 중…</p>}
+      {error && <p className="t-caption kr mt-20">{error}</p>}
 
       <ul className="mt-20 grid grid-cols-1 gap-x-[var(--gap)] gap-y-14 md:grid-cols-2 lg:mt-28 lg:grid-cols-3">
         {list.map((p) => (
@@ -51,8 +55,8 @@ export default function Discover() {
                 />
               </span>
               <span className="rule-1 mt-3 flex items-baseline justify-between gap-4 pt-2">
-                <span className="t-value">{p.name.value}</span>
-                <span className="t-label shrink-0 tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</span>
+                <span className="t-value kr">{p.name.value}</span>
+                <span className="t-caption kr shrink-0 tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</span>
               </span>
             </Link>
           </li>

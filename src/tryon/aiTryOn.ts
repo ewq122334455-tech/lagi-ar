@@ -37,14 +37,17 @@ export interface AiTryOnInput {
   person: string;
   product: Product;
   style?: string;
+  /** Lets the caller cancel (or time out) the request. */
+  signal?: AbortSignal;
 }
 
-export async function requestAiTryOn({ person, product, style }: AiTryOnInput): Promise<string> {
+export async function requestAiTryOn({ person, product, style, signal }: AiTryOnInput): Promise<string> {
   const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
   const d = product.dimensions;
   const size = d.widthCm ? `W${d.widthCm * 10} × H${(d.heightCm ?? 0) * 10} × D${(d.depthCm ?? 0) * 10} mm` : undefined;
   const res = await fetch(AI_TRYON_URL, {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       person,

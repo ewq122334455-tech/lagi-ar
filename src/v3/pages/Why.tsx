@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { WHY_LAGI, WHY_LAGI_RULE_EN } from '@/content/whyLagi';
+import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
+
+/** The three questions the whole site answers. */
+const QUESTIONS = [
+  { q: 'WHY LAGI?', a: '다시 볼 이유가 있는 리사이클링 제품만 골라 소개합니다.' },
+  { q: 'WHY DID LAGI SELECT THIS?', a: '아래 네 가지 기준을 모두 충족했기 때문입니다.' },
+  { q: 'WHAT VALUE DOES LAGI GIVE?', a: '익숙한 제품에서 새로운 가치와 가능성을 다시 발견하게 합니다.' },
+];
 
 /**
  * WHY LAGI (reference: Method). On wide screens the four criteria travel sideways as the page
@@ -43,17 +50,25 @@ export default function Why() {
 
   const intro = (
     <div className="w-full shrink-0 lg:w-[34vw]">
-      <h1 className="t-display">WHY LAGI</h1>
-      <p className="t-body mt-6 max-w-sm">The four criteria LAGI uses to select every product.</p>
-      <p className="t-body mt-2 max-w-sm font-semibold">{WHY_LAGI_RULE_EN}</p>
+      <h1 className="t-display t-mark">WHY LAGI</h1>
+      <p className="t-lead kr mt-6 max-w-sm">라기가 모든 제품을 고르는 네 가지 기준입니다.</p>
+      <p className="t-body kr mt-2 max-w-sm font-bold">{WHY_LAGI_RULE}</p>
+      <dl className="mt-10 max-w-sm space-y-4">
+        {QUESTIONS.map((x) => (
+          <div key={x.q} className="rule-1 pt-3">
+            <dt className="t-label t-mark">{x.q}</dt>
+            <dd className="t-caption kr mt-1 text-[var(--c-mute)]">{x.a}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 
   const steps = WHY_LAGI.map((c, i) => (
     <section key={c.key} className="relative w-full shrink-0 border-t border-[var(--c-ink)] pt-5 lg:w-[38vw] lg:border-0 lg:pt-0" style={wide ? { marginTop: `${[18, 2, 26, 8][i]}vh` } : undefined}>
-      <p className="t-h3 text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}.</p>
-      <h2 className="t-h2 mt-2">{c.key}</h2>
-      <p className="t-lead mt-5 max-w-md">{c.question}</p>
+      <p className="t-h3 t-mark text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}.</p>
+      <h2 className="t-h2 t-mark mt-2">{c.key}</h2>
+      <p className="t-lead kr mt-5 max-w-md">{c.question}</p>
     </section>
   ));
 

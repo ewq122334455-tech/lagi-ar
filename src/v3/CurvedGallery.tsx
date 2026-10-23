@@ -4,9 +4,13 @@ import type { Product } from '@/data/productTypes';
 import { price } from './data';
 
 /**
- * LAGI curved gallery (home). Products sit on one chain that runs from the bottom-left (near,
- * large) to the top-right (far, small); wheel, drag, swipe or arrow keys move the chain and the
- * front product links to its page.
+ * LAGI curved gallery. Products sit on one chain that runs from the bottom-left (near, large) to
+ * the top-right (far, small); the front product links to its page.
+ *
+ * Two ways to drive it:
+ * - 'scroll' (home): the section is tall and its stage sticks to the screen; ordinary page
+ *   scrolling moves the chain, so the page is never hijacked. Buttons and arrow keys scroll to a product.
+ * - 'stage': a one-screen stage driven by wheel, drag, swipe and arrow keys.
  *
  * Differences from the reference on purpose (docs/rebuild/03-design-system.md):
  * - DOM links + CSS transforms instead of WebGL, so every product is a real, focusable link;
@@ -64,8 +68,18 @@ function crop(d: number, i: number) {
   }
 }
 
-export function CurvedGallery({ products, ratios }: { products: Product[]; ratios: Record<string, number> }) {
+export function CurvedGallery({
+  products,
+  ratios,
+  mode = 'stage',
+}: {
+  products: Product[];
+  ratios: Record<string, number>;
+  mode?: 'stage' | 'scroll';
+}) {
   const n = products.length;
+  const scrollMode = mode === 'scroll';
+  const sectionRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -96,10 +110,19 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
 
   const step = useCallback(
     (delta: number) => {
+      const sec = sectionRef.current;
+      if (scrollMode && sec) {
+        // Scroll the page to the product instead of moving the chain behind the scroll's back.
+        const i = clamp(Math.round(target.current) + delta, 0, n - 1);
+        const top = sec.getBoundingClientRect().top + window.scrollY;
+        const range = sec.offsetHeight - window.innerHeight;
+        window.scrollTo({ top: top + (range * i) / Math.max(1, n - 1), behavior: reduced ? 'auto' : 'smooth' });
+        return;
+      }
       target.current = Math.round(target.current) + delta;
       if (reduced) pos.current = target.current;
     },
-    [reduced],
+    [reduced, scrollMode, n],
   );
 
   // Render loop: the chain eases after the target, then rests.
@@ -108,6 +131,12 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     let raf = 0;
     let lastFront = -1;
     const paint = () => {
+      const sec = sectionRef.current;
+      if (scrollMode && sec && !opening.current) {
+        const r = sec.getBoundingClientRect();
+        const p = clamp(-r.top / Math.max(1, r.height - g.vh), 0, 1);
+        target.current = p * (n - 1);
+      }
       pos.current = reduced ? target.current : pos.current + (target.current - pos.current) * (opening.current ? 0.14 : 0.09);
       if (Math.abs(target.current - pos.current) < 0.0005) pos.current = target.current;
       const op = opening.current;
@@ -165,7 +194,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     };
     raf = requestAnimationFrame(paint);
     return () => cancelAnimationFrame(raf);
-  }, [g, n, reduced, navigate, products]);
+  }, [g, n, reduced, navigate, products, scrollMode]);
 
   const open = (i: number) => {
     if (opening.current) return;
@@ -181,7 +210,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
   // Wheel and trackpad.
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage) return;
+    if (!stage || scrollMode) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (opening.current) return;
@@ -196,11 +225,11 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
     };
     stage.addEventListener('wheel', onWheel, { passive: false });
     return () => stage.removeEventListener('wheel', onWheel);
-  }, [reduced, scheduleSnap, step]);
+  }, [reduced, scheduleSnap, step, scrollMode]);
 
   // Drag (mouse) and swipe (touch/pen) through pointer events.
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0 || opening.current) return;
+    if (e.button !== 0 || opening.current || scrollMode) return;
     drag.current = { x: e.clientX, y: e.clientY, start: target.current, moved: false, lastX: e.clientX, lastY: e.clientY, lastT: performance.now(), v: 0 };
     window.clearTimeout(snapTimer.current);
   };
@@ -250,10 +279,10 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
 
   const current = products[front];
 
-  return (
+  const stage = (
     <div
       ref={stageRef}
-      className="relative h-full w-full touch-none select-none"
+      className={`relative h-full w-full select-none ${scrollMode ? '' : 'touch-none'}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -261,7 +290,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
       onKeyDown={onKeyDown}
       role="region"
       aria-roledescription="gallery"
-      aria-label="LAGI product gallery — scroll, drag or use the arrow keys"
+      aria-label={scrollMode ? 'LAGI 제품 갤러리 — 스크롤하거나 화살표 키로 넘겨 보세요' : 'LAGI 제품 갤러리 — 스크롤, 드래그, 화살표 키로 넘겨 보세요'}
     >
       {g &&
         products.map((p, i) => (
@@ -272,7 +301,7 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
               cardRefs.current[i] = el;
             }}
             draggable={false}
-            onFocus={() => bringToFront(i)}
+            onFocus={() => (scrollMode ? undefined : bringToFront(i))}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // new tab / window: leave it to the browser
               e.preventDefault();
@@ -299,25 +328,45 @@ export function CurvedGallery({ products, ratios }: { products: Product[]; ratio
         style={{ opacity: zooming ? 0.92 : 0 }}
       />
       {current && (
-        <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[120] w-[min(320px,60vw)] md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right">
+        <div
+          className={`pointer-events-none absolute z-[120] w-[min(320px,60vw)] ${
+            scrollMode
+              ? 'bottom-6 right-[var(--page-x)] text-right'
+              : 'left-[var(--page-x)] top-20 md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right'
+          }`}
+        >
           <p className="t-caption tabular-nums text-[var(--c-mute)]">
             {String(front + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}
           </p>
-          <p className="t-value mt-1">{current.name.value}</p>
-          <p className="t-label tabular-nums">{price(current.price.value)}</p>
-          <div className="pointer-events-auto mt-3 flex gap-1 t-nav md:justify-end">
-            <button type="button" className="tag" onClick={() => step(-1)} aria-label="Previous product">
+          <p className="t-value kr mt-1">{current.name.value}</p>
+          <p className="t-caption kr tabular-nums">{price(current.price.value)}</p>
+          <div className={`pointer-events-auto mt-3 flex gap-1 t-nav ${scrollMode ? 'justify-end' : 'md:justify-end'}`}>
+            <button type="button" className="tag" onClick={() => step(-1)} aria-label="이전 제품">
               ←
             </button>
-            <button type="button" className="tag" onClick={() => step(1)} aria-label="Next product">
+            <button type="button" className="tag" onClick={() => step(1)} aria-label="다음 제품">
               →
             </button>
-            <button type="button" className="tag tag-ink" onClick={() => open(front)}>
-              View
+            <button type="button" className="tag tag-ink kr" onClick={() => open(front)}>
+              자세히 보기
             </button>
           </div>
         </div>
       )}
     </div>
+  );
+
+  if (!scrollMode) return stage;
+  return (
+    <section ref={sectionRef} aria-label="DISCOVER" className="relative bg-[var(--c-gray)]" style={{ height: `${Math.max(2, n) * 55 + 100}svh` }}>
+      <div className="sticky top-0 h-[100svh] overflow-hidden">
+        <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[125] lg:top-24">
+          <p className="t-label t-mark text-[var(--c-mute)]">02</p>
+          <h2 className="t-h2 t-mark mt-1">DISCOVER</h2>
+          <p className="t-caption kr mt-2 max-w-[18rem] text-[var(--c-mute)]">스크롤하면 제품이 차례로 앞으로 나옵니다. 사진을 누르면 상세 페이지로 들어갑니다.</p>
+        </div>
+        {stage}
+      </div>
+    </section>
   );
 }

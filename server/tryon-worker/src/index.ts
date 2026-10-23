@@ -3,7 +3,10 @@
  *
  * The website sends a visitor's photo and a product; this Worker asks Google's Gemini image model
  * to compose a photo of that person wearing/carrying the product and returns the image. It exists
- * so the Gemini API key stays secret — it is never shipped to the browser. Nothing is stored.
+ * so the Gemini API key stays secret — it is never shipped to the browser. Photos are not stored.
+ *
+ * It also holds member accounts (/auth/*) and on-site orders (/orders, /payments/confirm): prices are
+ * always re-read from the published product data and the Toss Payments secret key stays here.
  */
 
 /** The slice of Cloudflare's KV API the member store uses. */
@@ -11,6 +14,7 @@ interface KV {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
   delete(key: string): Promise<void>;
+  list(options?: { prefix?: string; cursor?: string; limit?: number }): Promise<{ keys: { name: string }[]; list_complete: boolean; cursor?: string }>;
 }
 
 export interface Env {
@@ -22,6 +26,16 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
+  /** Orders. Bound in wrangler.toml ([[kv_namespaces]] ORDERS). */
+  ORDERS?: KV;
+  /** Where the published product data lives, e.g. "https://…github.io/lagi-ar/products/". Prices come from here. */
+  PRODUCTS_BASE_URL?: string;
+  /** Toss Payments secret key (test_sk_… / live_sk_…) — `npx wrangler secret put TOSS_SECRET_KEY`. */
+  TOSS_SECRET_KEY?: string;
+  /** Override for tests only. Defaults to https://api.tosspayments.com. */
+  TOSS_API_BASE?: string;
+  /** Token for reading orders (GET /admin/orders) — `npx wrangler secret put ADMIN_TOKEN`. */
+  ADMIN_TOKEN?: string;
 }
 
 interface TryOnRequest {
@@ -199,6 +213,200 @@ async function handleAuth(path: string, request: Request, kv: KV, headers: Recor
   return json({ error: 'not found' }, 404, headers);
 }
 
+// ---- Orders & payments (Toss Payments) -------------------------------------------------------
+
+interface PublishedProduct {
+  id: string;
+  sample?: boolean;
+  name: { value: string | null; status: string };
+  price: { value: number | null; status: string };
+  shipping?: { fee: number; freeOver?: number };
+}
+
+interface OrderLine {
+  productId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+}
+
+interface Order {
+  orderId: string;
+  status: 'PENDING' | 'PAID' | 'FAILED';
+  createdAt: string;
+  orderName: string;
+  lines: OrderLine[];
+  itemsTotal: number;
+  shippingFee: number;
+  amount: number;
+  customer: { name: string; phone: string; email: string };
+  shipping: { recipient: string; phone: string; zonecode: string; address: string; addressDetail: string; memo: string };
+  payment?: { paymentKey: string; method?: string; approvedAt?: string; receiptUrl?: string };
+}
+
+const PENDING_TTL = 60 * 60 * 24; // unpaid orders vanish after a day
+const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+/** The figures a visitor may see about their own order. */
+const orderSummary = (o: Order) => ({
+  orderId: o.orderId,
+  status: o.status,
+  orderName: o.orderName,
+  lines: o.lines,
+  itemsTotal: o.itemsTotal,
+  shippingFee: o.shippingFee,
+  amount: o.amount,
+  shipping: o.shipping,
+  customer: { name: o.customer.name },
+  payment: o.payment ? { method: o.payment.method, approvedAt: o.payment.approvedAt, receiptUrl: o.payment.receiptUrl } : undefined,
+});
+
+/** Reads one product from the published site — the only source of prices the Worker trusts. */
+async function publishedProduct(env: Env, id: string): Promise<PublishedProduct | null> {
+  if (!/^[a-z0-9-]{1,64}$/.test(id)) return null;
+  const res = await fetch(new URL(`${id}/product.json`, env.PRODUCTS_BASE_URL).toString(), { cf: { cacheTtl: 60 } } as RequestInit);
+  if (!res.ok) return null;
+  const p = (await res.json()) as PublishedProduct;
+  // Same rule as the site: only real products whose name and price were checked can be sold.
+  if (p.sample || p.name?.status !== 'VERIFIED' || p.price?.status !== 'VERIFIED' || typeof p.price.value !== 'number') return null;
+  return p;
+}
+
+/**
+ * Shipping for a combined order: the highest single-item fee applies once, and it is waived when
+ * the items total reaches that item's free-shipping threshold. Products marked free ship free.
+ */
+function shippingFor(products: PublishedProduct[], itemsTotal: number) {
+  let fee = 0;
+  let freeOver: number | undefined;
+  for (const p of products) {
+    const f = p.shipping?.fee ?? 0;
+    if (f > fee) {
+      fee = f;
+      freeOver = p.shipping?.freeOver;
+    }
+  }
+  return freeOver != null && itemsTotal >= freeOver ? 0 : fee;
+}
+
+async function handleOrders(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const kv = env.ORDERS!;
+
+  if (path === '/admin/orders' && request.method === 'GET') {
+    const token = /^Bearer (.+)$/.exec(request.headers.get('Authorization') ?? '')?.[1] ?? '';
+    if (!env.ADMIN_TOKEN || !sameString(token, env.ADMIN_TOKEN)) return json({ error: 'unauthorized' }, 401, headers);
+    const listed = await kv.list({ prefix: 'order:', limit: 100 });
+    const orders = (await Promise.all(listed.keys.map((k) => kv.get(k.name)))).filter(Boolean).map((r) => JSON.parse(r!) as Order);
+    return json({ orders: orders.filter((o) => o.status === 'PAID') }, 200, headers);
+  }
+  if (request.method !== 'POST') return json({ error: 'not found' }, 404, headers);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'invalid JSON' }, 400, headers);
+  }
+
+  if (path === '/orders') {
+    const items = Array.isArray(body.items) ? (body.items as { productId?: unknown; quantity?: unknown }[]) : [];
+    if (!items.length || items.length > 20) return json({ error: '주문할 제품이 없습니다.' }, 400, headers);
+    const c = (body.customer ?? {}) as Record<string, unknown>;
+    const sh = (body.shipping ?? {}) as Record<string, unknown>;
+    const customer = { name: clean(c.name, 30), phone: clean(c.phone, 20).replace(/[^0-9]/g, ''), email: clean(c.email, 120) };
+    const shipping = {
+      recipient: clean(sh.recipient, 30),
+      phone: clean(sh.phone, 20).replace(/[^0-9]/g, ''),
+      zonecode: clean(sh.zonecode, 10),
+      address: clean(sh.address, 200),
+      addressDetail: clean(sh.addressDetail, 100),
+      memo: clean(sh.memo, 100),
+    };
+    if (!customer.name || !/^01[0-9]{8,9}$/.test(customer.phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email))
+      return json({ error: '주문자 이름, 휴대폰 번호, 이메일을 확인해 주세요.' }, 400, headers);
+    if (!shipping.recipient || !/^0[0-9]{8,10}$/.test(shipping.phone) || !/^[0-9]{5}$/.test(shipping.zonecode) || !shipping.address || !shipping.addressDetail)
+      return json({ error: '받는 분, 연락처, 우편번호, 주소, 상세 주소를 확인해 주세요.' }, 400, headers);
+    if (body.agree !== true) return json({ error: '주문 내용 확인 및 결제 진행에 동의해 주세요.' }, 400, headers);
+
+    const merged = new Map<string, number>();
+    for (const it of items) {
+      const id = typeof it.productId === 'string' ? it.productId : '';
+      const q = Number(it.quantity);
+      if (!Number.isInteger(q) || q < 1 || q > 20) return json({ error: '수량을 확인해 주세요.' }, 400, headers);
+      merged.set(id, (merged.get(id) ?? 0) + q);
+    }
+    const products: PublishedProduct[] = [];
+    const lines: OrderLine[] = [];
+    for (const [id, quantity] of merged) {
+      const p = await publishedProduct(env, id);
+      if (!p) return json({ error: '판매 중이 아닌 제품이 포함되어 있습니다.' }, 400, headers);
+      products.push(p);
+      lines.push({ productId: id, name: p.name.value ?? id, unitPrice: p.price.value!, quantity });
+    }
+    const itemsTotal = lines.reduce((n, l) => n + l.unitPrice * l.quantity, 0);
+    const shippingFee = shippingFor(products, itemsTotal);
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const order: Order = {
+      orderId: `LAGI-${date}-${randomHex(6).toUpperCase()}`,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      orderName: lines.length > 1 ? `${lines[0].name} 외 ${lines.length - 1}건` : lines[0].name,
+      lines,
+      itemsTotal,
+      shippingFee,
+      amount: itemsTotal + shippingFee,
+      customer,
+      shipping,
+    };
+    await kv.put(`order:${order.orderId}`, JSON.stringify(order), { expirationTtl: PENDING_TTL });
+    return json(orderSummary(order), 201, headers);
+  }
+
+  if (path === '/payments/confirm') {
+    const paymentKey = clean(body.paymentKey, 200);
+    const orderId = clean(body.orderId, 64);
+    const amount = Number(body.amount);
+    const raw = await kv.get(`order:${orderId}`);
+    if (!raw || !paymentKey) return json({ error: '주문을 찾을 수 없습니다.' }, 404, headers);
+    const order = JSON.parse(raw) as Order;
+    // Already paid with this payment (e.g. the success page was reloaded): answer the same again.
+    if (order.status === 'PAID') {
+      return order.payment?.paymentKey === paymentKey ? json(orderSummary(order), 200, headers) : json({ error: '이미 결제된 주문입니다.' }, 409, headers);
+    }
+    // The amount coming back from the browser must match what the server priced.
+    if (amount !== order.amount) return json({ error: '결제 금액이 주문 금액과 다릅니다.' }, 400, headers);
+    if (!env.TOSS_SECRET_KEY) return json({ error: '결제 승인 키가 설정되지 않았습니다.' }, 503, headers);
+
+    const res = await fetch(`${env.TOSS_API_BASE || 'https://api.tosspayments.com'}/v1/payments/confirm`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${btoa(`${env.TOSS_SECRET_KEY}:`)}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': `confirm-${orderId}`,
+      },
+      body: JSON.stringify({ paymentKey, orderId, amount }),
+    });
+    const toss = (await res.json().catch(() => ({}))) as {
+      status?: string;
+      method?: string;
+      approvedAt?: string;
+      totalAmount?: number;
+      receipt?: { url?: string };
+      message?: string;
+      code?: string;
+    };
+    if (!res.ok || toss.status !== 'DONE' || toss.totalAmount !== order.amount) {
+      return json({ error: toss.message ?? '결제 승인에 실패했습니다.', code: toss.code }, res.ok ? 502 : res.status, headers);
+    }
+    order.status = 'PAID';
+    order.payment = { paymentKey, method: toss.method, approvedAt: toss.approvedAt, receiptUrl: toss.receipt?.url };
+    await kv.put(`order:${order.orderId}`, JSON.stringify(order)); // paid orders are kept
+    return json(orderSummary(order), 200, headers);
+  }
+
+  return json({ error: 'not found' }, 404, headers);
+}
+
 // ---- Router ----------------------------------------------------------------------------------
 
 export default {
@@ -211,6 +419,12 @@ export default {
     if (!origin || !allowed.includes(origin)) return json({ error: 'origin not allowed' }, 403, headers);
 
     const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
+    if (path === '/orders' || path === '/payments/confirm' || path === '/admin/orders') {
+      if (!env.ORDERS || !env.PRODUCTS_BASE_URL) return json({ error: '온라인 결제가 아직 연결되지 않았습니다.' }, 503, headers);
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      if (throttled(`order:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+      return handleOrders(path, request, env, headers);
+    }
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';

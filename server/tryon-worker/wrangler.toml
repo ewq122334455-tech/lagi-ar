@@ -7,7 +7,13 @@ compatibility_date = "2025-01-01"
 GEMINI_MODEL = "gemini-2.5-flash-image"
 # The LAGI site (and local dev). Only these origins may call the Worker or supply product images.
 ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io,http://localhost:5173,http://localhost:4173"
+# Published product data. The Worker re-reads prices from here for every order (never from the browser).
+PRODUCTS_BASE_URL = "https://ewq122334455-tech.github.io/lagi-ar/products/"
 
 # Member accounts and login sessions. With no id, `wrangler deploy` creates the namespace on first deploy.
 [[kv_namespaces]]
 binding = "USERS"
+
+# On-site orders (address + payment). Same auto-provisioning as USERS.
+[[kv_namespaces]]
+binding = "ORDERS"
