@@ -201,22 +201,6 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
           },
         ]
       : []),
-    {
-      key: 'again',
-      eyebrow: 'AGAIN · 다시 조합',
-      title: (
-        <>
-          색을 바꿔,
-          <br />
-          다시 만나는 가방.
-        </>
-      ),
-      text: '부분마다 색을 고르거나 ‘다시!’ 버튼으로 새 조합을 만들어 보세요.',
-      cta: '조합하러 가기',
-      to: '/again',
-      className: 'bg-orange text-paper',
-      image: cover,
-    },
   ];
 
   const [index, setIndex] = useState(0);
@@ -248,7 +232,7 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
                 src={slide.image}
                 alt=""
                 className={`max-h-[260px] w-auto object-contain drop-shadow-[0_24px_30px_rgba(0,0,0,0.25)] transition-transform duration-700 lg:max-h-[380px] ${
-                  slide.key === 'again' ? 'hue-rotate-[160deg]' : slide.key === 'tryon' ? '-rotate-6' : ''
+                  slide.key === 'tryon' ? '-rotate-6' : ''
                 }`}
               />
             )}
@@ -274,14 +258,14 @@ function BannerBento({ hero, tryOnId }: { hero: Product | null; tryOnId: string 
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-        <Link to="/again#card" className="flex min-h-[160px] flex-col justify-between rounded-xl bg-cream p-5 hover:brightness-[0.97] focus-ring lg:p-7">
-          <p className="text-[11px] font-bold tracking-[0.2em] text-ink/60">다시 카드</p>
+        <Link to="/about#why" className="flex min-h-[160px] flex-col justify-between rounded-xl bg-cream p-5 hover:brightness-[0.97] focus-ring lg:p-7">
+          <p className="text-[11px] font-bold tracking-[0.2em] text-ink/60">WHY LAGI</p>
           <div>
             <p className="text-lg font-bold leading-snug tracking-[-0.03em] lg:text-2xl">
-              다시, 하고 싶은
-              <br />한 가지
+              라기가 고르는
+              <br />네 가지 기준
             </p>
-            <p className="mt-2 text-xs text-ink/60">한 줄 적고 카드로 공유하기 →</p>
+            <p className="mt-2 text-xs text-ink/60">ATTRACTION · POSSIBILITY · PROCESS & PEOPLE · CRAFT & SENSE →</p>
           </div>
         </Link>
         <Link
@@ -308,8 +292,7 @@ function QuickMenu({ hero, tryOnId }: { hero: Product | null; tryOnId: string | 
     { label: '랭킹', to: '/products?sort=ranking', glyph: 'TOP', tone: 'bg-blue text-paper' },
     { label: '전체 상품', to: '/products', glyph: 'ALL', tone: 'bg-mist text-ink' },
     ...(tryOnId ? [{ label: 'AI 피팅', to: `/ai-fit/${tryOnId}`, glyph: 'AI', tone: 'bg-lime text-ink' }] : []),
-    { label: '다시 조합', to: '/again', glyph: '↻', tone: 'bg-orange text-paper' },
-    { label: '다시 카드', to: '/again#card', glyph: 'CARD', tone: 'bg-cream text-ink' },
+    { label: '왜 라기', to: '/about#why', glyph: 'WHY', tone: 'bg-cream text-ink' },
     { label: '소재', to: '/materials', glyph: 'MAT', tone: 'bg-mist text-ink' },
     { label: '스마트스토어', to: 'https://smartstore.naver.com/lagi_official', external: true, glyph: 'N', tone: 'bg-[#03c75a] text-paper' },
   ];

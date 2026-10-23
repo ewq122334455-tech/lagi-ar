@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import type { Product } from '@/data/productTypes';
 import { LagiLogo } from '@/components/LagiLogo';
-import { Motif } from '@/components/Motif';
 import { Reveal } from '@/components/Reveal';
 import { DiscoverFlow } from './DiscoverFlow';
+import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import type { DiscoverItem } from './DiscoverFlow';
 
 /**
@@ -208,31 +208,20 @@ function Selected({ products, ratios }: { products: Product[]; ratios: Record<st
   );
 }
 
-/**
- * The four selection criteria. No official wording has been supplied, so the slots are laid out
- * and marked as waiting for it rather than filled with invented copy.
- */
+/** The four official selection criteria — every product must meet all four. */
 function WhyLagi() {
   return (
     <section className="bg-mist px-5 py-28 lg:px-12 lg:py-40">
-      <SectionHead index="04" title="WHY LAGI" note="라기가 제품을 고르는 네 가지 기준." />
+      <SectionHead index="04" title="WHY LAGI" note={WHY_LAGI_RULE} />
       <ol className="mt-16 grid grid-cols-1 gap-px bg-ink/10 sm:grid-cols-2 lg:mt-24 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Reveal
-            as="li"
-            key={i}
-            delay={i * 90}
-            className="flex min-h-[260px] flex-col justify-between bg-mist p-6 lg:min-h-[360px] lg:p-8"
-          >
-            <div className="flex items-start justify-between">
-              <span className="font-display text-5xl lg:text-6xl" style={{ color: BRAND_BLUE }}>
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <Motif index={[0, 6, 4, 9][i]} className="h-6 w-auto opacity-80" />
-            </div>
+        {WHY_LAGI.map((c, i) => (
+          <Reveal as="li" key={c.key} delay={i * 90} className="flex min-h-[300px] flex-col justify-between bg-mist p-6 lg:min-h-[400px] lg:p-8">
+            <span className="font-display text-5xl lg:text-6xl" style={{ color: BRAND_BLUE }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
             <div>
-              <p className="text-[11px] tracking-[0.2em] text-ink/40">CRITERION {String(i + 1).padStart(2, '0')}</p>
-              <p className="mt-2 border-t border-dashed border-ink/25 pt-3 text-[13px] text-ink/45">공식 문구 제공 후 입력</p>
+              <p className="text-[13px] font-semibold tracking-[0.12em]">{c.key}</p>
+              <p className="mt-3 border-t border-ink/20 pt-3 text-[14px] leading-relaxed text-ink/70">{c.question}</p>
             </div>
           </Reveal>
         ))}

@@ -100,7 +100,6 @@ function ProductDetailView({ product }: { product: import('@/data/productTypes')
               <InfoRow label="체험">
                 <span className="flex flex-wrap gap-1.5">
                   {tryOnUrl && <Pill tone="lime">AI 피팅</Pill>}
-                  {product.remixModel && <Pill tone="orange">다시 조합</Pill>}
                 </span>
               </InfoRow>
               {product.shipping && <InfoRow label="배송">{shippingLabel(product.shipping)}</InfoRow>}

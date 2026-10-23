@@ -1,7 +1,14 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { DetailSection } from '@/components/DetailSection';
+import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import { LagiLogo } from '@/components/LagiLogo';
 
 export default function About() {
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+  }, [hash]);
   return (
     <div>
       <section className="border-b border-line bg-ink px-6 py-24 text-paper lg:px-10 lg:py-32">
@@ -34,6 +41,23 @@ export default function About() {
           </ul>
         </div>
       </DetailSection>
+
+      <section id="why" className="scroll-mt-[var(--nav-height)] border-t border-line px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-canvas">
+          <p className="eyebrow">WHY LAGI</p>
+          <h2 className="mt-4 text-3xl font-bold tracking-[-0.03em] lg:text-4xl">라기가 제품을 고르는 네 가지 기준</h2>
+          <ol className="mt-12 grid grid-cols-1 gap-x-10 gap-y-12 md:grid-cols-2">
+            {WHY_LAGI.map((c, i) => (
+              <li key={c.key} className="border-t border-ink pt-5">
+                <p className="text-sm font-bold text-blue">{String(i + 1).padStart(2, '0')}</p>
+                <p className="mt-2 text-xl font-bold tracking-[0.02em]">{c.key}</p>
+                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-graphite">{c.question}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-12 text-[15px] font-semibold">{WHY_LAGI_RULE}</p>
+        </div>
+      </section>
 
       <DetailSection eyebrow="BRAND HISTORY">
         <p className="max-w-2xl text-lg leading-relaxed text-graphite">
