@@ -15,10 +15,11 @@
   --radius-sheet: 50px;
 
   --t-display: 56px;
-  --t-h1: 32px;
-  --t-h2: 40px;
-  --t-h3: 24px;
-  --t-body: 16px;
+  --t-h1: 30px;
+  --t-h2: 36px;
+  --t-h3: 22px;
+  --t-lead: 20px;
+  --t-body: 15px;
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -26,7 +27,14 @@
   --dur-std: 420ms;
   --dur-slow: 900ms;
 
-  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  /*
+   * Latin: Posterama 2001 (Adobe Fonts kit — weights 400 and 700; an all-caps display cut).
+   * Hangul: Yoon 윤고딕 100 Std (licensed). It is used wherever it is installed; for every visitor
+   * to see it, its web-licensed font files must be added in public/fonts/brand-fonts.css.
+   * Posterama has no Hangul, so Korean characters fall through to the Hangul fonts.
+   */
+  font-family: 'posterama-2001', 'Posterama 2001', 'LAGI Hangul', 'Yoon 윤고딕 100 Std', 'YoonGothic100Std', 'Yoon Gothic 100 Std',
+    '윤고딕100Std', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   color: var(--c-ink);
   background: var(--c-ink);
   -webkit-font-smoothing: antialiased;
@@ -35,33 +43,40 @@
 @media (min-width: 810px) {
   .v3 {
     --t-display: 72px;
-    --t-h1: 48px;
-    --t-h2: 40px;
-    --t-h3: 28px;
-    --t-body: 18px;
+    --t-h1: 44px;
+    --t-h2: 44px;
+    --t-h3: 26px;
+    --t-lead: 24px;
+    --t-body: 16px;
   }
 }
 @media (min-width: 1200px) {
   .v3 {
     --top: 128px;
     --radius-card: 8px;
-    --t-display: 80px;
-    --t-h1: 64px;
-    --t-h2: 56px;
-    --t-h3: 32px;
-    --t-body: 20px;
+    --t-display: 96px;
+    --t-h1: 56px;
+    --t-h2: 60px;
+    --t-h3: 30px;
+    --t-lead: 28px;
+    --t-body: 17px;
   }
 }
 
-.v3 .t-display { font-size: var(--t-display); font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; }
-.v3 .t-h1 { font-size: var(--t-h1); font-weight: 600; line-height: 1.2; letter-spacing: -0.03em; }
-.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
-.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
-.v3 .t-body { font-size: var(--t-body); font-weight: 500; line-height: 1.5; letter-spacing: -0.02em; }
-.v3 .t-value { font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.02em; }
-.v3 .t-label { font-size: 16px; font-weight: 500; line-height: 1.3; letter-spacing: -0.02em; }
-.v3 .t-nav { font-size: 16px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
-.v3 .t-caption { font-size: 14px; font-weight: 500; line-height: 1.4; letter-spacing: -0.01em; }
+/*
+ * Type hierarchy: strong (700, large, tight) against weak (400, small, tracked out).
+ * Posterama 2001 is caps-only, so small text gets positive tracking to stay readable.
+ */
+.v3 .t-display { font-size: var(--t-display); font-weight: 700; line-height: 0.92; letter-spacing: -0.01em; }
+.v3 .t-h1 { font-size: var(--t-h1); font-weight: 400; line-height: 1.15; letter-spacing: 0; }
+.v3 .t-h2 { font-size: var(--t-h2); font-weight: 700; line-height: 0.95; letter-spacing: 0; }
+.v3 .t-h3 { font-size: var(--t-h3); font-weight: 700; line-height: 1.05; letter-spacing: 0.02em; }
+.v3 .t-lead { font-size: var(--t-lead); font-weight: 400; line-height: 1.4; letter-spacing: 0.01em; }
+.v3 .t-body { font-size: var(--t-body); font-weight: 400; line-height: 1.6; letter-spacing: 0.02em; }
+.v3 .t-value { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: 0.04em; }
+.v3 .t-label { font-size: 12px; font-weight: 400; line-height: 1.4; letter-spacing: 0.14em; }
+.v3 .t-nav { font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: 0.1em; }
+.v3 .t-caption { font-size: 12px; font-weight: 400; line-height: 1.55; letter-spacing: 0.06em; }
 
 .v3 .px-page { padding-left: var(--page-x); padding-right: var(--page-x); }
 .v3 .pt-page { padding-top: var(--top); }

@@ -53,7 +53,7 @@ export default function Why() {
     <section key={c.key} className="relative w-full shrink-0 border-t border-[var(--c-ink)] pt-5 lg:w-[38vw] lg:border-0 lg:pt-0" style={wide ? { marginTop: `${[18, 2, 26, 8][i]}vh` } : undefined}>
       <p className="t-h3 text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}.</p>
       <h2 className="t-h2 mt-2">{c.key}</h2>
-      <p className="t-body mt-5 max-w-md">{c.question}</p>
+      <p className="t-lead mt-5 max-w-md">{c.question}</p>
     </section>
   ));
 
