@@ -44,7 +44,7 @@ export function LoginPage() {
         <Field label="비밀번호" type="password" autoComplete="current-password" required value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         {err && <p className="t-caption kr text-[var(--c-blue)]" role="alert">{err}</p>}
         <div className="t-nav kr flex items-center gap-4">
-          <button type="submit" disabled={busy} className="tag tag-ink px-5 py-3 disabled:opacity-40">
+          <button type="submit" disabled={busy} className="tag btn-solid px-5 py-3 disabled:opacity-40">
             로그인
           </button>
           <Link to="/signup" className="tag">
@@ -106,7 +106,7 @@ export function SignupPage() {
           </label>
         </div>
         {err && <p className="t-caption kr text-[var(--c-blue)]" role="alert">{err}</p>}
-        <button type="submit" disabled={busy} className="t-nav tag tag-ink kr px-5 py-3 disabled:opacity-40">
+        <button type="submit" disabled={busy} className="t-nav tag btn-solid kr px-5 py-3 disabled:opacity-40">
           가입하기
         </button>
       </form>

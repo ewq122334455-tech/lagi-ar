@@ -96,8 +96,12 @@
 /* :where() keeps these at zero specificity so Tailwind utilities (hidden, lg:hidden…) still win. */
 :where(.v3 .tag) { display: inline-block; padding: 5px 8px 4px; transition: background-color var(--dur-fast) linear; }
 .v3 .tag:hover, .v3 .tag[aria-current='page'] { background-color: var(--c-label); }
-.v3 .tag-ink { background: var(--c-ink); color: var(--c-white); }
-.v3 .tag-ink:hover, .v3 .tag-ink[aria-current='page'] { background: var(--c-blue); color: var(--c-white); }
+/* Text link with weight: no box, an underline that turns blue on hover. */
+.v3 .tag-ink { background: none; color: inherit; font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; padding-left: 0; padding-right: 0; }
+.v3 .tag-ink:hover, .v3 .tag-ink[aria-current='page'] { background: none; color: var(--c-blue); }
+/* Filled button — kept only for actions that complete something (buy, pay, run, sign in). */
+.v3 .btn-solid { background: var(--c-ink); color: var(--c-white); }
+.v3 .btn-solid:hover { background: var(--c-blue); }
 .v3 .rule { border-top: 2px solid var(--c-line); }
 .v3 .rule-1 { border-top: 1px solid var(--c-line); }
 .v3 :focus-visible { outline: 2px solid var(--c-blue); outline-offset: 3px; }

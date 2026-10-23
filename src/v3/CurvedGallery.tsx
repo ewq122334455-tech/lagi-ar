@@ -347,8 +347,8 @@ export function CurvedGallery({
             <button type="button" className="tag" onClick={() => step(1)} aria-label="다음 제품">
               →
             </button>
-            <button type="button" className="tag tag-ink kr" onClick={() => open(front)}>
-              자세히 보기
+            <button type="button" className="tag tag-ink kr ml-2" onClick={() => open(front)}>
+              자세히 보기 →
             </button>
           </div>
         </div>

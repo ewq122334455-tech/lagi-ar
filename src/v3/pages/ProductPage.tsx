@@ -161,7 +161,7 @@ export default function ProductPage() {
             </div>
 
             <div className="t-nav kr mt-6 grid gap-2">
-              <button type="button" className="tag tag-ink w-full px-4 py-3.5 text-center" onClick={() => addToCart(true)}>
+              <button type="button" className="tag btn-solid w-full px-4 py-3.5 text-center" onClick={() => addToCart(true)}>
                 바로 구매
               </button>
               <button type="button" className="tag w-full bg-[var(--c-white)] px-4 py-3.5 text-center" onClick={() => addToCart()}>
@@ -345,7 +345,7 @@ export default function ProductPage() {
           <span className="t-caption kr block truncate text-[var(--c-mute)]">{p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
         </span>
-        <button type="button" className="t-nav tag tag-ink kr shrink-0 px-5 py-3" onClick={() => addToCart(true)}>
+        <button type="button" className="t-nav tag btn-solid kr shrink-0 px-5 py-3" onClick={() => addToCart(true)}>
           바로 구매
         </button>
       </div>
