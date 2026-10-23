@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
@@ -10,17 +11,25 @@ const STYLES = {
     { key: 'shoulder', label: '어깨에 메기', prompt: CARRY_PROMPTS.SHOULDER },
     { key: 'hand', label: '손에 들기', prompt: CARRY_PROMPTS.HAND },
     { key: 'cross', label: '크로스로 메기', prompt: CARRY_PROMPTS.CROSSBODY },
+    { key: 'elbow', label: '팔에 걸기', prompt: 'hung over the forearm in the crook of a bent elbow' },
+    { key: 'hug', label: '가슴에 안기', prompt: 'held against the chest with both arms, as if hugging it' },
+    { key: 'back', label: '어깨 뒤로 넘기기', prompt: 'slung over one shoulder so the bag rests on the back' },
+    { key: 'front', label: '앞으로 들어 보이기', prompt: 'held up with both hands in front of the body, showing the bag to the camera' },
   ],
   acc: [
     { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
+    { key: 'show', label: '들어 보이기', prompt: 'held up near the face with one hand, showing it to the camera' },
     { key: 'clip', label: '가방에 걸기', prompt: 'clipped or hanging from the bag or belt loop the person is carrying' },
+    { key: 'pocket', label: '주머니에 꽂기', prompt: 'tucked half-way into a front pocket of the outfit, clearly visible' },
+    { key: 'table', label: '테이블에 두기', prompt: 'placed on a small table right in front of the person, who looks at it' },
   ],
 };
 const stylesFor = (p: Product | undefined) => ((p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc);
 
 const MAX_INPUT_BYTES = 15 * 1024 * 1024;
-const ACCEPT = ['image/jpeg', 'image/png', 'image/webp'];
-const TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 120_000;
+/** Server-side hiccups (no image this time, busy, 5xx) are retried once quietly before the visitor sees anything. */
+const RETRIES = 1;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -44,6 +53,7 @@ export default function Again() {
   const [consent, setConsent] = useState(false);
   const [before, setBefore] = useState(false);
   const [camera, setCamera] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const albumRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLInputElement>(null);
@@ -71,13 +81,14 @@ export default function Again() {
   async function takePhoto(f: File | Blob | undefined) {
     if (!f) return;
     setError(null);
-    if (f.type && !ACCEPT.includes(f.type)) return setError('JPG, PNG, WEBP 사진만 사용할 수 있습니다.');
+    if (f.type && !f.type.startsWith('image/')) return setError('사진 파일을 골라 주세요.');
     if (f.size > MAX_INPUT_BYTES) return setError('15MB 이하의 사진을 사용해 주세요.');
     try {
+      // Any format the browser can open (JPG, PNG, WEBP, HEIC on iPhone Safari …) is redrawn as JPEG.
       setPhoto(await photoToDataUrl(f as File));
       setResult(null);
     } catch {
-      setError('사진을 읽지 못했습니다. 다른 사진으로 시도해 주세요.');
+      setError('이 사진 형식은 열 수 없습니다. JPG로 저장한 사진을 쓰거나 카메라로 촬영해 주세요.');
     }
   }
 
@@ -96,7 +107,20 @@ export default function Again() {
     setElapsed(0);
     setError(null);
     try {
-      const img = await requestAiTryOn({ person: photo, product, style: styles.find((s) => s.key === style)?.prompt, signal: ctrl.signal });
+      const ask = () => requestAiTryOn({ person: photo, product, style: styles.find((s) => s.key === style)?.prompt, signal: ctrl.signal });
+      let img: string | null = null;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          img = await ask();
+          break;
+        } catch (e) {
+          const status = (e as { status?: number }).status;
+          const retryable = !ctrl.signal.aborted && (e instanceof TypeError || status == null || status >= 500 || status === 429);
+          if (!retryable || attempt >= RETRIES) throw e;
+          setRetrying(true);
+          await new Promise((r) => setTimeout(r, status === 429 ? 4000 : 1500));
+        }
+      }
       setResult(img);
       requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } catch (e) {
@@ -107,6 +131,7 @@ export default function Again() {
       window.clearTimeout(timer);
       abortRef.current = null;
       setBusy(false);
+      setRetrying(false);
     }
   }
 
@@ -202,7 +227,7 @@ export default function Again() {
             {busy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-ink)]/75 text-[var(--c-white)]" role="status">
                 <p className="t-value kr">이미지를 합성하고 있습니다… {elapsed}초</p>
-                <p className="t-caption kr text-white/70">보통 10~40초 걸립니다.</p>
+                <p className="t-caption kr text-white/70">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초 걸립니다.'}</p>
                 <button type="button" className="t-caption kr tag bg-[var(--c-white)] text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
                   취소
                 </button>
@@ -238,7 +263,7 @@ export default function Again() {
             <h2 id="s2" className="t-h3 kr">
               <span className="t-mark text-[var(--c-mute)]">02</span> 사진
             </h2>
-            <input ref={albumRef} type="file" accept={ACCEPT.join(',')} className="hidden" onChange={onPick} data-testid="photo-input" />
+            <input ref={albumRef} type="file" accept="image/*" className="hidden" onChange={onPick} data-testid="photo-input" />
             <input ref={captureRef} type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
             <div className="t-nav kr mt-4 flex flex-wrap gap-2">
               <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => albumRef.current?.click()}>
@@ -247,12 +272,18 @@ export default function Again() {
               <button
                 type="button"
                 className="tag bg-[var(--c-label)] px-4 py-3"
-                onClick={() => (typeof navigator.mediaDevices?.getUserMedia === 'function' && window.matchMedia('(pointer: fine)').matches ? setCamera(true) : captureRef.current?.click())}
+                onClick={() => {
+                  setError(null);
+                  // The camera opens inside the page on phones and computers alike; only browsers
+                  // without camera access (some in-app browsers) fall back to the system picker.
+                  if (typeof navigator.mediaDevices?.getUserMedia === 'function') setCamera(true);
+                  else captureRef.current?.click();
+                }}
               >
                 카메라로 촬영
               </button>
             </div>
-            <p className="t-caption kr mt-2 text-[var(--c-mute)]">JPG · PNG · WEBP, 15MB 이하</p>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">15MB 이하 사진 · 정면 전신 또는 상반신 사진이 가장 잘 나옵니다</p>
           </section>
 
           <section aria-labelledby="s3">
@@ -338,9 +369,9 @@ export default function Again() {
             setCamera(false);
             void takePhoto(blob);
           }}
-          onFail={() => {
+          onPick={() => {
             setCamera(false);
-            captureRef.current?.click();
+            albumRef.current?.click();
           }}
         />
       )}
@@ -369,36 +400,55 @@ async function labelled(dataUrl: string): Promise<Blob> {
   return new Promise((res) => c.toBlob((b) => res(b!), 'image/png'));
 }
 
-/** Desktop camera: a live preview to take one still photo. Nothing is recorded or sent until the visitor starts compositing. */
-function CameraCapture({ onShot, onClose, onFail }: { onShot: (b: Blob) => void; onClose: () => void; onFail: () => void }) {
+/**
+ * In-page camera (phones and computers): a live preview to take one still photo, front or back
+ * camera. Nothing is recorded or sent until the visitor starts compositing.
+ */
+function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void; onClose: () => void; onPick: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
-  // Keep the latest callbacks without restarting the camera on every render.
-  const cb = useRef({ onClose, onFail });
-  cb.current = { onClose, onFail };
+  const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  const [problem, setProblem] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let alive = true;
+    setReady(false);
+    setProblem(null);
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 } }, audio: false })
+      .getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false })
       .then((s) => {
         if (!alive) return s.getTracks().forEach((t) => t.stop());
         stream = s;
-        if (video.current) {
-          video.current.srcObject = s;
-          video.current.play().then(() => setReady(true), () => undefined);
+        const v = video.current;
+        if (v) {
+          v.srcObject = s;
+          v.play().then(() => alive && setReady(true), () => undefined);
         }
       })
-      .catch(() => alive && cb.current.onFail());
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && cb.current.onClose();
+      .catch((e: DOMException) => {
+        if (!alive) return;
+        setProblem(
+          e?.name === 'NotAllowedError'
+            ? '카메라 권한이 꺼져 있습니다. 브라우저 주소창의 카메라 설정에서 허용한 뒤 다시 시도해 주세요.'
+            : e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError'
+              ? '사용할 수 있는 카메라를 찾지 못했습니다.'
+              : '카메라를 열지 못했습니다. 다른 앱이 카메라를 쓰고 있다면 닫고 다시 시도해 주세요.',
+        );
+      });
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', esc);
     return () => {
       alive = false;
       stream?.getTracks().forEach((t) => t.stop());
       window.removeEventListener('keydown', esc);
     };
-  }, []);
+  }, [facing, attempt]);
 
+  const mirrored = facing === 'user';
   function shoot() {
     const v = video.current;
     if (!v || !v.videoWidth) return;
@@ -406,24 +456,60 @@ function CameraCapture({ onShot, onClose, onFail }: { onShot: (b: Blob) => void;
     c.width = v.videoWidth;
     c.height = v.videoHeight;
     const ctx = c.getContext('2d')!;
-    // The preview is mirrored like a mirror; the saved photo is mirrored the same way.
-    ctx.translate(c.width, 0);
-    ctx.scale(-1, 1);
+    // The front camera preview is mirrored like a mirror; the photo keeps what the visitor saw.
+    if (mirrored) {
+      ctx.translate(c.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(v, 0, 0);
     c.toBlob((b) => b && onShot(b), 'image/jpeg', 0.92);
   }
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label="카메라로 촬영" className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[var(--c-ink)] p-6">
-      <video ref={video} playsInline muted className="max-h-[70vh] max-w-full -scale-x-100 rounded-[var(--radius-card)] bg-black" />
-      <div className="t-nav kr flex gap-2">
-        <button type="button" className="tag tag-ink border border-white px-5 py-3 disabled:opacity-40" disabled={!ready} onClick={shoot}>
-          촬영
-        </button>
-        <button type="button" className="tag bg-[var(--c-white)] px-5 py-3" onClick={onClose}>
+  // Rendered at the page root so it sits above the site header.
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="카메라로 촬영"
+      className="v3 fixed inset-0 z-[300] flex flex-col items-center gap-4 bg-[var(--c-ink)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
+      data-testid="camera"
+    >
+      <p className="t-caption kr self-start text-white/70">정면 전신 또는 상반신이 화면에 들어오게 찍어 주세요.</p>
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+      {problem ? (
+        <div className="max-w-sm text-center text-[var(--c-white)]">
+          <p className="t-body kr" role="alert">
+            {problem}
+          </p>
+          <div className="t-nav kr mt-6 flex flex-wrap justify-center gap-2">
+            <button type="button" className="tag bg-[var(--c-white)] px-4 py-3 text-[var(--c-ink)]" onClick={() => setAttempt((n) => n + 1)}>
+              다시 시도
+            </button>
+            <button type="button" className="tag border border-white px-4 py-3" onClick={onPick}>
+              앨범에서 고르기
+            </button>
+          </div>
+        </div>
+      ) : (
+        <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-black ${mirrored ? '-scale-x-100' : ''}`} />
+      )}
+      </div>
+      <div className="t-nav kr flex flex-wrap justify-center gap-2">
+        {!problem && (
+          <>
+            <button type="button" className="tag border border-white bg-[var(--c-white)] px-6 py-3 text-[var(--c-ink)] disabled:opacity-40" disabled={!ready} onClick={shoot}>
+              촬영
+            </button>
+            <button type="button" className="tag border border-white px-4 py-3 text-[var(--c-white)]" onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}>
+              카메라 전환
+            </button>
+          </>
+        )}
+        <button type="button" className="tag border border-white px-4 py-3 text-[var(--c-white)]" onClick={onClose}>
           닫기
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
