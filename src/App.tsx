@@ -14,7 +14,6 @@ const ProductDetail = lazy(() => import('@/pages/ProductDetail'));
 const About = lazy(() => import('@/pages/About'));
 const Materials = lazy(() => import('@/pages/Materials'));
 const Story = lazy(() => import('@/pages/Story'));
-const Again = lazy(() => import('@/pages/Again'));
 const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.SignupPage })));
 const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
@@ -62,7 +61,7 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/materials" element={<Materials />} />
             <Route path="/story" element={<Story />} />
-            <Route path="/again" element={<Again />} />
+            <Route path="/again" element={<Navigate to="/" replace />} />
             <Route path="/ai-fit/:id" element={<AiFitPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />

@@ -10,7 +10,6 @@ const TABS: { to: string; label: string; match: (path: string, search: string) =
   { to: '/products?sort=ranking', label: '랭킹', match: (p, s) => p === '/products' && s.includes('sort=ranking') },
   { to: '/products', label: '전체 상품', match: (p, s) => p === '/products' && !s.includes('sort=ranking') && !s.includes('filter=') },
   { to: '/products?filter=tryon', label: 'AI 피팅', match: (p, s) => p === '/products' && s.includes('filter=tryon') },
-  { to: '/again', label: '다시 조합', match: (p) => p === '/again' },
   { to: '/materials', label: '소재', match: (p) => p === '/materials' },
   { to: '/story', label: '스토리', match: (p) => p === '/story' },
   { to: '/about', label: '브랜드', match: (p) => p === '/about' },
@@ -92,10 +91,6 @@ export function Nav() {
             >
               <SearchIcon />
             </button>
-            <Link to="/again" className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold hover:bg-mist focus-ring lg:flex">
-              <span className="h-2 w-2 rounded-full bg-lime" aria-hidden="true" />
-              다시 조합하기
-            </Link>
             <Link
               to={user ? '/account' : '/login'}
               aria-label={user ? '내 정보' : '로그인'}
@@ -181,10 +176,6 @@ function MobileTabBar({ count, onCart }: { count: number; onCart: () => void }) 
         <GridIcon />
         상품
       </NavLink>
-      <NavLink to="/again" className={tone}>
-        <AgainIcon />
-        다시
-      </NavLink>
       <NavLink to="/about" className={tone}>
         <InfoIcon />
         브랜드
@@ -234,14 +225,6 @@ function GridIcon() {
       <rect x="13" y="4" width="7" height="7" rx="1" />
       <rect x="4" y="13" width="7" height="7" rx="1" />
       <rect x="13" y="13" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-function AgainIcon() {
-  return (
-    <svg {...iconProps}>
-      <path d="M20 12a8 8 0 1 1-2.3-5.6" />
-      <path d="M20 4v5h-5" />
     </svg>
   );
 }
