@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { CATEGORY_LABEL, useImageRatios, useRealProducts } from '../data';
+import { CATEGORY_LABEL, useRealProducts } from '../data';
 import { BrandFilmSection } from '../BrandFilm';
+import { RibbonCanvas } from '../RibbonCanvas';
 
 const STATEMENT =
   'LAGI is a curation brand that discovers, selects, introduces and connects recycled products. We do not make them ourselves — we choose products of value and help you discover them again, from a new point of view.';
@@ -8,8 +9,6 @@ const STATEMENT =
 /** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
 export default function About() {
   const { products } = useRealProducts();
-  const ratios = useImageRatios(products);
-  const ribbonRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
   const collabs = [...new Set(products.map((p) => p.brandLabel).filter((b): b is string => !!b && b.includes('×')))].map((b) => b.split('×')[1].trim());
   const categories = [...new Set(products.map((p) => p.category.value).filter(Boolean))] as string[];
@@ -20,28 +19,13 @@ export default function About() {
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const ribbon = ribbonRef.current;
-        if (ribbon) {
-          const shift = reduced ? 0 : -y * 0.6;
-          ribbon.style.transform = `translate3d(${shift.toFixed(1)}px,0,0)`;
-          // Each photo rides a wave across the screen and leans with its slope, so the row reads as a bent ribbon.
-          const vw = window.innerWidth;
-          const amp = window.innerHeight * 0.07;
-          for (const el of Array.from(ribbon.children) as HTMLElement[]) {
-            const cx = el.offsetLeft + el.offsetWidth / 2 + shift;
-            const t = (cx / vw) * Math.PI * 1.4;
-            el.style.transform = `translateY(${(Math.sin(t) * amp).toFixed(1)}px) rotate(${(Math.cos(t) * 9).toFixed(2)}deg)`;
-          }
-        }
         // The statement darkens word by word as it scrolls into place.
         const el = textRef.current;
-        if (el) {
-          const r = el.getBoundingClientRect();
-          const p = reduced ? 1 : Math.min(1, Math.max(0, (window.innerHeight * 0.85 - r.top) / (r.height + window.innerHeight * 0.35)));
-          const words = el.children;
-          for (let i = 0; i < words.length; i++) (words[i] as HTMLElement).style.opacity = i / words.length < p ? '1' : '0.25';
-        }
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const p = reduced ? 1 : Math.min(1, Math.max(0, (window.innerHeight * 0.95 - r.top) / (r.height + window.innerHeight * 0.45)));
+        const words = el.children;
+        for (let i = 0; i < words.length; i++) (words[i] as HTMLElement).style.opacity = i / words.length < p ? '1' : '0.25';
       });
     };
     onScroll();
@@ -52,31 +36,21 @@ export default function About() {
     };
   }, [products.length]);
 
-  const ribbon = [...products, ...products, ...products];
+  // Two passes of the real products' main photos, so the band never shows the same one twice in view.
+  const ribbon = [...products, ...products].map((p) => ({ src: p.images[0] })).filter((i) => !!i.src);
 
   return (
-    <div className="pb-32 pt-page">
-      <h1 className="t-display px-page">
-        LAGI
-        <br />
-        in AGAIN
-      </h1>
+    <div className="pb-32">
+      <section className="relative h-[100svh] min-h-[560px] overflow-hidden" aria-label="LAGI in AGAIN">
+        {ribbon.length > 0 && <RibbonCanvas images={ribbon} className="absolute inset-0" />}
+        <h1 className="t-display pointer-events-none relative z-10 px-page pt-page lg:pl-[8%]">
+          LAGI
+          <br />
+          in AGAIN
+        </h1>
+      </section>
 
-      <div className="mt-12 overflow-hidden lg:mt-16" aria-hidden="true">
-        <div ref={ribbonRef} className="flex w-max items-center gap-1 py-[8vh] pl-[10vw] will-change-transform">
-          {ribbon.map((p, i) => (
-            <img
-              key={`${p.id}-${i}`}
-              src={p.images[0]}
-              alt=""
-              className="block h-[26vh] w-auto rounded-[var(--radius-card)] object-cover lg:h-[34vh]"
-              style={{ aspectRatio: ratios[p.id] ?? 1 }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <p ref={textRef} className="t-h1 mt-20 px-page lg:ml-[33%] lg:mt-28 lg:w-[60%]">
+      <p ref={textRef} className="t-h1 relative z-10 -mt-[14svh] px-page lg:ml-[48%] lg:w-[48%] lg:-mt-[20svh]">
         {STATEMENT.split(' ').map((w, i) => (
           <span key={i} className="transition-opacity duration-300">
             {w}{' '}
