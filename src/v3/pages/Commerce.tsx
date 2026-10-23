@@ -352,7 +352,7 @@ export function CheckoutPage() {
                   <input type="checkbox" className="mt-1" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
                   <span>주문 상품, 금액, 배송 정보를 확인했으며 결제 진행에 동의합니다.</span>
                 </label>
-                <button type="button" onClick={toPayment} disabled={busy} className="t-nav tag tag-ink kr mt-5 w-full px-5 py-4 text-center disabled:opacity-50">
+                <button type="button" onClick={toPayment} disabled={busy} className="t-nav tag btn-solid kr mt-5 w-full px-5 py-4 text-center disabled:opacity-50">
                   {busy ? '주문서 만드는 중…' : '결제 수단 선택'}
                 </button>
               </>
@@ -361,7 +361,7 @@ export function CheckoutPage() {
                 <p className="t-caption kr mt-6 text-[var(--c-mute)]">주문번호 {order.orderId}</p>
                 <div id="toss-methods" className="mt-3 bg-[var(--c-white)]" />
                 <div id="toss-agreement" className="bg-[var(--c-white)]" />
-                <button type="button" onClick={pay} disabled={busy || !widgetReady} className="t-nav tag tag-ink kr mt-4 w-full px-5 py-4 text-center disabled:opacity-50">
+                <button type="button" onClick={pay} disabled={busy || !widgetReady} className="t-nav tag btn-solid kr mt-4 w-full px-5 py-4 text-center disabled:opacity-50">
                   {price(order.amount)} 결제하기
                 </button>
                 <button

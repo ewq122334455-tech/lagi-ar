@@ -30,12 +30,12 @@ function useFilmControls() {
 
 function Controls({ playing, muted, toggle, toggleSound }: { playing: boolean; muted: boolean; toggle: () => void; toggleSound: () => void }) {
   return (
-    <div className="t-nav kr flex gap-1">
+    <div className="t-nav t-mark flex gap-3">
       <button type="button" onClick={toggle} className="tag tag-ink">
-        {playing ? '일시정지' : '재생'}
+        {playing ? 'Pause' : 'Play'}
       </button>
-      <button type="button" onClick={toggleSound} className="tag bg-[var(--c-white)]">
-        {muted ? '소리 켜기' : '소리 끄기'}
+      <button type="button" onClick={toggleSound} className="tag tag-ink">
+        {muted ? 'Sound on' : 'Sound off'}
       </button>
     </div>
   );
@@ -52,7 +52,7 @@ export function BrandFilmSection() {
     return () => io.disconnect();
   }, [f.ref]);
   return (
-    <section id="film" aria-label="브랜드 영상" className="px-page">
+    <section id="film" aria-label="Brand film" className="px-page">
       <div className="rule flex items-baseline justify-between pt-4">
         <h2 className="t-label t-mark">LAGI FILM</h2>
         <Controls {...f} />
@@ -84,13 +84,13 @@ export function BrandFilmOverlay({ onClose }: { onClose: () => void }) {
   }, [f.ref, onClose]);
   // Rendered at the top of the document (inside a .v3 wrapper for the tokens) so it covers the site header.
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="브랜드 영상" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-ink)] px-page pb-5 pt-5">
+    <div role="dialog" aria-modal="true" aria-label="Brand film" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-ink)] px-page pb-5 pt-5">
       <div className="flex items-center justify-between">
         <p className="t-label t-mark text-[var(--c-white)]">LAGI FILM</p>
-        <div className="flex gap-1">
+        <div className="flex gap-3 text-[var(--c-white)]">
           <Controls {...f} />
-          <button type="button" onClick={onClose} className="t-nav tag bg-[var(--c-white)]" autoFocus>
-            닫기
+          <button type="button" onClick={onClose} className="t-nav t-mark tag tag-ink text-[var(--c-white)]" autoFocus>
+            Close
           </button>
         </div>
       </div>

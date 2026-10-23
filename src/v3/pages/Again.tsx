@@ -292,7 +292,7 @@ export default function Again() {
             </h2>
             <div className="t-nav kr mt-4 flex flex-wrap gap-2">
               {styles.map((s) => (
-                <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'tag-ink' : 'bg-[var(--c-label)]'}`}>
+                <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'bg-[var(--c-white)] font-bold outline outline-2 -outline-offset-2 outline-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`}>
                   {s.label}
                 </button>
               ))}
@@ -313,7 +313,7 @@ export default function Again() {
               type="button"
               onClick={run}
               disabled={!photo || !product || busy || !consent}
-              className="t-nav tag tag-ink kr mt-5 px-5 py-3.5 disabled:cursor-not-allowed disabled:opacity-40"
+              className="t-nav tag btn-solid kr mt-5 px-5 py-3.5 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy ? '합성 중…' : result ? '같은 사진으로 다시 합성' : 'AI 이미지 합성'}
             </button>

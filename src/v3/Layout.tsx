@@ -93,7 +93,7 @@ function Header() {
             <NavLink
               key={n.to}
               to={n.to}
-              className={`tag t-mark ${n.to === '/again' ? 'tag-ink' : ''}`}
+              className="tag t-mark"
               aria-current={pathname.startsWith(n.to) ? 'page' : undefined}
             >
               {n.label}
@@ -124,7 +124,7 @@ function Header() {
           <nav className="mt-10 flex flex-col items-start gap-4" aria-label="모바일 메뉴">
             {[{ to: '/', label: 'Home', kr: '홈' }, ...NAV].map((n) => (
               <Link key={n.to} to={n.to} className="flex items-baseline gap-3">
-                <span className={`t-h2 t-mark px-2 pb-0.5 pt-1.5 ${n.to === '/again' ? 'bg-[var(--c-ink)] text-[var(--c-white)]' : 'bg-[var(--c-label)]'}`}>{n.label}</span>
+                <span className="t-h2 t-mark bg-[var(--c-label)] px-2 pb-0.5 pt-1.5">{n.label}</span>
                 <span className="t-caption kr text-[var(--c-mute)]">{n.kr}</span>
               </Link>
             ))}
