@@ -1,4 +1,16 @@
 /*
+ * NEW SITE (v3) — Hangul: Yoon 윤고딕 100 Std (Yoon가변 윤고딕100Std_OTF).
+ * With a web licence from Yoon Design, convert the OTF to WOFF2 (one file per weight you use:
+ * 400 and 700), put them in this folder and uncomment:
+ *
+ * @font-face { font-family: 'LAGI Hangul'; src: url('./YoonGothic100Std-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+ * @font-face { font-family: 'LAGI Hangul'; src: url('./YoonGothic100Std-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+ *
+ * Until then the site uses the font only on computers where it is installed, and Pretendard elsewhere.
+ * Latin (Posterama 2001) already loads from the Adobe Fonts kit.
+ */
+
+/*
  * LAGI brand fonts (self-hosted).
  *
  * Posterama 2001 (Latin) and 윤고딕 / Yoon Gothic (Hangul) are licensed fonts. Once you have a

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { WHY_LAGI, WHY_LAGI_RULE_EN } from '@/content/whyLagi';
+import { PRODUCT_DETAILS } from '@/content/productDetails';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, price, shippingText, useImageRatios, useRealProducts } from '../data';
 
 /**
@@ -35,6 +36,7 @@ export default function ProductPage() {
   const d = p.dimensions;
   const size = d.widthCm ? `${d.widthCm} × ${d.heightCm ?? '—'} × ${d.depthCm ?? '—'} cm` : null;
   const brandLine = p.brandLabel ?? 'LAGI';
+  const detail = PRODUCT_DETAILS[p.id];
 
   const meta: [string, string | null][] = [
     ['Price', price(p.price.value)],
@@ -133,6 +135,38 @@ export default function ProductPage() {
           </section>
         </div>
       </div>
+
+      {detail && (
+        <section className="rule mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 pt-4 md:grid-cols-12 lg:mt-36" aria-labelledby="details-title">
+          <h2 id="details-title" className="t-label md:col-span-12">
+            DETAILS
+          </h2>
+          <div className="space-y-5 md:col-span-7">
+            {detail.overview.map((t) => (
+              <p key={t} className="t-lead">
+                {t}
+              </p>
+            ))}
+          </div>
+          <dl className="md:col-span-4 md:col-start-9">
+            {(
+              [
+                ['Material', detail.material],
+                ['Use', detail.use],
+                ['Size (W × H × D)', size],
+                ['Made with', brandLine.includes('×') ? brandLine.split('×')[1].trim() : null],
+              ] as [string, string | null][]
+            )
+              .filter(([, v]) => v)
+              .map(([k, v]) => (
+                <div key={k} className="rule-1 flex items-baseline justify-between gap-6 py-3">
+                  <dt className="t-label text-[var(--c-mute)]">{k}</dt>
+                  <dd className="t-value text-right">{v}</dd>
+                </div>
+              ))}
+          </dl>
+        </section>
+      )}
 
       {next && next.id !== p.id && (
         <Link to={`/product/${next.id}`} className="t-display mt-28 block hover:text-[var(--c-blue)] lg:mt-40">

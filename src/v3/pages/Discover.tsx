@@ -51,7 +51,7 @@ export default function Discover() {
                 />
               </span>
               <span className="rule-1 mt-3 flex items-baseline justify-between gap-4 pt-2">
-                <span className="t-body">{p.name.value}</span>
+                <span className="t-value">{p.name.value}</span>
                 <span className="t-label shrink-0 tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</span>
               </span>
             </Link>

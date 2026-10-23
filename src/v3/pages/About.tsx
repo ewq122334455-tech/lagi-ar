@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { CATEGORY_LABEL, useImageRatios, useRealProducts } from '../data';
+import { BrandFilmSection } from '../BrandFilm';
 
 const STATEMENT =
   'LAGI is a curation brand that discovers, selects, introduces and connects recycled products. We do not make them ourselves — we choose products of value and help you discover them again, from a new point of view.';
@@ -83,9 +84,13 @@ export default function About() {
         ))}
       </p>
 
+      <div className="mt-24 lg:mt-36">
+        <BrandFilmSection />
+      </div>
+
       <section className="rule mx-[var(--page-x)] mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 pt-6 lg:mt-36 lg:grid-cols-12 [&>*]:min-w-0">
-        <h2 className="t-h1 lg:col-span-5">Information</h2>
-        <div className="lg:col-span-3">
+        <h2 className="t-h1 lg:col-span-12">Information</h2>
+        <div className="lg:col-span-4">
           <h3 className="t-h3">Role</h3>
           <ul className="t-body mt-4 text-[var(--c-mute)]">
             {['Discover', 'Select', 'Introduce', 'Connect'].map((r) => (
@@ -93,7 +98,7 @@ export default function About() {
             ))}
           </ul>
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-4">
           <h3 className="t-h3">Categories</h3>
           <ul className="t-body mt-4 text-[var(--c-mute)]">
             {categories.map((c) => (
@@ -102,7 +107,7 @@ export default function About() {
           </ul>
         </div>
         {collabs.length > 0 && (
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-4">
             <h3 className="t-h3">Collaboration</h3>
             <ul className="t-body mt-4 text-[var(--c-mute)]">
               {collabs.map((c) => (
