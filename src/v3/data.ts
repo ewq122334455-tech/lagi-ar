@@ -33,12 +33,17 @@ export function useImageRatios(products: Product[]) {
   return ratios;
 }
 
-/** Korean category names for the store's category values. */
-export const CATEGORY_KO: Record<string, string> = { Bag: '가방', 'Acc.': '소품', Acc: '소품' };
+/** Display names for the store's category values. */
+export const CATEGORY_LABEL: Record<string, string> = { Bag: 'Bags', 'Acc.': 'Accessories', Acc: 'Accessories' };
 
 export const OFFICIAL_LINKS = {
   store: 'https://smartstore.naver.com/lagi_official',
   instagram: 'https://www.instagram.com/lagi.official/',
 } as const;
 
-export const price = (n: number | null | undefined) => (n == null ? '' : `${n.toLocaleString('ko-KR')}원`);
+export const price = (n: number | null | undefined) => (n == null ? '' : `₩${n.toLocaleString('en-US')}`);
+
+export function shippingText(s: { fee: number; freeOver?: number }) {
+  if (s.fee === 0) return 'Free shipping';
+  return `${price(s.fee)}${s.freeOver ? ` · free over ${price(s.freeOver)}` : ''}`;
+}
