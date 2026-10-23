@@ -158,7 +158,11 @@ button {
 }
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
-  [class*='lagi-rise'], [class*='lagi-pop'], [class*='lagi-float'], [class*='lagi-fade'] { animation: none !important; }
+  [class*='lagi-unveil'], [class*='lagi-rise'], [class*='lagi-pop'], [class*='lagi-float'], [class*='lagi-fade'] { animation: none !important; }
+}
+@keyframes lagi-unveil {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
 }
 @keyframes lagi-marquee {
   from { transform: translateX(0); }

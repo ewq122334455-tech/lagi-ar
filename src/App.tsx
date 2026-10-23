@@ -18,6 +18,7 @@ const Again = lazy(() => import('@/pages/Again'));
 const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.SignupPage })));
 const AccountPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.AccountPage })));
+const RedesignHome = lazy(() => import('@/redesign/RedesignHome'));
 const AiFitPage = lazy(() => import('@/pages/AiFitPage'));
 const Exhibition = lazy(() => import('@/pages/Exhibition'));
 const Cart = lazy(() => import('@/pages/Cart'));
@@ -71,6 +72,7 @@ export default function App() {
           </Route>
           <Route path="/try-on/:id" element={<TryOnRedirect />} />
           <Route path="/exhibition" element={<Exhibition />} />
+          <Route path="/v2" element={<RedesignHome />} />
         </Routes>
       </Suspense>
       </CartProvider>
