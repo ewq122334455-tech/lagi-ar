@@ -62,3 +62,6 @@ npx wrangler deploy                       # ORDERS 저장소 자동 생성
 - 처음 쓰는 상품은 Gemini 호출이 1번 더 들어 조금 느리고 비용도 1회분 더 든다. 이후에는 저장된 것을 쓴다.
 - 실패하면 `reason`(busy / blocked / no_image)을 함께 돌려주고, 사이트가 이유별로 안내한다.
 - 반영하려면 `npx wrangler deploy` (MEDIA 저장소는 자동 생성).
+
+## 자동 배포
+main에 `server/tryon-worker/` 변경이 올라가면 GitHub Actions(`.github/workflows/deploy-worker.yml`)가 Cloudflare에 배포한다. 저장소 비밀값 `CLOUDFLARE_API_TOKEN`(Cloudflare "Workers 편집" 템플릿 토큰)이 필요하다.
