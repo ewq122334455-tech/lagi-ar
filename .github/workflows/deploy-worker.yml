@@ -1,0 +1,40 @@
+# Deploys the AI / members / orders server (server/tryon-worker) to Cloudflare whenever it changes on main.
+# Needs one repository secret: CLOUDFLARE_API_TOKEN (Cloudflare → My Profile → API Tokens → "Edit Cloudflare Workers").
+# Without it the job only prints a notice — the website deploy is not affected.
+name: Deploy AI server (Cloudflare Worker)
+
+on:
+  push:
+    branches: [main]
+    paths: ['server/tryon-worker/**']
+  workflow_dispatch:
+
+concurrency:
+  group: worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for the Cloudflare token
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set — skipping the AI server deploy."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+      - uses: cloudflare/wrangler-action@v3
+        if: steps.token.outputs.ok == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: server/tryon-worker
+          wranglerVersion: '4'
+          command: deploy
