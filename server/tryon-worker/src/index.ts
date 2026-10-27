@@ -26,6 +26,8 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
+  /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
+  RELAY?: { idFromName(name: string): unknown; get(id: unknown, opts?: { locationHint?: string }): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   /** Product cut-outs (product alone on white), made once per product photo. Optional. */
   MEDIA?: KV;
   /** Orders. Bound in wrangler.toml ([[kv_namespaces]] ORDERS). */
@@ -536,6 +538,54 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * overloaded (429/503) or blocks one attempt; asking again usually works, so up to three tries are
  * made before giving up. The first try asks for an image only, later tries also allow text.
  */
+/**
+ * Gemini's image model refuses calls from some locations ("User location is not supported for
+ * the API use"). Calls therefore go through GeminiRelay, a Durable Object created in the western
+ * US: wherever the visitor is, the request to Google leaves from there. Without the binding (e.g.
+ * local tests) the call is made directly.
+ */
+async function callGemini(env: Env, body: string): Promise<Response> {
+  if (env.RELAY) {
+    const stub = env.RELAY.get(env.RELAY.idFromName('gemini-us-west'), { locationHint: 'wnam' });
+    return stub.fetch('https://relay/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-model': env.GEMINI_MODEL }, body });
+  }
+  return geminiFetch(env.GEMINI_API_KEY, env.GEMINI_MODEL, body);
+}
+
+function geminiFetch(key: string, model: string, body: string) {
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body,
+  });
+}
+
+/** Where a request leaves Cloudflare from (colo and country), for the failure note. */
+async function egress(): Promise<string> {
+  try {
+    const t = await (await fetch('https://cloudflare.com/cdn-cgi/trace')).text();
+    return `${/colo=(\w+)/.exec(t)?.[1] ?? '?'}/${/loc=(\w+)/.exec(t)?.[1] ?? '?'}`;
+  } catch {
+    return '?';
+  }
+}
+
+/** Durable Object that makes the Gemini call from its own (western US) location. */
+export class GeminiRelay {
+  constructor(
+    private state: unknown,
+    private env: Env,
+  ) {}
+
+  async fetch(request: Request): Promise<Response> {
+    const res = await geminiFetch(this.env.GEMINI_API_KEY, request.headers.get('x-model') || this.env.GEMINI_MODEL, await request.text());
+    const headers = new Headers(res.headers);
+    // On a refusal, say where the call left from — the visible clue when location is the problem.
+    if (!res.ok) headers.set('x-lagi-egress', `relay ${await egress()}`);
+    return new Response(res.body, { status: res.status, headers });
+  }
+}
+
 type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string };
 
 // People photos trip the general filters more often than they should; only clearly harmful content is blocked.
@@ -554,23 +604,19 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult>
       attempt > 0 && reason === 'no_image'
         ? [...parts, { text: 'Respond with the edited image only. Do not reply with text; always return an image.' }]
         : parts;
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: askParts }],
-          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
-          safetySettings: SAFETY,
-        }),
-      },
+    const res = await callGemini(
+      env,
+      JSON.stringify({
+        contents: [{ role: 'user', parts: askParts }],
+        generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+        safetySettings: SAFETY,
+      }),
     );
     if (!res.ok) {
       const text = (await res.text()).slice(0, 300);
       console.log('gemini error', attempt, res.status, text);
       reason = res.status === 429 || res.status === 503 ? 'busy' : 'error';
-      detail = `HTTP ${res.status} ${(/"message":\s*"([^"]{0,120})/.exec(text)?.[1] ?? '').trim()}`;
+      detail = `HTTP ${res.status} ${(/"message":\s*"([^"]{0,120})/.exec(text)?.[1] ?? '').trim()} [via ${res.headers.get('x-lagi-egress') ?? 'direct'}]`;
       // A bad request will not get better by repeating it — unless it was the image-only setting.
       if (res.status === 400 && attempt > 0) return { reason, detail };
       continue;

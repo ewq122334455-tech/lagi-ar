@@ -28,3 +28,13 @@ binding = "ORDERS"
 # Product cut-outs for the AI fitting (product alone on white, one per photo). Auto-created on deploy.
 [[kv_namespaces]]
 binding = "MEDIA"
+
+# Gemini relay: a Durable Object created in the western US, so calls to Gemini always leave from
+# there (Gemini refuses image calls from some visitor locations).
+[[durable_objects.bindings]]
+name = "RELAY"
+class_name = "GeminiRelay"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GeminiRelay"]
