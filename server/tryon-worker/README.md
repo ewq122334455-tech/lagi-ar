@@ -64,4 +64,4 @@ npx wrangler deploy                       # ORDERS 저장소 자동 생성
 - 반영하려면 `npx wrangler deploy` (MEDIA 저장소는 자동 생성).
 
 ## 자동 배포
-main에 `server/tryon-worker/` 변경이 올라가면 GitHub Actions(`.github/workflows/deploy-worker.yml`)가 Cloudflare에 배포한다. 저장소 비밀값 `CLOUDFLARE_API_TOKEN`(Cloudflare "Workers 편집" 템플릿 토큰)이 필요하다.
+main에 `server/tryon-worker/` 변경이 올라가면(또는 Actions 탭에서 직접 실행하면) GitHub Actions(`.github/workflows/deploy-worker.yml`)가 Cloudflare에 배포한다. 저장소 비밀값 `CLOUDFLARE_API_TOKEN`(Cloudflare "Workers 편집" 템플릿 토큰)이 필요하다.
