@@ -2,6 +2,13 @@ name = "lagi-tryon"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Run the Worker next to Google's US region instead of the visitor's nearest Cloudflare location.
+# Gemini's image model refuses calls from some locations ("User location is not supported for the
+# API use") — e.g. when a visitor in Korea is served from a nearby Cloudflare data centre.
+[placement]
+mode = "targeted"
+region = "gcp:us-central1"
+
 [vars]
 # Gemini image model. If Google renames it, change this and redeploy (see README).
 GEMINI_MODEL = "gemini-2.5-flash-image"
