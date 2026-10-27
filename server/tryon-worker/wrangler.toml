@@ -17,3 +17,7 @@ binding = "USERS"
 # On-site orders (address + payment). Same auto-provisioning as USERS.
 [[kv_namespaces]]
 binding = "ORDERS"
+
+# Product cut-outs for the AI fitting (product alone on white, one per photo). Auto-created on deploy.
+[[kv_namespaces]]
+binding = "MEDIA"

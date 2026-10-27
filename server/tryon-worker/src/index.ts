@@ -26,6 +26,8 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
+  /** Product cut-outs (product alone on white), made once per product photo. Optional. */
+  MEDIA?: KV;
   /** Orders. Bound in wrangler.toml ([[kv_namespaces]] ORDERS). */
   ORDERS?: KV;
   /** Where the published product data lives, e.g. "https://…github.io/lagi-ar/products/". Prices come from here. */
@@ -92,22 +94,46 @@ function toBase64(buf: ArrayBuffer) {
   return btoa(bin);
 }
 
-function buildPrompt(r: TryOnRequest) {
+function buildPrompt(r: TryOnRequest, cutout: boolean) {
   r = { ...r, style: r.style?.slice(0, 200), productName: r.productName?.slice(0, 120) };
   const what = [r.productName, r.category].filter(Boolean).join(', ');
   return [
-    'You are a virtual fitting room. Image 1 is a photo of a person. Image 2 shows a product' + (what ? ` (${what})` : '') + '.',
-    'Create one photorealistic photo of the SAME person from image 1 naturally wearing or carrying the product from image 2' +
-      (r.style ? `, ${r.style}` : '') +
-      '.',
-    "Keep the person's face, identity, body shape, pose, hair and the background exactly as in image 1, and keep the rest of their outfit unchanged.",
-    'Reproduce the product faithfully: same shape, colours, prints, text, materials, hardware and proportions as in image 2. Ignore any person or background in image 2.',
-    r.size
-      ? `The product's real size is ${r.size}; scale it realistically to the person's body.`
-      : 'Scale the product realistically to the body.',
+    'You are a virtual fitting room. Image 1 is a photo of a person. Image 2 shows ONLY a product' + (what ? ` (${what})` : '') + (cutout ? ' on a plain background.' : '.'),
+    'Create one photorealistic photo of the SAME person from image 1 naturally wearing or carrying that product' + (r.style ? `, ${r.style}` : '') + '.',
+    "Keep the person's face, identity, body shape, hair, clothing and the background exactly as in image 1. Change their arm and hand position only as much as needed to hold or wear the product.",
+    // The most common failure: an extra hand or arm copied from the product photo, or grown to hold the product.
+    'ANATOMY RULES: the person has exactly two arms and two hands, each with five fingers, attached naturally at the shoulders. Never add a third hand, arm or finger, and never show a hand that does not belong to this person. Use only image 2 as a reference for the product itself; take no hands, arms, bodies or background from it. If the product is held, it is held by one of the person\'s own hands.',
+    'Reproduce the product faithfully: same shape, colours, prints, text, materials, hardware and proportions as in image 2.',
+    r.size ? `The product's real size is ${r.size}; scale it realistically to the person's body.` : 'Scale the product realistically to the body.',
     'Match the lighting, perspective and shadows of image 1 so the product looks physically present (straps resting on the shoulder or held in the hand, natural contact shadows).',
     'Return only the edited photo.',
   ].join(' ');
+}
+
+const CUTOUT_PROMPT = [
+  'This photo shows a product, possibly worn or held by a person.',
+  'Output a clean product photo of ONLY that product: the whole product, complete and unobstructed, seen from the front, centred on a plain white background.',
+  'Remove every person, hand, arm, finger and background. Where a hand covered the product, restore the hidden part so it matches the rest.',
+  'Keep the product exactly as it is: same shape, colours, prints, text, materials, hardware and proportions. Do not redesign it.',
+  'Return only the image.',
+].join(' ');
+
+/**
+ * Product photos on the site often show someone wearing or holding the product. Sent as they are,
+ * the AI tends to copy that person's hand into the result (the "third hand"). So the product is
+ * first isolated on white — once per photo, kept in KV — and the fitting uses that cut-out.
+ */
+async function productCutout(env: Env, url: string, product: { mime: string; data: string }): Promise<{ cut?: { mime: string; data: string }; busy?: boolean }> {
+  const key = `cutout:v1:${url}`;
+  const cached = await env.MEDIA?.get(key);
+  if (cached) return { cut: JSON.parse(cached) as { mime: string; data: string } };
+  const out = await geminiImage(env, [{ text: CUTOUT_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  if (!out.image) return { busy: out.reason === 'busy' };
+  const m = /^data:([^;]+);base64,(.+)$/.exec(out.image);
+  if (!m) return {};
+  const cut = { mime: m[1], data: m[2] };
+  await env.MEDIA?.put(key, JSON.stringify(cut));
+  return { cut };
 }
 
 // ---- Members: sign-up / log-in --------------------------------------------------------------
@@ -459,13 +485,26 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   const product = await fetchProductImage(body.productImage, allowed);
   if ('error' in product) return json({ error: product.error }, product.status, headers);
 
-  const image = await geminiImage(env, [
-    { text: buildPrompt(body) },
+  // Falls back to the original photo if the cut-out could not be made this time.
+  const { cut: cutout, busy } = await productCutout(env, body.productImage, product);
+  // Gemini is over its limit right now — asking again for the fitting would only wait longer.
+  if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
+  const ref = cutout ?? product;
+  const out = await geminiImage(env, [
+    { text: buildPrompt(body, !!cutout) },
     { inline_data: { mime_type: person.mime, data: person.data } },
-    { inline_data: { mime_type: product.mime, data: product.data } },
+    { inline_data: { mime_type: ref.mime, data: ref.data } },
   ]);
-  if (!image) return json({ error: '이번에는 AI가 이미지를 만들지 못했습니다. 얼굴과 몸이 잘 보이는 밝은 사진으로 다시 시도해 주세요.' }, 502, headers);
-  return json({ image }, 200, headers);
+  if (!out.image) {
+    const message =
+      out.reason === 'busy'
+        ? 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.'
+        : out.reason === 'blocked'
+          ? 'AI가 이 사진은 처리하지 않았습니다. 한 사람만, 얼굴과 몸이 잘 보이는 다른 사진으로 시도해 주세요.'
+          : '이번에는 AI가 이미지를 만들지 못했습니다. 밝고 정면에서 찍은 사진으로 다시 시도해 주세요.';
+    return json({ error: message, reason: out.reason }, out.reason === 'busy' ? 503 : 502, headers);
+  }
+  return json({ image: out.image }, 200, headers);
 }
 
 /** Fetches a product photo — only ever from the LAGI site itself, never an arbitrary URL. */
@@ -496,9 +535,12 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * overloaded (429/503) or blocks one attempt; asking again usually works, so up to three tries are
  * made before giving up. The first try asks for an image only, later tries also allow text.
  */
-async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null> {
+type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error' };
+
+async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult> {
+  let reason: GeminiResult['reason'] = 'no_image';
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt) await new Promise((r) => setTimeout(r, 800 * attempt));
+    if (attempt) await new Promise((r) => setTimeout(r, reason === 'busy' ? 2000 * attempt : 800 * attempt));
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
       {
@@ -512,11 +554,13 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null
     );
     if (!res.ok) {
       console.log('gemini error', attempt, res.status, (await res.text()).slice(0, 300));
+      reason = res.status === 429 || res.status === 503 ? 'busy' : 'error';
       // A bad request will not get better by repeating it — unless it was the image-only setting.
-      if (res.status === 400 && attempt > 0) return null;
+      if (res.status === 400 && attempt > 0) return { reason };
       continue;
     }
     const result = (await res.json()) as {
+      promptFeedback?: { blockReason?: string };
       candidates?: {
         finishReason?: string;
         content?: { parts?: { inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
@@ -524,9 +568,14 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<string | null
     };
     for (const part of result.candidates?.[0]?.content?.parts ?? []) {
       const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
-      if (img?.data) return `data:${img.mimeType};base64,${img.data}`;
+      if (img?.data) return { image: `data:${img.mimeType};base64,${img.data}` };
     }
-    console.log('gemini no image', attempt, result.candidates?.[0]?.finishReason);
+    const finish = result.candidates?.[0]?.finishReason ?? '';
+    const blocked = !!result.promptFeedback?.blockReason || /SAFETY|PROHIBITED|BLOCKLIST|RECITATION/.test(finish);
+    console.log('gemini no image', attempt, finish, result.promptFeedback?.blockReason);
+    reason = blocked ? 'blocked' : 'no_image';
+    // The same photo will be blocked again; stop early.
+    if (blocked && attempt >= 1) return { reason };
   }
-  return null;
+  return { reason };
 }

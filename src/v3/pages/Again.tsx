@@ -114,8 +114,9 @@ export default function Again() {
           img = await ask();
           break;
         } catch (e) {
-          const status = (e as { status?: number }).status;
-          const retryable = !ctrl.signal.aborted && (e instanceof TypeError || status == null || status >= 500 || status === 429);
+          const { status, reason } = e as { status?: number; reason?: string };
+          // A photo the AI refused will be refused again — only server hiccups are retried.
+          const retryable = !ctrl.signal.aborted && reason !== 'blocked' && (e instanceof TypeError || status == null || status >= 500 || status === 429);
           if (!retryable || attempt >= RETRIES) throw e;
           setRetrying(true);
           await new Promise((r) => setTimeout(r, status === 429 ? 4000 : 1500));
@@ -227,7 +228,7 @@ export default function Again() {
             {busy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-ink)]/75 text-[var(--c-white)]" role="status">
                 <p className="t-value kr">이미지를 합성하고 있습니다… {elapsed}초</p>
-                <p className="t-caption kr text-white/80">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초 걸립니다.'}</p>
+                <p className="t-caption kr text-white/80">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초, 처음 고른 제품은 조금 더 걸립니다.'}</p>
                 <button type="button" className="t-caption kr tag bg-[var(--c-white)] text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
                   취소
                 </button>
