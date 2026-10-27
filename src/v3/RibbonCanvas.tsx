@@ -3,10 +3,26 @@ import * as THREE from 'three';
 
 export interface RibbonImage {
   src: string;
+  /** Edge print under the frame, e.g. the product name and price. */
+  caption?: string;
+  /** Where clicking the frame goes. */
+  href?: string;
+  /** Accessible name for the frame's link. */
+  label?: string;
 }
 
-/** Strip height in the texture atlas, in pixels. Each photo keeps its own ratio inside it. */
-const ATLAS_H = 512;
+/*
+ * LAGI film: the band is a strip of film stock. Each frame is one product photo (at its own ratio)
+ * between two black edges. The edges carry POINT-dot perforations and an edge print —
+ * "LAGI in AGAIN", the frame number, and the product.
+ */
+const PHOTO_H = 512;
+const EDGE = 76;
+const GAP = 14;
+const ATLAS_H = PHOTO_H + EDGE * 2;
+const INK = '#0f0f0f';
+const HOLE = '#f1f1f1';
+const BLUE = '#1d5198';
 
 /**
  * Path of the ribbon, in units of the visible half-width (x) / half-height (y) at z = 0.
@@ -72,24 +88,77 @@ function loadImage(src: string) {
   });
 }
 
-/** Lays the photos end to end at one height, each at its natural ratio (never stretched). */
-async function buildAtlas(images: RibbonImage[]) {
-  const loaded = (await Promise.all(images.map((i) => loadImage(i.src)))).filter((i): i is HTMLImageElement => !!i && i.naturalWidth > 0);
+interface Atlas {
+  canvas: HTMLCanvasElement;
+  /** Left edge of each frame in the atlas, plus the total width at the end. */
+  starts: number[];
+  /** Which input image each frame shows. */
+  index: number[];
+}
+
+/** Lays the frames end to end on film stock: photo at its natural ratio, edges, perforations, edge print. */
+async function buildAtlas(images: RibbonImage[]): Promise<Atlas | null> {
+  const loaded = (await Promise.all(images.map((i) => loadImage(i.src)))).map((img, i) => ({ img, i })).filter((x) => !!x.img && x.img.naturalWidth > 0) as {
+    img: HTMLImageElement;
+    i: number;
+  }[];
   if (!loaded.length) return null;
-  const widths = loaded.map((img) => Math.round((img.naturalWidth / img.naturalHeight) * ATLAS_H));
+  await document.fonts?.ready.catch(() => undefined);
+  const widths = loaded.map(({ img }) => Math.round((img.naturalWidth / img.naturalHeight) * PHOTO_H) + GAP);
   const total = Math.min(widths.reduce((a, b) => a + b, 0), 8192);
   const canvas = document.createElement('canvas');
   canvas.width = total;
   canvas.height = ATLAS_H;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, total, ATLAS_H);
+
+  // Perforations: POINT dots running the whole length of both edges.
+  const pitch = 34;
+  for (let x = pitch / 2; x < total; x += pitch) {
+    for (const y of [20, ATLAS_H - 20]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = HOLE;
+      ctx.fill();
+    }
+  }
+
+  const starts: number[] = [];
+  const index: number[] = [];
   let x = 0;
-  loaded.forEach((img, i) => {
+  loaded.forEach(({ img, i }, n) => {
     if (x >= total) return;
-    ctx.drawImage(img, x, 0, widths[i], ATLAS_H);
-    x += widths[i];
+    starts.push(x);
+    index.push(i);
+    const w = widths[n] - GAP;
+    const px = x + GAP / 2;
+    ctx.drawImage(img, px, EDGE, w, PHOTO_H);
+    // Edge print above the frame: brand + frame number, the number in LAGI blue.
+    const num = String(n + 1).padStart(2, '0');
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = "700 17px 'posterama-2001', 'Posterama 2001', 'Pretendard Variable', Pretendard, sans-serif";
+    ctx.fillStyle = BLUE;
+    ctx.beginPath();
+    ctx.arc(px + 8, EDGE - 19, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${num}`, px + 22, EDGE - 13);
+    ctx.globalAlpha = 0.8;
+    ctx.fillText('LAGI IN AGAIN', px + 58, EDGE - 13);
+    ctx.globalAlpha = 1;
+    // Edge print below: the product.
+    const caption = images[i].caption;
+    if (caption) {
+      ctx.font = "600 17px 'Pretendard Variable', Pretendard, sans-serif";
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(caption, px + 4, EDGE + PHOTO_H + 26, w - 8);
+    }
+    x += widths[n];
   });
-  return canvas;
+  starts.push(x);
+  return { canvas, starts, index };
 }
 
 /** Positions and normals along the path. The band faces the camera, then twists around the path. */
@@ -147,9 +216,12 @@ function buildGeometry(halfW: number, halfH: number, bandW: number, segments = 3
  * flow along the band slowly on their own and faster with scrolling. Falls back to a plain row
  * when WebGL is not available.
  */
-export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]; className?: string }) {
+export function RibbonCanvas({ images, className = '', onSelect }: { images: RibbonImage[]; className?: string; onSelect?: (href: string) => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  const [hover, setHover] = useState<{ x: number; y: number; text: string } | null>(null);
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
   const key = images.map((i) => i.src).join('|');
 
   useEffect(() => {
@@ -181,7 +253,9 @@ export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
     scene.add(mesh);
     let atlasAspect = 1;
+    let atlas: Atlas | null = null;
     let disposed = false;
+    let hovering = false;
 
     const layout = () => {
       const w = host.clientWidth;
@@ -202,8 +276,10 @@ export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]
       uniforms.uRepeat.value = length / bandW / atlasAspect;
     };
 
-    buildAtlas(images).then((canvas) => {
-      if (disposed || !canvas) return;
+    buildAtlas(images).then((built) => {
+      if (disposed || !built) return;
+      atlas = built;
+      const canvas = built.canvas;
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.RepeatWrapping;
@@ -229,7 +305,8 @@ export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]
       const sy = window.scrollY;
       velocity += (sy - lastScroll - velocity) * 0.2;
       lastScroll = sy;
-      offset -= dt * 0.012 + velocity * 0.00035;
+      // The film slows almost to a stop while a frame is under the pointer, so it can be clicked.
+      offset -= (hovering ? 0.12 : 1) * (dt * 0.012 + velocity * 0.00035);
       uniforms.uOffset.value = offset;
       if (uniforms.uMap.value) renderer.render(scene, camera);
       if (!reduced) raf = requestAnimationFrame(tick);
@@ -253,12 +330,50 @@ export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]
     const onScroll = () => reduced && start();
     window.addEventListener('scroll', onScroll, { passive: true });
 
+    // Which frame is under the pointer: ray → band UV → position in the atlas → frame.
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const frameAt = (e: PointerEvent | MouseEvent) => {
+      if (!atlas) return null;
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObject(mesh)[0];
+      if (!hit?.uv) return null;
+      const u = hit.uv.x * uniforms.uRepeat.value + uniforms.uOffset.value;
+      const px = (u - Math.floor(u)) * atlas.canvas.width;
+      for (let k = 0; k < atlas.index.length; k++) if (px >= atlas.starts[k] && px < atlas.starts[k + 1]) return images[atlas.index[k]];
+      return null;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      const f = frameAt(e);
+      hovering = !!f?.href;
+      renderer.domElement.style.cursor = f?.href ? 'pointer' : '';
+      const r = host.getBoundingClientRect();
+      setHover(f?.href ? { x: e.clientX - r.left, y: e.clientY - r.top, text: f.caption ?? f.label ?? '' } : null);
+    };
+    const onLeave = () => {
+      hovering = false;
+      setHover(null);
+    };
+    const onClick = (e: MouseEvent) => {
+      const f = frameAt(e);
+      if (f?.href) selectRef.current?.(f.href);
+    };
+    renderer.domElement.addEventListener('pointermove', onMove);
+    renderer.domElement.addEventListener('pointerleave', onLeave);
+    renderer.domElement.addEventListener('click', onClick);
+
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
       io.disconnect();
       ro.disconnect();
       window.removeEventListener('scroll', onScroll);
+      renderer.domElement.removeEventListener('pointermove', onMove);
+      renderer.domElement.removeEventListener('pointerleave', onLeave);
+      renderer.domElement.removeEventListener('click', onClick);
       mesh.geometry.dispose();
       material.dispose();
       uniforms.uMap.value?.dispose();
@@ -276,5 +391,34 @@ export function RibbonCanvas({ images, className = '' }: { images: RibbonImage[]
         ))}
       </div>
     );
-  return <div ref={hostRef} className={className} />;
+  return (
+    <div ref={hostRef} className={className}>
+      {hover && (
+        <span
+          className="t-caption kr pointer-events-none absolute z-20 whitespace-nowrap bg-[var(--c-white)] px-2 py-1 font-semibold"
+          style={{ left: hover.x + 14, top: hover.y + 14 }}
+        >
+          {hover.text} →
+        </span>
+      )}
+      {/* The film for keyboards and screen readers: the same frames as plain links. */}
+      <ul className="sr-only">
+        {images.map((i, n) =>
+          i.href ? (
+            <li key={n}>
+              <a
+                href={`#${i.href}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  selectRef.current?.(i.href!);
+                }}
+              >
+                {i.label ?? i.caption}
+              </a>
+            </li>
+          ) : null,
+        )}
+      </ul>
+    </div>
+  );
 }

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef } from 'react';
-import { CATEGORY_LABEL, useRealProducts } from '../data';
+import { useNavigate } from 'react-router-dom';
+import { CATEGORY_LABEL, price, useRealProducts } from '../data';
 import { BrandFilmSection } from '../BrandFilm';
 // three.js is only needed for the ribbon — load it after the page text.
 const RibbonCanvas = lazy(() => import('../RibbonCanvas').then((m) => ({ default: m.RibbonCanvas })));
@@ -11,6 +12,7 @@ const STATEMENT_KR = '라기는 디자인과 완성도, 소재의 새로운 가�
 /** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
 export default function About() {
   const { products } = useRealProducts();
+  const navigate = useNavigate();
   const textRef = useRef<HTMLParagraphElement>(null);
   const collabs = [...new Set(products.map((p) => p.brandLabel).filter((b): b is string => !!b && b.includes('×')))].map((b) => b.split('×')[1].trim());
   const categories = [...new Set(products.map((p) => p.category.value).filter(Boolean))] as string[];
@@ -38,15 +40,17 @@ export default function About() {
     };
   }, [products.length]);
 
-  // Two passes of the real products' main photos, so the band never shows the same one twice in view.
-  const ribbon = [...products, ...products].map((p) => ({ src: p.images[0] })).filter((i) => !!i.src);
+  // One frame per product; the film repeats on its own along the band.
+  const ribbon = products
+    .filter((p) => !!p.images[0])
+    .map((p) => ({ src: p.images[0], caption: `${p.name.value} · ${price(p.price.value)}`, href: `/product/${p.id}`, label: `${p.name.value} 보기` }));
 
   return (
     <div className="pb-32">
       <section className="relative h-[100svh] min-h-[560px] overflow-hidden" aria-label="LAGI in AGAIN">
         {ribbon.length > 0 && (
           <Suspense fallback={null}>
-            <RibbonCanvas images={ribbon} className="absolute inset-0" />
+            <RibbonCanvas images={ribbon} className="absolute inset-0" onSelect={(href) => navigate(href)} />
           </Suspense>
         )}
         <h1 className="t-display t-mark pointer-events-none relative z-10 px-page pt-page lg:pl-[8%]">
