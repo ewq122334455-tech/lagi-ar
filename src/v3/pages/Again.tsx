@@ -50,6 +50,8 @@ export default function Again() {
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // What the AI actually answered when it failed — small print, so it can be reported.
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [before, setBefore] = useState(false);
   const [camera, setCamera] = useState(false);
@@ -76,11 +78,13 @@ export default function Again() {
     setParams({ p: p.id }, { replace: true });
     setResult(null);
     setError(null);
+    setErrorDetail(null);
   }
 
   async function takePhoto(f: File | Blob | undefined) {
     if (!f) return;
     setError(null);
+    setErrorDetail(null);
     if (f.type && !f.type.startsWith('image/')) return setError('사진 파일을 골라 주세요.');
     if (f.size > MAX_INPUT_BYTES) return setError('15MB 이하의 사진을 사용해 주세요.');
     try {
@@ -106,6 +110,7 @@ export default function Again() {
     setBusy(true);
     setElapsed(0);
     setError(null);
+    setErrorDetail(null);
     try {
       const ask = () => requestAiTryOn({ person: photo, product, style: styles.find((s) => s.key === style)?.prompt, signal: ctrl.signal });
       let img: string | null = null;
@@ -127,7 +132,10 @@ export default function Again() {
     } catch (e) {
       if (ctrl.signal.aborted) setError(ctrl.signal.reason === 'timeout' ? '시간이 너무 오래 걸려 중단했습니다. 다시 시도해 주세요.' : '합성을 취소했습니다.');
       else if (e instanceof TypeError) setError('AI 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.');
-      else setError((e as Error).message || 'AI 이미지 합성에 실패했습니다.');
+      else {
+        setError((e as Error).message || 'AI 이미지 합성에 실패했습니다.');
+        setErrorDetail((e as { detail?: string }).detail ?? null);
+      }
     } finally {
       window.clearTimeout(timer);
       abortRef.current = null;
@@ -275,6 +283,7 @@ export default function Again() {
                 className="tag bg-[var(--c-label)] px-4 py-3"
                 onClick={() => {
                   setError(null);
+                  setErrorDetail(null);
                   // The camera opens inside the page on phones and computers alike; only browsers
                   // without camera access (some in-app browsers) fall back to the system picker.
                   if (typeof navigator.mediaDevices?.getUserMedia === 'function') setCamera(true);
@@ -325,6 +334,7 @@ export default function Again() {
                 {error}
               </p>
             )}
+            {error && errorDetail && <p className="t-label mt-1 break-words text-[var(--c-mute)]">원인: {errorDetail}</p>}
           </section>
 
           {result && (
