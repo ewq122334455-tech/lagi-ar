@@ -81,12 +81,12 @@ function Header() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between px-page transition-colors duration-300 ${
+        className={`fixed inset-x-0 top-0 z-30 flex h-14 items-center lg:h-16 justify-between px-page transition-colors duration-300 ${
           scrolled ? 'bg-[rgba(255,255,255,0.94)]' : ''
         }`}
       >
-        <Link to="/" aria-label="LAGI home" className="flex items-center">
-          <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
+        <Link to="/" aria-label="LAGI home" className="-m-1.5 flex items-center p-1.5">
+          <LagiLogo className="h-9 w-auto text-[var(--c-blue)] lg:h-11" title="LAGI" />
         </Link>
         <nav aria-label="Main" className="t-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
           {NAV.map((n) => (
@@ -115,8 +115,8 @@ function Header() {
 
       {open && (
         <div id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
-          <div className="flex h-16 items-center justify-between">
-            <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
+          <div className="flex h-14 items-center justify-between">
+            <LagiLogo className="h-9 w-auto text-[var(--c-blue)]" title="LAGI" />
             <button type="button" onClick={() => setOpen(false)} className="t-nav tag kr" aria-label="메뉴 닫기">
               닫기
             </button>
@@ -148,27 +148,27 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
       <div className="relative flex min-h-[70svh] flex-col justify-between pb-8 pt-28 lg:min-h-[82svh] lg:pt-36">
         <div className="text-center">
           <p className="t-h1 t-mark">LAGI in AGAIN</p>
-          <p className="t-caption kr mt-3 text-white/70">다시 볼 이유가 있는 리사이클링 제품을 발견하고, 고르고, 소개하고, 연결합니다.</p>
+          <p className="t-caption kr mt-3 text-white/80">디자인과 완성도, 소재의 새로운 가능성을 발견하고 소개합니다.</p>
         </div>
-        {/* Official emblem in its one-colour reverse, large and cropped by the bottom edge. */}
-        <span aria-hidden="true" className="pointer-events-none absolute bottom-[-14%] left-1/2 h-[42%] -translate-x-1/2 lg:h-[58%]">
+        {/* Phones: the emblem sits below the links (in flow); wider screens: large and behind, cropped by the edge. */}
+        <span aria-hidden="true" className="pointer-events-none order-last -mb-16 mt-10 block h-48 self-center md:absolute md:bottom-[-14%] md:left-1/2 md:mb-0 md:mt-0 md:h-[42%] md:-translate-x-1/2 lg:h-[58%]">
           <LagiLogo className="h-full w-auto text-[var(--c-white)]" title="" />
         </span>
-        <div className="t-caption kr relative flex items-end justify-between gap-8">
+        <div className="t-caption kr relative mt-14 flex items-end justify-between gap-8 md:mt-0">
           <div>
-            <p className="t-label t-mark mb-2 text-white/60">Official</p>
-            <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="block opacity-80 hover:opacity-100">
+            <p className="t-label t-mark mb-2 text-white/80">Official</p>
+            <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
               네이버 스마트스토어
             </a>
-            <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="block opacity-80 hover:opacity-100">
+            <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
               인스타그램
             </a>
-            <p className="mt-4 text-white/50">© LAGI</p>
+            <p className="mt-4 text-white/80">© LAGI</p>
           </div>
           <div className="text-right">
-            <p className="t-label t-mark mb-2 text-white/60">Menu</p>
+            <p className="t-label t-mark mb-2 text-white/80">Menu</p>
             {[{ to: '/', kr: '홈' }, ...NAV, { to: '/cart', kr: '장바구니' }].map((n) => (
-              <Link key={n.to} to={n.to} className="block opacity-80 hover:opacity-100">
+              <Link key={n.to} to={n.to} className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
                 {n.kr}
               </Link>
             ))}

@@ -13,7 +13,7 @@ export default function Home() {
       {ready && <CurvedGallery products={products} ratios={ratios} />}
       {error && <p className="t-caption kr absolute left-[var(--page-x)] top-24">{error}</p>}
       {/* Wordmark: white text in a difference-blend layer, so it inverts over photos (as in the reference). */}
-      <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute left-[var(--page-x)] top-20 z-[160] max-md:top-auto max-md:bottom-[calc(var(--t-display)*2+28px)]">
+      <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-20 z-[160] md:left-[var(--page-x)] md:right-auto">
         ▶ Brand film
       </button>
       {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}

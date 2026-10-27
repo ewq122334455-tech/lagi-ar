@@ -5,7 +5,7 @@
   --c-ink: #0f0f0f;
   --c-blue: #1d5198;
   --c-line: #000000;
-  --c-mute: rgba(15, 15, 15, 0.5);
+  --c-mute: #626262; /* 5.9:1 on white, 5.1:1 on #f1f1f1 (WCAG AA) */
   --c-label: rgb(230, 230, 230);
 
   --page-x: 20px;
@@ -15,16 +15,16 @@
   --radius-sheet: 50px;
 
   /*
-   * Scale: one loud size (display) against a quiet, tight set below it. Mid sizes are kept
-   * deliberately small — Hangul reads larger than Latin at the same px.
+   * Fluid scale (clamp between 375px and 1440px wide): one loud size (display) against a quiet,
+   * tight set below it. Mid sizes stay small — Hangul reads larger than Latin at the same px.
    */
-  --t-display: 52px;
-  --t-h1: 22px;
-  --t-h2: 26px;
-  --t-h3: 17px;
-  --t-lead: 16px;
-  --t-body: 14px;
-  --t-en: 20px;
+  --t-display: clamp(48px, 30px + 4.3vw, 92px);
+  --t-h1: clamp(22px, 19px + 0.75vw, 30px);
+  --t-h2: clamp(26px, 22px + 1vw, 36px);
+  --t-h3: clamp(17px, 16px + 0.3vw, 20px);
+  --t-lead: clamp(16px, 15.3px + 0.2vw, 18px);
+  --t-body: clamp(14px, 13.6px + 0.1vw, 15px);
+  --t-en: clamp(20px, 16.5px + 0.95vw, 30px);
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -44,28 +44,10 @@
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
 }
-@media (min-width: 810px) {
-  .v3 {
-    --t-display: 68px;
-    --t-h1: 26px;
-    --t-h2: 30px;
-    --t-h3: 18px;
-    --t-lead: 17px;
-    --t-body: 14px;
-    --t-en: 24px;
-  }
-}
 @media (min-width: 1200px) {
   .v3 {
     --top: 128px;
     --radius-card: 8px;
-    --t-display: 92px;
-    --t-h1: 30px;
-    --t-h2: 36px;
-    --t-h3: 20px;
-    --t-lead: 18px;
-    --t-body: 15px;
-    --t-en: 30px;
   }
 }
 
@@ -81,7 +63,7 @@
 .v3 .t-body { font-size: var(--t-body); font-weight: 400; line-height: 1.75; letter-spacing: -0.005em; }
 /* English statement line (Posterama, light) with a smaller, quieter Korean line under it. */
 .v3 .t-en { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); font-size: var(--t-en); font-weight: 400; line-height: 1.2; letter-spacing: 0.01em; }
-.v3 .t-kr-sub { font-family: var(--font-kr); font-size: var(--t-body); font-weight: 400; line-height: 1.7; color: rgba(15, 15, 15, 0.55); }
+.v3 .t-kr-sub { font-family: var(--font-kr); font-size: var(--t-body); font-weight: 400; line-height: 1.7; color: #626262; }
 .v3 .t-value { font-size: 14px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
 .v3 .t-label { font-size: 11px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
 .v3 .t-nav { font-size: 12px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em; }
@@ -130,4 +112,13 @@
 .v3 .rise { animation: v3-rise var(--dur-slow) var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) {
   .v3 .arrive, .v3 .rise { animation: none; }
+}
+
+/* Touch screens: every small button / link-tag gets a thumb-sized hit area (≥40px). */
+@media (pointer: coarse) {
+  /* :where() keeps the display at zero specificity, so utilities like hidden / block still win. */
+  :where(.v3 .tag) { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; }
+  .v3 .tag { min-height: 40px; min-width: 40px; }
+  :where(.v3 .tap) { display: inline-block; }
+  .v3 .tap { padding-top: 10px; padding-bottom: 10px; }
 }

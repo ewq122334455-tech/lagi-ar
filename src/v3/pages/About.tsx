@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { CATEGORY_LABEL, useRealProducts } from '../data';
 import { BrandFilmSection } from '../BrandFilm';
-import { RibbonCanvas } from '../RibbonCanvas';
+// three.js is only needed for the ribbon — load it after the page text.
+const RibbonCanvas = lazy(() => import('../RibbonCanvas').then((m) => ({ default: m.RibbonCanvas })));
 import { ROLES } from '@/content/roles';
 
-const STATEMENT_EN = 'We discover, select, introduce and connect recycled products.';
-const STATEMENT_KR = '라기는 리사이클링 제품을 발견하고, 고르고, 소개하고, 연결하는 큐레이션 브랜드입니다.';
+const STATEMENT_EN = 'We discover, select, introduce and connect products worth seeing again.';
+const STATEMENT_KR = '라기는 디자인과 완성도, 소재의 새로운 가능성을 발견하고 제품을 선별해 소개하는 큐레이션 브랜드입니다. 제품은 각 제작사가 만들고, 라기는 발견하고 선별하고 소개하고 연결합니다.';
 
 /** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
 export default function About() {
@@ -43,7 +44,11 @@ export default function About() {
   return (
     <div className="pb-32">
       <section className="relative h-[100svh] min-h-[560px] overflow-hidden" aria-label="LAGI in AGAIN">
-        {ribbon.length > 0 && <RibbonCanvas images={ribbon} className="absolute inset-0" />}
+        {ribbon.length > 0 && (
+          <Suspense fallback={null}>
+            <RibbonCanvas images={ribbon} className="absolute inset-0" />
+          </Suspense>
+        )}
         <h1 className="t-display t-mark pointer-events-none relative z-10 px-page pt-page lg:pl-[8%]">
           LAGI
           <br />
