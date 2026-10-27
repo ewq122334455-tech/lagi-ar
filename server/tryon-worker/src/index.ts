@@ -502,7 +502,8 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
         : out.reason === 'blocked'
           ? 'AI가 이 사진은 처리하지 않았습니다. 한 사람만, 얼굴과 몸이 잘 보이는 다른 사진으로 시도해 주세요.'
           : '이번에는 AI가 이미지를 만들지 못했습니다. 밝고 정면에서 찍은 사진으로 다시 시도해 주세요.';
-    return json({ error: message, reason: out.reason }, out.reason === 'busy' ? 503 : 502, headers);
+    // `detail` is what the model actually answered (finish reason, its words) — shown small, for diagnosis.
+    return json({ error: message, reason: out.reason, detail: out.detail }, out.reason === 'busy' ? 503 : 502, headers);
   }
   return json({ image: out.image }, 200, headers);
 }
@@ -535,47 +536,65 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * overloaded (429/503) or blocks one attempt; asking again usually works, so up to three tries are
  * made before giving up. The first try asks for an image only, later tries also allow text.
  */
-type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error' };
+type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string };
+
+// People photos trip the general filters more often than they should; only clearly harmful content is blocked.
+const SAFETY = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'].map((category) => ({
+  category,
+  threshold: 'BLOCK_ONLY_HIGH',
+}));
 
 async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult> {
   let reason: GeminiResult['reason'] = 'no_image';
+  let detail = '';
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt) await new Promise((r) => setTimeout(r, reason === 'busy' ? 2000 * attempt : 800 * attempt));
+    // When the model answered with words instead of a picture, ask again — firmly — for the picture.
+    const askParts: GeminiPart[] =
+      attempt > 0 && reason === 'no_image'
+        ? [...parts, { text: 'Respond with the edited image only. Do not reply with text; always return an image.' }]
+        : parts;
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts }],
+          contents: [{ role: 'user', parts: askParts }],
           generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+          safetySettings: SAFETY,
         }),
       },
     );
     if (!res.ok) {
-      console.log('gemini error', attempt, res.status, (await res.text()).slice(0, 300));
+      const text = (await res.text()).slice(0, 300);
+      console.log('gemini error', attempt, res.status, text);
       reason = res.status === 429 || res.status === 503 ? 'busy' : 'error';
+      detail = `HTTP ${res.status} ${(/"message":\s*"([^"]{0,120})/.exec(text)?.[1] ?? '').trim()}`;
       // A bad request will not get better by repeating it — unless it was the image-only setting.
-      if (res.status === 400 && attempt > 0) return { reason };
+      if (res.status === 400 && attempt > 0) return { reason, detail };
       continue;
     }
     const result = (await res.json()) as {
       promptFeedback?: { blockReason?: string };
       candidates?: {
         finishReason?: string;
-        content?: { parts?: { inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
+        content?: { parts?: { text?: string; inlineData?: { mimeType: string; data: string }; inline_data?: { mime_type: string; data: string } }[] };
       }[];
     };
-    for (const part of result.candidates?.[0]?.content?.parts ?? []) {
+    const got = result.candidates?.[0]?.content?.parts ?? [];
+    for (const part of got) {
       const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
       if (img?.data) return { image: `data:${img.mimeType};base64,${img.data}` };
     }
     const finish = result.candidates?.[0]?.finishReason ?? '';
+    const said = got.map((p) => p.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
     const blocked = !!result.promptFeedback?.blockReason || /SAFETY|PROHIBITED|BLOCKLIST|RECITATION/.test(finish);
-    console.log('gemini no image', attempt, finish, result.promptFeedback?.blockReason);
+    console.log('gemini no image', attempt, finish, result.promptFeedback?.blockReason, said.slice(0, 200));
     reason = blocked ? 'blocked' : 'no_image';
+    detail = [finish || result.promptFeedback?.blockReason || 'NO_IMAGE', said.slice(0, 140)].filter(Boolean).join(' · ');
     // The same photo will be blocked again; stop early.
-    if (blocked && attempt >= 1) return { reason };
+    if (blocked && attempt >= 1) return { reason, detail };
   }
-  return { reason };
+  return { reason, detail };
 }
