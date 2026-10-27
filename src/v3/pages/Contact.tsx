@@ -16,7 +16,7 @@ export default function Contact() {
           <div key={r.label}>
             <dt className="t-caption kr text-[var(--c-mute)]">{r.label}</dt>
             <dd className="mt-2">
-              <a href={r.href} target="_blank" rel="noopener noreferrer" className="t-h1 kr hover:text-[var(--c-blue)]">
+              <a href={r.href} target="_blank" rel="noopener noreferrer" className="tap t-h1 kr hover:text-[var(--c-blue)]">
                 {r.value} ↗
               </a>
             </dd>

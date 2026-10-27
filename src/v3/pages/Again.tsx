@@ -227,7 +227,7 @@ export default function Again() {
             {busy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-ink)]/75 text-[var(--c-white)]" role="status">
                 <p className="t-value kr">이미지를 합성하고 있습니다… {elapsed}초</p>
-                <p className="t-caption kr text-white/70">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초 걸립니다.'}</p>
+                <p className="t-caption kr text-white/80">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초 걸립니다.'}</p>
                 <button type="button" className="t-caption kr tag bg-[var(--c-white)] text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
                   취소
                 </button>
@@ -474,7 +474,7 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
       className="v3 fixed inset-0 z-[300] flex flex-col items-center gap-4 bg-[var(--c-ink)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
       data-testid="camera"
     >
-      <p className="t-caption kr self-start text-white/70">정면 전신 또는 상반신이 화면에 들어오게 찍어 주세요.</p>
+      <p className="t-caption kr self-start text-white/80">정면 전신 또는 상반신이 화면에 들어오게 찍어 주세요.</p>
       <div className="flex min-h-0 w-full flex-1 items-center justify-center">
       {problem ? (
         <div className="max-w-sm text-center text-[var(--c-white)]">

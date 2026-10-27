@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
+import { price, useRealProducts } from '../data';
 
 /** The three questions the whole site answers. */
 const QUESTIONS = [
-  { q: 'WHY LAGI?', a: '다시 볼 이유가 있는 리사이클링 제품만 골라 소개합니다.' },
+  { q: 'WHY LAGI?', a: '디자인과 완성도, 소재의 새로운 가능성을 가진 제품을 찾아 소개합니다.' },
   { q: 'WHY DID LAGI SELECT THIS?', a: '아래 네 가지 기준을 모두 충족했기 때문입니다.' },
-  { q: 'WHAT VALUE DOES LAGI GIVE?', a: '익숙한 제품에서 새로운 가치와 가능성을 다시 발견하게 합니다.' },
+  { q: 'WHAT VALUE DOES LAGI GIVE?', a: '익숙한 제품을 새로운 관점에서 다시 보게 합니다.' },
 ];
 
 /**
@@ -74,13 +76,17 @@ export default function Why() {
 
   if (!wide)
     return (
-      <div className="px-page pb-32 pt-page">
-        {intro}
-        <div className="mt-20 space-y-16">{steps}</div>
-      </div>
+      <>
+        <div className="px-page pt-page">
+          {intro}
+          <div className="mt-20 space-y-16">{steps}</div>
+        </div>
+        <Passed />
+      </>
     );
 
   return (
+    <>
     <div ref={wrapRef} style={{ height: height ?? '300vh' }} className="relative">
       <div className="sticky top-0 h-[100svh] overflow-hidden">
         <div ref={trackRef} className="flex h-full items-start gap-[8vw] px-page pt-page will-change-transform" style={{ width: 'max-content' }}>
@@ -93,5 +99,39 @@ export default function Why() {
         </svg>
       </div>
     </div>
+    <Passed />
+    </>
+  );
+}
+
+/** The criteria in practice: every product on sale has passed all four. */
+function Passed() {
+  const { products } = useRealProducts();
+  if (!products.length) return null;
+  return (
+    <section className="px-page pb-32 pt-24 lg:pt-36" aria-labelledby="passed-title">
+      <div className="rule grid grid-cols-1 gap-x-[var(--gap)] gap-y-3 pt-4 lg:grid-cols-12">
+        <div className="lg:col-span-5">
+          <p className="t-label t-mark text-[var(--c-mute)]">Passed all four</p>
+          <h2 id="passed-title" className="t-h2 kr mt-2">
+            네 가지 기준을 모두 통과한 제품
+          </h2>
+        </div>
+        <p className="t-kr-sub lg:col-span-5 lg:col-start-8 lg:self-end">지금 라기에서 소개하는 {products.length}개 제품은 모두 네 가지 기준을 통과했습니다.</p>
+      </div>
+      <ul className="mt-10 grid grid-cols-2 gap-x-[var(--gap)] gap-y-8 md:grid-cols-4">
+        {products.map((p) => (
+          <li key={p.id}>
+            <Link to={`/product/${p.id}`} className="group block">
+              <span className="block overflow-hidden bg-[var(--c-gray)]" style={{ aspectRatio: 1 }}>
+                <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
+              </span>
+              <span className="t-caption kr mt-2 block font-semibold">{p.name.value}</span>
+              <span className="t-caption kr block tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

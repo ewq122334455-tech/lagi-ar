@@ -17,8 +17,8 @@ export default function Discover() {
         <div>
           <p className="t-label t-mark text-[var(--c-mute)]">Discover</p>
           <h1 className="t-display t-mark mt-2">DISCOVER</h1>
-          <p className="t-en mt-4">Recycled products, selected by LAGI.</p>
-          <p className="t-kr-sub mt-2">라기가 선별한 리사이클링 제품</p>
+          <p className="t-en mt-4">Selected by LAGI.</p>
+          <p className="t-kr-sub mt-2">라기가 발견하고 선별한 제품</p>
         </div>
         <div className="flex gap-6">
           <p className="t-value kr">분류</p>
@@ -29,7 +29,7 @@ export default function Discover() {
                   type="button"
                   onClick={() => setParams(c ? { c } : {})}
                   aria-pressed={active === c}
-                  className={active === c ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}
+                  className={'tap ' + (active === c ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]')}
                 >
                   {c ? CATEGORY_LABEL[c] ?? c : '전체'} <span className="tabular-nums">{c ? products.filter((p) => p.category.value === c).length : products.length}</span>
                 </button>
