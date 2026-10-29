@@ -5,8 +5,11 @@ import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 
 /** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
-function promptFor(product: Product, stylePrompt: string) {
+function promptFor(product: Product, stylePrompt: string, description?: string) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
+  // The written description (from the server, per product) pins colours and parts the image alone lets drift.
+  if (description)
+    return `Add the ${kind} from the reference image, ${stylePrompt}. The ${kind}: ${description} It is an accessory, not clothing: do not change the person's clothes. Copy its exact design, colours and prints; keep the person and background unchanged.`;
   return `Add the ${kind} from the reference image, ${stylePrompt}. It is an accessory, not clothing: do not change the person's clothes. Keep the ${kind}'s exact shape, colours, prints and proportions, realistic size and natural shadows. Keep the person and background unchanged.`;
 }
 
@@ -39,11 +42,11 @@ function productBox(bmp: ImageBitmap) {
   return { sx, sy, sw: Math.min(bmp.width - sx, (x1 - x0 + 2 * pad) * k), sh: Math.min(bmp.height - sy, (y1 - y0 + 2 * pad) * k) };
 }
 
-/** The model wants a small reference: crop to the product, shrink to 512 px on white, send as JPEG (the PNG cutout is ~1 MB). */
+/** The model wants a small reference: crop to the product, shrink to 768 px on white, send as JPEG (the PNG cutout is ~1 MB). */
 async function smallReference(blob: Blob): Promise<Blob> {
   const bmp = await createImageBitmap(blob);
   const { sx, sy, sw, sh } = productBox(bmp);
-  const k = Math.min(1, 512 / Math.max(sw, sh));
+  const k = Math.min(1, 768 / Math.max(sw, sh));
   const c = document.createElement('canvas');
   c.width = Math.round(sw * k);
   c.height = Math.round(sh * k);
@@ -104,7 +107,7 @@ export function LiveTryOn({
   const out = useRef<HTMLVideoElement>(null);
   const local = useRef<HTMLVideoElement>(null);
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
-  const garment = useRef<{ id: string; blob: Blob } | null>(null);
+  const garment = useRef<{ id: string; blob: Blob; description?: string } | null>(null);
 
   // Never leave a paid session running: stop on unmount and when the tab is hidden.
   useEffect(() => {
@@ -118,16 +121,16 @@ export function LiveTryOn({
 
   // A new product or way of wearing it while live: send the new instruction without reconnecting.
   useEffect(() => {
-    if (phase === 'live' && product) void session.current?.setPrompt(promptFor(product, stylePrompt)).catch(() => undefined);
+    if (phase === 'live' && product) void session.current?.setPrompt(promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
   }, [stylePrompt, product, phase]);
 
   async function garmentBlob(p: Product) {
-    if (garment.current?.id === p.id) return garment.current.blob;
+    if (garment.current?.id === p.id) return garment.current;
     const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-    const { image } = await post<{ image: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
+    const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
     const blob = await smallReference(await (await fetch(image)).blob());
-    garment.current = { id: p.id, blob };
-    return blob;
+    garment.current = { id: p.id, blob, description };
+    return garment.current;
   }
 
   async function start() {
@@ -155,7 +158,7 @@ export function LiveTryOn({
       setPhase(wentLive ? 'ended' : 'idle');
     };
     try {
-      const [blob, token, sdk] = await Promise.all([
+      const [ref, token, sdk] = await Promise.all([
         garmentBlob(product),
         post<{ apiKey: string; seconds: number; remainingToday: number | null }>('/realtime/token', {}),
         import('@decartai/sdk'),
@@ -184,7 +187,7 @@ export function LiveTryOn({
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
-        await conn.setImage(blob, { prompt: promptFor(product, stylePrompt), enhance: false });
+        await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description), enhance: false });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
