@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/data/productTypes';
-import { AI_TRYON_URL } from '@/tryon/aiTryOn';
+import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 
@@ -10,17 +10,47 @@ function promptFor(product: Product, stylePrompt: string) {
   return `Add the ${kind} from the reference image, ${stylePrompt}. It is an accessory, not clothing: do not change the person's clothes. Keep the ${kind}'s exact shape, colours, prints and proportions, realistic size and natural shadows. Keep the person and background unchanged.`;
 }
 
-/** The model wants a small reference: shrink to 512 px on white and send as JPEG (the PNG cutout is ~1 MB). */
+/** Bounding box of the non-white pixels, so the reference is the product and not mostly empty background. */
+function productBox(bmp: ImageBitmap) {
+  const w = 256;
+  const h = Math.max(1, Math.round((bmp.height / bmp.width) * w));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(bmp, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (px[i + 3] > 16 && Math.min(px[i], px[i + 1], px[i + 2]) < 225) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  if (x1 < 0) return { sx: 0, sy: 0, sw: bmp.width, sh: bmp.height };
+  const k = bmp.width / w;
+  const pad = 0.04 * Math.max(x1 - x0, y1 - y0);
+  const sx = Math.max(0, (x0 - pad) * k);
+  const sy = Math.max(0, (y0 - pad) * k);
+  return { sx, sy, sw: Math.min(bmp.width - sx, (x1 - x0 + 2 * pad) * k), sh: Math.min(bmp.height - sy, (y1 - y0 + 2 * pad) * k) };
+}
+
+/** The model wants a small reference: crop to the product, shrink to 512 px on white, send as JPEG (the PNG cutout is ~1 MB). */
 async function smallReference(blob: Blob): Promise<Blob> {
   const bmp = await createImageBitmap(blob);
-  const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height));
+  const { sx, sy, sw, sh } = productBox(bmp);
+  const k = Math.min(1, 512 / Math.max(sw, sh));
   const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k);
-  c.height = Math.round(bmp.height * k);
+  c.width = Math.round(sw * k);
+  c.height = Math.round(sh * k);
   const ctx = c.getContext('2d')!;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
   bmp.close();
   return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', 0.88));
 }
@@ -69,6 +99,8 @@ export function LiveTryOn({
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   // Connected but the AI has not sent a generated frame yet (queued or warming up).
   const [waiting, setWaiting] = useState<string | null>(null);
+  // "정확한 사진": the live pose re-made by the photo compositor, which keeps the real product design.
+  const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const out = useRef<HTMLVideoElement>(null);
   const local = useRef<HTMLVideoElement>(null);
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
@@ -101,6 +133,7 @@ export function LiveTryOn({
   async function start() {
     if (!product || phase === 'starting' || phase === 'live' || !consent) return;
     setError(null);
+    setExact({ busy: false });
     setPhase('starting');
     let stream: MediaStream | null = null;
     let timer = 0;
@@ -151,7 +184,7 @@ export function LiveTryOn({
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
-        await conn.setImage(blob, { prompt: promptFor(product, stylePrompt), enhance: true });
+        await conn.setImage(blob, { prompt: promptFor(product, stylePrompt), enhance: false });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
@@ -163,7 +196,7 @@ export function LiveTryOn({
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
       });
-      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: true }) };
+      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: false }) };
       // The page counts down too, so the visitor sees the limit; Decart enforces it either way.
       // The clock starts at connect (that is what Decart bills), but the "waiting" overlay stays up until
       // the first generated frame, and a session that never produces one is stopped early.
@@ -199,6 +232,45 @@ export function LiveTryOn({
             : (e as Error).message || '실시간 착용을 시작하지 못했습니다.',
       );
     }
+  }
+
+  /** Freeze the visitor's own camera frame, end the paid live session, and have the photo AI place the real product. */
+  async function exactPhoto() {
+    const v = local.current;
+    if (!v || !v.videoWidth || !product || exact.busy) return;
+    const k = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(v.videoWidth * k);
+    c.height = Math.round(v.videoHeight * k);
+    c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
+    const person = c.toDataURL('image/jpeg', 0.9);
+    session.current?.stop();
+    setExact({ busy: true });
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 120_000);
+    try {
+      const ask = () => requestAiTryOn({ person, product, style: stylePrompt, signal: ctrl.signal });
+      let image: string;
+      try {
+        image = await ask();
+      } catch (e) {
+        if ((e as { reason?: string }).reason === 'blocked' || ctrl.signal.aborted) throw e;
+        image = await ask();
+      }
+      setExact({ busy: false, image });
+    } catch (e) {
+      setExact({ busy: false, error: ctrl.signal.aborted ? '시간이 너무 오래 걸려 중단했습니다. 다시 시도해 주세요.' : (e as Error).message || '사진을 만들지 못했습니다.' });
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  function saveExact() {
+    if (!exact.image || !product) return;
+    const a = document.createElement('a');
+    a.href = exact.image;
+    a.download = `lagi-tryon-${product.id}.png`;
+    a.click();
   }
 
   function saveFrame() {
@@ -251,12 +323,37 @@ export function LiveTryOn({
         </div>
         {live && (
           <div className="t-nav kr mt-3 flex flex-wrap gap-2">
-            <button type="button" className="tag btn-solid px-4 py-3" onClick={saveFrame}>
+            <button type="button" className="tag btn-solid px-4 py-3" onClick={exactPhoto} data-testid="exact-photo">
+              이 포즈로 정확한 사진 만들기
+            </button>
+            <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={saveFrame}>
               이 장면 저장
             </button>
             <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => session.current?.stop()}>
               끝내기
             </button>
+          </div>
+        )}
+        {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
+        {(exact.busy || exact.image || exact.error) && (
+          <div className="mt-6" data-testid="exact-result" aria-live="polite">
+            {exact.busy && <p className="t-body kr">이 포즈에 실제 제품을 합성하고 있습니다… (10~40초)</p>}
+            {exact.error && (
+              <p className="t-caption kr text-[var(--c-blue)]" role="alert">
+                {exact.error}
+              </p>
+            )}
+            {exact.image && (
+              <>
+                <img src={exact.image} alt="AI로 합성한 착용 사진" className="block h-auto w-full max-w-xl" />
+                <div className="t-nav kr mt-3 flex flex-wrap gap-2">
+                  <button type="button" className="tag btn-solid px-4 py-3" onClick={saveExact}>
+                    사진 저장
+                  </button>
+                </div>
+                <p className="t-caption kr mt-2 text-[var(--c-mute)]">AI가 만든 이미지입니다. 실제 크기와 색은 다를 수 있습니다.</p>
+              </>
+            )}
           </div>
         )}
       </div>
