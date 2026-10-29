@@ -31,6 +31,11 @@
     "products/daily-tote/images/main.jpg"
   ],
   "gallery": [],
+  "styledImages": [
+    "products/daily-tote/images/styled-hand.jpg",
+    "products/daily-tote/images/styled-shoulder.jpg",
+    "products/daily-tote/images/styled-shoulder-close.jpg"
+  ],
   "colors": [],
   "dimensions": {
     "widthCm": 28,

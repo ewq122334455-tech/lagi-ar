@@ -185,6 +185,28 @@ export default function ProductPage() {
         </aside>
       </div>
 
+      {/* 2b · AI styling shots — labelled on every image, kept apart from the real product photos */}
+      {!!p.styledImages?.length && (
+        <section className="mt-24 px-page lg:mt-36" aria-labelledby="styled-title">
+          <div className="rule flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pt-4">
+            <h2 id="styled-title" className="t-h3 kr">
+              착용 연출
+            </h2>
+            <p className="t-caption kr text-[var(--c-mute)]">AI로 만든 연출 이미지입니다. 라벨·프린트·형태 등 실제 제품과 다를 수 있어요.</p>
+          </div>
+          <div className="mt-6 grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
+            {p.styledImages.map((src) => (
+              <figure key={src} className="relative overflow-hidden bg-[var(--c-gray)]" data-testid="styled-image">
+                <img src={src} alt={`AI 연출 이미지 — ${p.name.value ?? "제품"} 착용 모습`} loading="lazy" className="block h-auto w-full" />
+                <figcaption className="t-label t-mark absolute left-2 top-2 bg-[var(--c-ink)] px-2 py-1 text-[var(--c-white)]">
+                  AI 연출 이미지 · 실제와 다를 수 있음
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 3 · More photos — only when the store has more than one */}
       {more.length > 0 && (
         <section className="mt-24 px-page lg:mt-36" aria-labelledby="photos-title">
