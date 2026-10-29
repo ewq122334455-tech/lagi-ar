@@ -7,7 +7,22 @@ type Phase = 'idle' | 'starting' | 'live' | 'ended';
 /** What the realtime model is asked to do with the product (English works best, 20–30 words). */
 function promptFor(product: Product, stylePrompt: string) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
-  return `Add the ${kind} from the reference image to the person, ${stylePrompt}. Keep its exact shape, colours, prints and proportions, realistic size and natural shadows.`;
+  return `The person is carrying the ${kind} shown in the reference image, ${stylePrompt}. The ${kind} is fully visible in front of the body. Keep its exact shape, colours, prints and proportions, realistic size and natural shadows.`;
+}
+
+/** The model wants a small reference: shrink to 512 px on white and send as JPEG (the PNG cutout is ~1 MB). */
+async function smallReference(blob: Blob): Promise<Blob> {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k);
+  c.height = Math.round(bmp.height * k);
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', 0.88));
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -62,7 +77,7 @@ export function LiveTryOn({
     if (garment.current?.id === p.id) return garment.current.blob;
     const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
     const { image } = await post<{ image: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
-    const blob = await (await fetch(image)).blob();
+    const blob = await smallReference(await (await fetch(image)).blob());
     garment.current = { id: p.id, blob };
     return blob;
   }
@@ -107,15 +122,20 @@ export function LiveTryOn({
         onRemoteStream: (remote: MediaStream) => {
           if (out.current) out.current.srcObject = remote;
         },
-        initialState: { image: blob, prompt: { text: promptFor(product, stylePrompt), enhance: false } },
       });
       rt = conn;
+      // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
+      try {
+        await conn.setImage(blob, { prompt: promptFor(product, stylePrompt), enhance: true });
+      } catch (e) {
+        throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
+      }
       conn.on('sessionEnded', () => stop());
       conn.on('error', (e: { message?: string }) => {
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
       });
-      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: false }) };
+      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: true }) };
       // The page counts down too, so the visitor sees the limit; Decart enforces it either way.
       const until = Date.now() + token.seconds * 1000;
       setLeft(token.seconds);
