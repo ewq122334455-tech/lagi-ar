@@ -20,6 +20,8 @@ interface KV {
 export interface Env {
   /** Member accounts and login sessions. Bound in wrangler.toml ([[kv_namespaces]] USERS). */
   USERS?: KV;
+  /** Text model for the product description (realtime try-on). Defaults to gemini-3.8-flash. */
+  GEMINI_TEXT_MODEL?: string;
   /** Comma-separated member emails with no daily realtime limit (the owner) — a Worker secret, never in the repo. */
   REALTIME_UNLIMITED?: string;
   /** Google AI Studio API key — set with `npx wrangler secret put GEMINI_API_KEY`. */
@@ -159,10 +161,10 @@ async function productDescription(env: Env, url: string, product: { mime: string
       env,
       JSON.stringify({
         contents: [{ parts: [{ text: DESCRIBE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }] }],
-        // No thinking: on 2.5 Flash it uses up the output budget before any text is written.
-        generationConfig: { temperature: 0.2, maxOutputTokens: 300, thinkingConfig: { thinkingBudget: 0 } },
+        // Roomy budget: newer Flash models may think before writing; the answer is cut to 400 chars below.
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
-      'gemini-2.5-flash',
+      env.GEMINI_TEXT_MODEL ?? 'gemini-3.8-flash',
     );
     if (!res.ok) return { note: `HTTP ${res.status} ${(await res.text()).replace(/\s+/g, ' ').slice(0, 200)}` };
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[] };
