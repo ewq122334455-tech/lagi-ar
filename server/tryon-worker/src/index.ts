@@ -150,10 +150,10 @@ const DESCRIBE_PROMPT =
   'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
 
 /** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
-async function productDescription(env: Env, url: string, product: { mime: string; data: string }): Promise<string | undefined> {
+async function productDescription(env: Env, url: string, product: { mime: string; data: string }): Promise<{ text?: string; note?: string }> {
   const key = `desc:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
-  if (cached) return cached;
+  if (cached) return { text: cached };
   try {
     const res = await callGemini(
       env,
@@ -164,15 +164,15 @@ async function productDescription(env: Env, url: string, product: { mime: string
       }),
       'gemini-2.5-flash',
     );
-    if (!res.ok) return undefined;
-    const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    if (!res.ok) return { note: `HTTP ${res.status} ${(await res.text()).replace(/\s+/g, ' ').slice(0, 200)}` };
+    const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[] };
     const text = data.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
-    if (!text) return undefined;
+    if (!text) return { note: `no text (${data.candidates?.[0]?.finishReason ?? 'no candidate'})` };
     const clean = text.slice(0, 400);
     await env.MEDIA?.put(key, clean);
-    return clean;
-  } catch {
-    return undefined;
+    return { text: clean };
+  } catch (e) {
+    return { note: (e as Error).message.slice(0, 200) };
   }
 }
 
@@ -501,11 +501,12 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
     const product = await fetchProductImage(body.productImage ?? '', allowed);
     if ('error' in product) return json({ error: product.error }, product.status, headers);
-    const [{ cut }, description] = env.GEMINI_API_KEY
+    const [{ cut }, desc] = env.GEMINI_API_KEY
       ? await Promise.all([productCutout(env, body.productImage!, product), productDescription(env, body.productImage!, product)])
-      : [{}, undefined];
+      : [{}, {}];
     const img = cut ?? product;
-    return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description }, 200, headers);
+    // descriptionNote: why there is no description (shown only in the response, for diagnosis).
+    return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description: desc.text, descriptionNote: desc.note }, 200, headers);
   }
 
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
