@@ -159,7 +159,8 @@ async function productDescription(env: Env, url: string, product: { mime: string
       env,
       JSON.stringify({
         contents: [{ parts: [{ text: DESCRIBE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
+        // No thinking: on 2.5 Flash it uses up the output budget before any text is written.
+        generationConfig: { temperature: 0.2, maxOutputTokens: 300, thinkingConfig: { thinkingBudget: 0 } },
       }),
       'gemini-2.5-flash',
     );
