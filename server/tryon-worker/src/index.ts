@@ -26,6 +26,10 @@ export interface Env {
   GEMINI_MODEL: string;
   /** Comma-separated site origins allowed to call this Worker and to serve product images. */
   ALLOWED_ORIGINS: string;
+  /** Decart API key (dct_…) for the realtime try-on — `wrangler secret put DECART_API_KEY`. Never sent to browsers. */
+  DECART_API_KEY?: string;
+  /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
+  REALTIME_DAILY_SESSIONS?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
   RELAY?: { idFromName(name: string): unknown; get(id: unknown, opts?: { locationHint?: string }): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   /** Product cut-outs (product alone on white), made once per product photo. Optional. */
@@ -436,6 +440,74 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
   return json({ error: 'not found' }, 404, headers);
 }
 
+// ---- Realtime try-on (Decart Lucy VTON) ----------------------------------------------------
+
+/** Seconds one realtime session may run — enforced by Decart through the token, not only the page. */
+const REALTIME_SECONDS = 20;
+/** Realtime sessions per visitor (IP) per day. */
+const REALTIME_PER_IP = 3;
+
+/**
+ * POST /realtime/token — a short-lived Decart client token for one 20-second session.
+ * POST /cutout — the product alone on white (cached), used as the garment reference.
+ * The permanent Decart key stays here; usage is capped per visitor and per day (KV `MEDIA`).
+ */
+async function realtime(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405, headers);
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+
+  if (path === '/cutout') {
+    if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+    let body: { productImage?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'invalid JSON' }, 400, headers);
+    }
+    const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+    const product = await fetchProductImage(body.productImage ?? '', allowed);
+    if ('error' in product) return json({ error: product.error }, product.status, headers);
+    const { cut } = env.GEMINI_API_KEY ? await productCutout(env, body.productImage!, product) : {};
+    const img = cut ?? product;
+    return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut }, 200, headers);
+  }
+
+  if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
+  if (throttled(`rt:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+
+  // Daily caps: per visitor, and for the whole site (the bill is per second).
+  const day = new Date().toISOString().slice(0, 10);
+  const kv = env.MEDIA;
+  const ipKey = `rt:${day}:${ip}`;
+  const allKey = `rt:${day}:all`;
+  const used = Number((await kv?.get(ipKey)) ?? 0);
+  const usedAll = Number((await kv?.get(allKey)) ?? 0);
+  const dailyAll = Number(env.REALTIME_DAILY_SESSIONS ?? 100);
+  if (used >= REALTIME_PER_IP) return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
+  if (usedAll >= dailyAll) return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+
+  const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+  const res = await fetch('https://api.decart.ai/v1/client/tokens', {
+    method: 'POST',
+    headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      expiresIn: 60, // enough to connect; an open session is capped by maxSessionDuration
+      allowedModels: ['lucy-vton-latest'],
+      allowedOrigins: origins,
+      constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
+    }),
+  });
+  if (!res.ok) {
+    console.log('decart token error', res.status, (await res.text()).slice(0, 300));
+    return json({ error: '실시간 착용 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.', reason: 'provider' }, 502, headers);
+  }
+  const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
+  if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
+  await kv?.put(ipKey, String(used + 1), { expirationTtl: 60 * 60 * 26 });
+  await kv?.put(allKey, String(usedAll + 1), { expirationTtl: 60 * 60 * 26 });
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: REALTIME_PER_IP - used - 1 }, 200, headers);
+}
+
 // ---- Router ----------------------------------------------------------------------------------
 
 export default {
@@ -454,6 +526,7 @@ export default {
       if (throttled(`order:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
       return handleOrders(path, request, env, headers);
     }
+    if (path === '/realtime/token' || path === '/cutout') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';

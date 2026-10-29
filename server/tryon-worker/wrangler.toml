@@ -16,6 +16,8 @@ GEMINI_MODEL = "gemini-2.5-flash-image"
 ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io,http://localhost:5173,http://localhost:4173"
 # Published product data. The Worker re-reads prices from here for every order (never from the browser).
 PRODUCTS_BASE_URL = "https://ewq122334455-tech.github.io/lagi-ar/products/"
+# Realtime try-on: sessions per day for the whole site (each up to 20 s, about $0.40 at $0.02/s).
+REALTIME_DAILY_SESSIONS = "100"
 
 # Member accounts and login sessions. With no id, `wrangler deploy` creates the namespace on first deploy.
 [[kv_namespaces]]

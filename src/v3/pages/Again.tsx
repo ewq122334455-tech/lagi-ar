@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { CATEGORY_LABEL, price, useRealProducts } from '../data';
+import { LiveTryOn } from '../LiveTryOn';
 
 /** Ways of wearing a product the AI is asked for — the same set the Worker prompt supports. */
 const STYLES = {
@@ -42,6 +43,8 @@ export default function Again() {
   const { products, loading } = useRealProducts();
   const [params, setParams] = useSearchParams();
   const productId = params.get('p');
+  // Realtime try-on (video) or photo compositing. Realtime is the default.
+  const mode = params.get('m') === 'photo' ? 'photo' : 'live';
   const product = products.find((p) => p.id === productId);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
@@ -75,7 +78,7 @@ export default function Again() {
   const step = !product ? 1 : !photo ? 2 : !result ? (busy ? 4 : 3) : 5;
 
   function choose(p: Product) {
-    setParams({ p: p.id }, { replace: true });
+    setParams(mode === 'photo' ? { p: p.id, m: 'photo' } : { p: p.id }, { replace: true });
     setResult(null);
     setError(null);
     setErrorDetail(null);
@@ -164,6 +167,17 @@ export default function Again() {
 
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 
+  const chips = (
+    <div className="t-nav kr mt-4 flex flex-wrap gap-2">
+      {styles.map((s) => (
+        <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'bg-[var(--c-white)] font-bold outline outline-2 -outline-offset-2 outline-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`}>
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+  const setMode = (m: 'live' | 'photo') => setParams({ ...(productId ? { p: productId } : {}), ...(m === 'photo' ? { m } : {}) }, { replace: true });
+
   return (
     <div className="px-page pb-32 pt-page">
       <header className="grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 lg:grid-cols-12">
@@ -178,13 +192,29 @@ export default function Again() {
         </div>
       </header>
 
-      <ol className="t-caption kr rule mt-12 grid grid-cols-3 gap-2 pt-3 md:grid-cols-6" aria-label="진행 단계">
+      <div className="rule mt-12 flex flex-wrap gap-x-8 gap-y-2 pt-3" role="tablist" aria-label="체험 방식">
+        {(
+          [
+            ['live', '실시간 착용', '카메라 영상 · 20초'],
+            ['photo', '사진 합성', '사진 한 장 · 10~40초'],
+          ] as const
+        ).map(([m, label, sub]) => (
+          <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`tap text-left ${mode === m ? '' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}>
+            <span className={`t-h3 kr ${mode === m ? 'underline decoration-2 underline-offset-8' : ''}`}>{label}</span>
+            <span className="t-caption kr ml-2">{sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {mode === 'photo' && (
+      <ol className="t-caption kr mt-6 grid grid-cols-3 gap-2 pt-3 md:grid-cols-6" aria-label="진행 단계">
         {['제품 선택', '사진', '착용 방식', '합성', '결과 확인', '저장 · 다시'].map((t, i) => (
           <li key={t} aria-current={step === i + 1 ? 'step' : undefined} className={step === i + 1 ? 'font-bold' : step > i + 1 ? '' : 'text-[var(--c-mute)]'}>
             <span className="t-mark tabular-nums">{pad(i + 1)}</span> {t}
           </li>
         ))}
       </ol>
+      )}
 
       {/* 01 Product */}
       <section className="mt-14" aria-labelledby="s1">
@@ -217,6 +247,9 @@ export default function Again() {
         )}
       </section>
 
+      {mode === 'live' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+
+      {mode === 'photo' && (
       <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
         {/* Preview */}
         <div className="lg:col-span-7" ref={resultRef}>
@@ -300,13 +333,7 @@ export default function Again() {
             <h2 id="s3" className="t-h3 kr">
               <span className="t-mark text-[var(--c-mute)]">03</span> 착용 방식
             </h2>
-            <div className="t-nav kr mt-4 flex flex-wrap gap-2">
-              {styles.map((s) => (
-                <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'bg-[var(--c-white)] font-bold outline outline-2 -outline-offset-2 outline-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            {chips}
           </section>
 
           <section aria-labelledby="s4">
@@ -372,6 +399,7 @@ export default function Again() {
           )}
         </div>
       </div>
+      )}
 
       {camera && (
         <CameraCapture
