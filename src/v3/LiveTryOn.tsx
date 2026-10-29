@@ -53,6 +53,8 @@ export function LiveTryOn({
   const [consent, setConsent] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  // Connected but the AI has not sent a generated frame yet (queued or warming up).
+  const [waiting, setWaiting] = useState<string | null>(null);
   const out = useRef<HTMLVideoElement>(null);
   const local = useRef<HTMLVideoElement>(null);
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
@@ -90,6 +92,7 @@ export function LiveTryOn({
     let timer = 0;
     let stopped = false;
     let wentLive = false;
+    let gotFrames = false;
     let rt: { disconnect: () => void } | null = null;
     const stop = () => {
       if (stopped) return;
@@ -100,6 +103,7 @@ export function LiveTryOn({
       if (out.current) out.current.srcObject = null;
       if (local.current) local.current.srcObject = null;
       session.current = null;
+      setWaiting(null);
       // Only a session that actually ran "ended"; a failed start goes back to the start state.
       setPhase(wentLive ? 'ended' : 'idle');
     };
@@ -119,32 +123,56 @@ export function LiveTryOn({
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       const conn = await client.realtime.connect(stream, {
         model,
+        mirror: 'auto',
         onRemoteStream: (remote: MediaStream) => {
-          if (out.current) out.current.srcObject = remote;
+          const v = out.current;
+          if (!v) return;
+          v.srcObject = remote;
+          // Mobile browsers do not always autoplay a stream attached while the element was off screen.
+          void v.play().catch(() => undefined);
         },
+        onQueuePosition: (q: { position: number }) => setWaiting(q.position > 0 ? `대기 중입니다 · ${q.position}번째` : 'AI가 영상을 만들고 있습니다…'),
       });
       rt = conn;
+      setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
         await conn.setImage(blob, { prompt: promptFor(product, stylePrompt), enhance: true });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
-      conn.on('sessionEnded', () => stop());
+      conn.on('sessionEnded', (e: { reason?: string }) => {
+        if (!gotFrames && e?.reason) setError(`AI 영상이 시작되기 전에 세션이 끝났습니다 (${e.reason}).`);
+        stop();
+      });
       conn.on('error', (e: { message?: string }) => {
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
       });
       session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: true }) };
       // The page counts down too, so the visitor sees the limit; Decart enforces it either way.
-      const until = Date.now() + token.seconds * 1000;
+      // The clock starts at connect (that is what Decart bills), but the "waiting" overlay stays up until
+      // the first generated frame, and a session that never produces one is stopped early.
+      const begun = Date.now();
+      const until = begun + token.seconds * 1000;
+      const onFrames = () => {
+        if (gotFrames) return;
+        gotFrames = true;
+        setWaiting(null);
+      };
+      conn.on('generationTick', onFrames);
       setLeft(token.seconds);
       wentLive = true;
       setPhase('live');
       timer = window.setInterval(() => {
+        const v = out.current;
+        if (!gotFrames && v && v.readyState >= 2 && v.videoWidth > 0 && Date.now() - begun > 1500) onFrames();
         const s = Math.max(0, Math.ceil((until - Date.now()) / 1000));
         setLeft(s);
-        if (s <= 0) stop();
+        if (!gotFrames && Date.now() - begun > 12000) {
+          setError('AI 영상이 오지 않아 중단했습니다. 잠시 후 다시 시도해 주세요.');
+          stop();
+        } else if (s <= 0) stop();
       }, 250);
     } catch (e) {
       stop();
@@ -190,10 +218,10 @@ export function LiveTryOn({
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
       <div className="lg:col-span-7">
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-[var(--c-ink)]" data-testid="live-stage">
-          <video ref={out} autoPlay playsInline muted className={`h-full w-full object-contain ${live ? '' : 'hidden'}`} />
-          {!live && (
-            <p className="t-body kr max-w-xs px-6 text-center text-white/80" data-testid="live-status">
-              {phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
+          <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting ? '' : 'opacity-0'}`} />
+          {(!live || waiting) && (
+            <p className="t-body kr relative max-w-xs px-6 text-center text-white/80" data-testid="live-status">
+              {live ? waiting : phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
             </p>
           )}
           {/* Own camera, small, so the visitor can frame themselves. */}
