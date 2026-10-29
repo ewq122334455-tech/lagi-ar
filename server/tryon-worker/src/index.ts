@@ -144,6 +144,37 @@ async function productCutout(env: Env, url: string, product: { mime: string; dat
   return { cut };
 }
 
+const DESCRIBE_PROMPT =
+  'Describe this product for a video generator in one English sentence of at most 45 words. Only what is visible: ' +
+  'the kind of item, its overall shape and proportions, each main colour and the part it is on (body, top band, handles, ' +
+  'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
+
+/** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
+async function productDescription(env: Env, url: string, product: { mime: string; data: string }): Promise<string | undefined> {
+  const key = `desc:v1:${url}`;
+  const cached = await env.MEDIA?.get(key);
+  if (cached) return cached;
+  try {
+    const res = await callGemini(
+      env,
+      JSON.stringify({
+        contents: [{ parts: [{ text: DESCRIBE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
+      }),
+      'gemini-2.5-flash',
+    );
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const text = data.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
+    if (!text) return undefined;
+    const clean = text.slice(0, 400);
+    await env.MEDIA?.put(key, clean);
+    return clean;
+  } catch {
+    return undefined;
+  }
+}
+
 // ---- Members: sign-up / log-in --------------------------------------------------------------
 
 interface StoredUser {
@@ -469,9 +500,11 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
     const product = await fetchProductImage(body.productImage ?? '', allowed);
     if ('error' in product) return json({ error: product.error }, product.status, headers);
-    const { cut } = env.GEMINI_API_KEY ? await productCutout(env, body.productImage!, product) : {};
+    const [{ cut }, description] = env.GEMINI_API_KEY
+      ? await Promise.all([productCutout(env, body.productImage!, product), productDescription(env, body.productImage!, product)])
+      : [{}, undefined];
     const img = cut ?? product;
-    return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut }, 200, headers);
+    return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description }, 200, headers);
   }
 
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
@@ -623,12 +656,12 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * US: wherever the visitor is, the request to Google leaves from there. Without the binding (e.g.
  * local tests) the call is made directly.
  */
-async function callGemini(env: Env, body: string): Promise<Response> {
+async function callGemini(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
   if (env.RELAY) {
     const stub = env.RELAY.get(env.RELAY.idFromName('gemini-us-west'), { locationHint: 'wnam' });
-    return stub.fetch('https://relay/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-model': env.GEMINI_MODEL }, body });
+    return stub.fetch('https://relay/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-model': model }, body });
   }
-  return geminiFetch(env.GEMINI_API_KEY, env.GEMINI_MODEL, body);
+  return geminiFetch(env.GEMINI_API_KEY, model, body);
 }
 
 function geminiFetch(key: string, model: string, body: string) {
