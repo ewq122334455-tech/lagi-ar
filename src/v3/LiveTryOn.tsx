@@ -74,6 +74,7 @@ export function LiveTryOn({
     let stream: MediaStream | null = null;
     let timer = 0;
     let stopped = false;
+    let wentLive = false;
     let rt: { disconnect: () => void } | null = null;
     const stop = () => {
       if (stopped) return;
@@ -84,7 +85,8 @@ export function LiveTryOn({
       if (out.current) out.current.srcObject = null;
       if (local.current) local.current.srcObject = null;
       session.current = null;
-      setPhase('ended');
+      // Only a session that actually ran "ended"; a failed start goes back to the start state.
+      setPhase(wentLive ? 'ended' : 'idle');
     };
     try {
       const [blob, token, sdk] = await Promise.all([
@@ -117,6 +119,7 @@ export function LiveTryOn({
       // The page counts down too, so the visitor sees the limit; Decart enforces it either way.
       const until = Date.now() + token.seconds * 1000;
       setLeft(token.seconds);
+      wentLive = true;
       setPhase('live');
       timer = window.setInterval(() => {
         const s = Math.max(0, Math.ceil((until - Date.now()) / 1000));
@@ -169,7 +172,7 @@ export function LiveTryOn({
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-[var(--c-ink)]" data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`h-full w-full object-contain ${live ? '' : 'hidden'}`} />
           {!live && (
-            <p className="t-body kr max-w-xs px-6 text-center text-white/80">
+            <p className="t-body kr max-w-xs px-6 text-center text-white/80" data-testid="live-status">
               {phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
             </p>
           )}
