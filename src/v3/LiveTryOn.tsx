@@ -4,10 +4,10 @@ import { AI_TRYON_URL } from '@/tryon/aiTryOn';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 
-/** What the realtime model is asked to do with the product (English works best, 20–30 words). */
+/** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
 function promptFor(product: Product, stylePrompt: string) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
-  return `The person is carrying the ${kind} shown in the reference image, ${stylePrompt}. The ${kind} is fully visible in front of the body. Keep its exact shape, colours, prints and proportions, realistic size and natural shadows.`;
+  return `Add the ${kind} from the reference image, ${stylePrompt}. It is an accessory, not clothing: do not change the person's clothes. Keep the ${kind}'s exact shape, colours, prints and proportions, realistic size and natural shadows. Keep the person and background unchanged.`;
 }
 
 /** The model wants a small reference: shrink to 512 px on white and send as JPEG (the PNG cutout is ~1 MB). */
@@ -114,7 +114,7 @@ export function LiveTryOn({
         import('@decartai/sdk'),
       ]);
       setRemaining(token.remainingToday);
-      const model = sdk.models.realtime('lucy-vton-latest');
+      const model = sdk.models.realtime('lucy-2.6');
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: { facingMode: facing, frameRate: model.fps, width: model.width, height: model.height },
