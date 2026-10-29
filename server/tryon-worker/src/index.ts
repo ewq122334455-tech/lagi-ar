@@ -492,7 +492,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       expiresIn: 60, // enough to connect; an open session is capped by maxSessionDuration
-      allowedModels: ['lucy-vton-latest'],
+      allowedModels: ['lucy-2.6'],
       allowedOrigins: origins,
       constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
     }),
