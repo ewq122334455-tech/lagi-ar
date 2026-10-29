@@ -20,6 +20,8 @@ interface KV {
 export interface Env {
   /** Member accounts and login sessions. Bound in wrangler.toml ([[kv_namespaces]] USERS). */
   USERS?: KV;
+  /** Comma-separated member emails with no daily realtime limit (the owner) — a Worker secret, never in the repo. */
+  REALTIME_UNLIMITED?: string;
   /** Google AI Studio API key — set with `npx wrangler secret put GEMINI_API_KEY`. */
   GEMINI_API_KEY: string;
   /** Gemini image model id, e.g. "gemini-2.5-flash-image". Set in wrangler.toml [vars]. */
@@ -483,8 +485,11 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   const used = Number((await kv?.get(ipKey)) ?? 0);
   const usedAll = Number((await kv?.get(allKey)) ?? 0);
   const dailyAll = Number(env.REALTIME_DAILY_SESSIONS ?? 100);
-  if (used >= REALTIME_PER_IP) return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
-  if (usedAll >= dailyAll) return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+  const unlimited = (env.REALTIME_UNLIMITED ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const member = unlimited.length && env.USERS ? await sessionUser(env.USERS, request) : null;
+  const vip = !!member && unlimited.includes(member.user.email.toLowerCase());
+  if (!vip && used >= REALTIME_PER_IP) return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
+  if (!vip && usedAll >= dailyAll) return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
 
   const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
   const res = await fetch('https://api.decart.ai/v1/client/tokens', {
@@ -503,6 +508,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   }
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
   if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
+  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: null }, 200, headers);
   await kv?.put(ipKey, String(used + 1), { expirationTtl: 60 * 60 * 26 });
   await kv?.put(allKey, String(usedAll + 1), { expirationTtl: 60 * 60 * 26 });
   return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: REALTIME_PER_IP - used - 1 }, 200, headers);

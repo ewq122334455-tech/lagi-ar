@@ -25,8 +25,22 @@ async function smallReference(blob: Blob): Promise<Blob> {
   return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', 0.88));
 }
 
+function sessionToken() {
+  try {
+    return localStorage.getItem('lagi-session');
+  } catch {
+    return null;
+  }
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${AI_TRYON_URL}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  // The member session goes along so the owner's account can skip the daily limit.
+  const token = sessionToken();
+  const res = await fetch(`${AI_TRYON_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body),
+  });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(data.error ?? `요청에 실패했습니다 (${res.status}).`);
   return data;
@@ -51,7 +65,7 @@ export function LiveTryOn({
   const [left, setLeft] = useState(20);
   const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
-  const [remaining, setRemaining] = useState<number | null>(null);
+  const [remaining, setRemaining] = useState<number | 'unlimited' | null>(null);
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   // Connected but the AI has not sent a generated frame yet (queued or warming up).
   const [waiting, setWaiting] = useState<string | null>(null);
@@ -110,10 +124,10 @@ export function LiveTryOn({
     try {
       const [blob, token, sdk] = await Promise.all([
         garmentBlob(product),
-        post<{ apiKey: string; seconds: number; remainingToday: number }>('/realtime/token', {}),
+        post<{ apiKey: string; seconds: number; remainingToday: number | null }>('/realtime/token', {}),
         import('@decartai/sdk'),
       ]);
-      setRemaining(token.remainingToday);
+      setRemaining(token.remainingToday ?? 'unlimited');
       const model = sdk.models.realtime('lucy-2.6');
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
@@ -280,7 +294,7 @@ export function LiveTryOn({
           </button>
           {!product && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 제품을 고르세요.</p>}
           <p className="t-caption kr mt-3 text-[var(--c-mute)]">
-            한 번에 20초, 하루 3번까지 체험할 수 있습니다{remaining != null ? ` (오늘 남은 횟수 ${remaining}번)` : ''}. 화면은 AI가 만든 영상이며, 실제 크기와 색은 다를 수 있습니다.
+            한 번에 20초, 하루 3번까지 체험할 수 있습니다{remaining === 'unlimited' ? ' (이 계정은 횟수 제한 없음)' : remaining != null ? ` (오늘 남은 횟수 ${remaining}번)` : ''}. 화면은 AI가 만든 영상이며, 실제 크기와 색은 다를 수 있습니다.
           </p>
           {error && (
             <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert">

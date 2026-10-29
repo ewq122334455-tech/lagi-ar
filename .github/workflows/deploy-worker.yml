@@ -1,7 +1,8 @@
 # Deploys the AI / members / orders server (server/tryon-worker) to Cloudflare whenever it changes on main.
 # Needs one repository secret: CLOUDFLARE_API_TOKEN (Cloudflare → My Profile → API Tokens → "Edit Cloudflare Workers").
 # Without it the job only prints a notice — the website deploy is not affected.
-# Optional secret DECART_API_KEY (realtime try-on) is uploaded to the Worker as a Worker secret when present.
+# Optional secrets, uploaded to the Worker when present: DECART_API_KEY (realtime try-on) and
+# REALTIME_UNLIMITED (comma-separated member emails with no daily realtime limit).
 name: Deploy AI server (Cloudflare Worker)
 
 on:
@@ -22,7 +23,8 @@ jobs:
         id: token
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          DECART: ${{ secrets.DECART_API_KEY }}
+          DECART_API_KEY: ${{ secrets.DECART_API_KEY }}
+          REALTIME_UNLIMITED: ${{ secrets.REALTIME_UNLIMITED }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::notice::CLOUDFLARE_API_TOKEN is not set — skipping the AI server deploy."
@@ -30,28 +32,26 @@ jobs:
           else
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
-          if [ -n "$DECART" ]; then echo "decart=true" >> "$GITHUB_OUTPUT"; else echo "decart=false" >> "$GITHUB_OUTPUT"; fi
+          # Only the optional secrets that are actually set are uploaded (wrangler-action fails on an empty one).
+          {
+            echo "secrets<<EOF"
+            for name in DECART_API_KEY REALTIME_UNLIMITED; do
+              if [ -n "${!name}" ]; then echo "$name"; fi
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.token.outputs.ok == 'true'
-      - name: Deploy (with the Decart key)
-        uses: cloudflare/wrangler-action@v3
-        if: steps.token.outputs.ok == 'true' && steps.token.outputs.decart == 'true'
-        env:
-          DECART_API_KEY: ${{ secrets.DECART_API_KEY }}
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: server/tryon-worker
-          wranglerVersion: '4'
-          secrets: |
-            DECART_API_KEY
-          command: deploy
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
-        if: steps.token.outputs.ok == 'true' && steps.token.outputs.decart != 'true'
+        if: steps.token.outputs.ok == 'true'
+        env:
+          DECART_API_KEY: ${{ secrets.DECART_API_KEY }}
+          REALTIME_UNLIMITED: ${{ secrets.REALTIME_UNLIMITED }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: server/tryon-worker
           wranglerVersion: '4'
+          secrets: ${{ steps.token.outputs.secrets }}
           command: deploy
