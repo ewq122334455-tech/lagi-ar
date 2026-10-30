@@ -135,21 +135,21 @@ function Header({ onSearch }: { onSearch: () => void }) {
         {/* Row 1 (wide screens): the logo, centred. Folds away on scroll. */}
         <div className="header-top hidden items-center justify-center px-page lg:flex">
           <Link to="/" aria-label="LAGI home" className="-m-1.5 p-1.5">
-            <LagiLogo className="h-12 w-auto text-[var(--c-blue)]" title="LAGI" />
+            <LagiLogo className="h-[72px] w-auto text-[var(--c-blue)]" title="LAGI" />
           </Link>
         </div>
         {/* Row 2: menu in the middle, utilities on the right (on phones: menu · logo · utilities). */}
-        <div className="relative flex h-14 items-center justify-between px-page lg:h-12">
+        <div className="relative flex h-16 items-center justify-between px-page lg:h-14">
           <div className="flex min-w-[96px] items-center">
             <button type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
               {Icon.menu}
             </button>
             <Link to="/" aria-label="LAGI home" className={`header-mini hidden lg:inline-flex`}>
-              <LagiLogo className="h-8 w-auto text-[var(--c-blue)]" title="LAGI" />
+              <LagiLogo className="h-10 w-auto text-[var(--c-blue)]" title="LAGI" />
             </Link>
           </div>
           <Link to="/" aria-label="LAGI home" className="absolute left-1/2 -translate-x-1/2 lg:hidden">
-            <LagiLogo className="h-9 w-auto text-[var(--c-blue)]" title="LAGI" />
+            <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
           </Link>
           <nav aria-label="Main" className="t-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex xl:gap-10">
             {NAV.map((n) => (
@@ -168,7 +168,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
             <button type="button" onClick={() => setOpen(false)} className="icon-btn" aria-label="메뉴 닫기">
               {Icon.close}
             </button>
-            <LagiLogo className="absolute left-1/2 h-9 w-auto -translate-x-1/2 text-[var(--c-blue)]" title="LAGI" />
+            <LagiLogo className="absolute left-1/2 h-11 w-auto -translate-x-1/2 text-[var(--c-blue)]" title="LAGI" />
             <span className="w-10" />
           </div>
           <nav className="mt-10 flex flex-col items-start gap-5" aria-label="모바일 메뉴">
@@ -309,7 +309,7 @@ function HelpButton() {
         className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-[0_4px_18px_rgba(0,0,0,0.16)] transition-transform hover:scale-105 md:h-14 md:w-14"
         data-testid="help-button"
       >
-        <LagiLogo className="h-7 w-auto text-[var(--c-blue)] md:h-8" title="" />
+        <LagiLogo className="h-8 w-auto text-[var(--c-blue)] md:h-9" title="" />
       </button>
     </div>
   );

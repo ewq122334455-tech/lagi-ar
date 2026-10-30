@@ -203,7 +203,7 @@ export default function ProductPage() {
         </div>
 
         <aside className="lg:col-span-5" aria-label="구매">
-          <div className="lg:sticky lg:top-[136px]">
+          <div className="lg:sticky lg:top-[80px]">
             <div className="flex items-center justify-between">
               <p className="t-caption t-mark text-[var(--c-mute)]">{p.brandLabel ?? 'LAGI'}</p>
               <span className="t-caption t-mark tabular-nums text-[var(--c-mute)]" data-testid="product-index">
@@ -302,7 +302,7 @@ export default function ProductPage() {
       </div>
 
       {/* 2 · Tabs */}
-      <div className="sticky top-14 z-20 mt-20 border-b border-black/10 bg-white lg:top-12" role="tablist" aria-label="제품 정보">
+      <div className="sticky top-16 z-20 mt-20 border-b border-black/10 bg-white lg:top-14" role="tablist" aria-label="제품 정보">
         <div className="grid grid-cols-3">
           {tabs.map((t) => (
             <button
