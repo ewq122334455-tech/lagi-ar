@@ -306,7 +306,7 @@ export function LiveTryOn({
   return (
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
       <div className="lg:col-span-7">
-        <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-[var(--c-ink)]" data-testid="live-stage">
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)]" data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting ? '' : 'opacity-0'}`} />
           {(!live || waiting) && (
             <p className="t-body kr relative max-w-xs px-6 text-center text-white/80" data-testid="live-status">
@@ -325,14 +325,14 @@ export function LiveTryOn({
           )}
         </div>
         {live && (
-          <div className="t-nav kr mt-3 flex flex-wrap gap-2">
-            <button type="button" className="tag btn-solid px-4 py-3" onClick={exactPhoto} data-testid="exact-photo">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className="btn btn-primary" onClick={exactPhoto} data-testid="exact-photo">
               이 포즈로 정확한 사진 만들기
             </button>
-            <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={saveFrame}>
+            <button type="button" className="btn btn-line" onClick={saveFrame}>
               이 장면 저장
             </button>
-            <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => session.current?.stop()}>
+            <button type="button" className="btn btn-line" onClick={() => session.current?.stop()}>
               끝내기
             </button>
           </div>
@@ -349,8 +349,8 @@ export function LiveTryOn({
             {exact.image && (
               <>
                 <img src={exact.image} alt="AI로 합성한 착용 사진" className="block h-auto w-full max-w-xl" />
-                <div className="t-nav kr mt-3 flex flex-wrap gap-2">
-                  <button type="button" className="tag btn-solid px-4 py-3" onClick={saveExact}>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" className="btn btn-primary" onClick={saveExact}>
                     사진 저장
                   </button>
                 </div>
@@ -361,7 +361,7 @@ export function LiveTryOn({
         )}
       </div>
 
-      <div className="space-y-8 lg:col-span-5">
+      <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
         <section aria-labelledby="l2">
           <h2 id="l2" className="t-h3 kr">
             <span className="t-mark text-[var(--c-mute)]">02</span> 착용 방식
@@ -373,14 +373,14 @@ export function LiveTryOn({
           <h2 id="l3" className="t-h3 kr">
             <span className="t-mark text-[var(--c-mute)]">03</span> 실시간 착용 · 20초
           </h2>
-          <div className="t-caption kr mt-3 flex gap-2">
+          <div className="mt-3 flex gap-2">
             {(['user', 'environment'] as const).map((f) => (
-              <button key={f} type="button" aria-pressed={facing === f} disabled={live || phase === 'starting'} onClick={() => setFacing(f)} className={`tag px-3 ${facing === f ? 'font-bold outline outline-2 -outline-offset-2 outline-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`}>
+              <button key={f} type="button" aria-pressed={facing === f} disabled={live || phase === 'starting'} onClick={() => setFacing(f)} className="chip disabled:opacity-40">
                 {f === 'user' ? '앞 카메라' : '뒤 카메라'}
               </button>
             ))}
           </div>
-          <label className="t-caption kr mt-4 flex items-start gap-2">
+          <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>체험하는 20초 동안 카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
           </label>
@@ -388,7 +388,7 @@ export function LiveTryOn({
             type="button"
             onClick={start}
             disabled={!product || !consent || live || phase === 'starting'}
-            className="t-nav tag btn-solid kr mt-5 px-5 py-3.5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn btn-primary mt-5 w-full"
           >
             {phase === 'starting' ? '연결 중…' : phase === 'ended' ? '다시 시작' : '실시간 착용 시작'}
           </button>

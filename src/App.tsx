@@ -27,6 +27,8 @@ const V3Login = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.L
 const V3Signup = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.SignupPage })));
 const V3NotFound = lazy(() => import('@/v3/pages/NotFound'));
 const V3Account = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.AccountPage })));
+const V3Order = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.OrderLookupPage })));
+const V3Review = lazy(() => import('@/v3/pages/ReviewPage'));
 
 function SiteLayout() {
   const { pathname } = useLocation();
@@ -71,6 +73,8 @@ export default function App() {
             <Route path="/login" element={<V3Login />} />
             <Route path="/signup" element={<V3Signup />} />
             <Route path="/account" element={<V3Account />} />
+            <Route path="/order" element={<V3Order />} />
+            <Route path="/review" element={<V3Review />} />
             <Route path="*" element={<V3NotFound />} />
           </Route>
           {/* Old addresses that were shared before the rebuild. */}

@@ -72,10 +72,13 @@ export function CurvedGallery({
   products,
   ratios,
   mode = 'stage',
+  pageScroll = false,
 }: {
   products: Product[];
   ratios: Record<string, number>;
   mode?: 'stage' | 'scroll';
+  /** Stage inside a scrolling page: vertical wheel/swipe scroll the page; only sideways movement turns the gallery. */
+  pageScroll?: boolean;
 }) {
   const n = products.length;
   const scrollMode = mode === 'scroll';
@@ -212,6 +215,7 @@ export function CurvedGallery({
     const stage = stageRef.current;
     if (!stage || scrollMode) return;
     const onWheel = (e: WheelEvent) => {
+      if (pageScroll && Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // let the page scroll
       e.preventDefault();
       if (opening.current) return;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
@@ -225,7 +229,7 @@ export function CurvedGallery({
     };
     stage.addEventListener('wheel', onWheel, { passive: false });
     return () => stage.removeEventListener('wheel', onWheel);
-  }, [reduced, scheduleSnap, step, scrollMode]);
+  }, [reduced, scheduleSnap, step, scrollMode, pageScroll]);
 
   // Drag (mouse) and swipe (touch/pen) through pointer events.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -239,16 +243,21 @@ export function CurvedGallery({
     const dx = e.clientX - dr.x;
     const dy = e.clientY - dr.y;
     if (!dr.moved && Math.hypot(dx, dy) > 6) {
+      // In a scrolling page a mostly-vertical drag is a page scroll, not a gallery turn.
+      if (pageScroll && Math.abs(dy) > Math.abs(dx)) {
+        drag.current = null;
+        return;
+      }
       dr.moved = true;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     }
     if (!dr.moved) return;
     // Pulling left or up brings the next product forward (same direction as scrolling down).
     const unit = g.mobile ? g.vw * 0.55 : g.vw * 0.3;
-    target.current = dr.start + (-dx - dy) / unit;
+    target.current = dr.start + (pageScroll ? -dx : -dx - dy) / unit;
     const now = performance.now();
     const dt = Math.max(1, now - dr.lastT);
-    dr.v = ((-(e.clientX - dr.lastX) - (e.clientY - dr.lastY)) / unit / dt) * 1000;
+    dr.v = ((-(e.clientX - dr.lastX) - (pageScroll ? 0 : e.clientY - dr.lastY)) / unit / dt) * 1000;
     dr.lastX = e.clientX;
     dr.lastY = e.clientY;
     dr.lastT = now;
@@ -282,7 +291,7 @@ export function CurvedGallery({
   const stage = (
     <div
       ref={stageRef}
-      className={`relative h-full w-full select-none ${scrollMode ? '' : 'touch-none'}`}
+      className={`relative h-full w-full select-none ${scrollMode ? '' : pageScroll ? 'touch-pan-y' : 'touch-none'}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

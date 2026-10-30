@@ -55,8 +55,8 @@ export function ProductViews({ src, name, product }: { src: string; name: string
   const strips = drawings.filter((d) => d.group === 'detail' && isStrip(d));
   const photo = product.views;
   return (
-    <section className="mt-24 px-page lg:mt-36" aria-labelledby="views-title">
-      <div className="rule flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pt-4">
+    <section className="mt-20" aria-labelledby="views-title">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-t border-black/15 pt-4">
         <h2 id="views-title" className="t-h3 kr">
           구도 · 형태 · 착용
         </h2>

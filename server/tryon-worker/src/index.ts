@@ -81,7 +81,7 @@ function cors(origin: string | null, env: Env): Record<string, string> {
   const ok = origin && allowed.includes(origin);
   return {
     'Access-Control-Allow-Origin': ok ? origin : allowed[0],
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
@@ -388,6 +388,14 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     const orders = (await Promise.all(listed.keys.map((k) => kv.get(k.name)))).filter(Boolean).map((r) => JSON.parse(r!) as Order);
     return json({ orders: orders.filter((o) => o.status === 'PAID') }, 200, headers);
   }
+  if (path === '/orders/mine' && request.method === 'GET') {
+    const me = env.USERS ? await sessionUser(env.USERS, request) : null;
+    if (!me) return json({ error: '로그인이 필요합니다.' }, 401, headers);
+    const listed = await kv.list({ prefix: `byemail:${me.user.email.toLowerCase()}:`, limit: 50 });
+    const orders = (await Promise.all(listed.keys.map((k) => kv.get(`order:${k.name.split(':').pop()}`)))).filter(Boolean).map((r) => orderSummary(JSON.parse(r!) as Order));
+    orders.sort((a, b) => (a.orderId < b.orderId ? 1 : -1));
+    return json({ orders }, 200, headers);
+  }
   if (request.method !== 'POST') return json({ error: 'not found' }, 404, headers);
 
   let body: Record<string, unknown>;
@@ -490,7 +498,147 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     order.status = 'PAID';
     order.payment = { paymentKey, method: toss.method, approvedAt: toss.approvedAt, receiptUrl: toss.receipt?.url };
     await kv.put(`order:${order.orderId}`, JSON.stringify(order)); // paid orders are kept
+    // Index by buyer email: members see their orders, and reviews of bought products are marked.
+    await kv.put(`byemail:${order.customer.email.toLowerCase()}:${order.orderId}`, order.lines.map((l) => l.productId).join(','));
     return json(orderSummary(order), 200, headers);
+  }
+
+  // Guest order lookup: order number + the phone number given at checkout.
+  if (path === '/orders/lookup') {
+    const orderId = clean(body.orderId, 64).toUpperCase();
+    const phone = clean(body.phone, 20).replace(/[^0-9]/g, '');
+    const raw = /^LAGI-\d{8}-[0-9A-F]{6,16}$/.test(orderId) ? await kv.get(`order:${orderId}`) : null;
+    const order = raw ? (JSON.parse(raw) as Order) : null;
+    if (!order || !phone || (order.customer.phone !== phone && order.shipping.phone !== phone))
+      return json({ error: '주문 번호와 휴대폰 번호를 확인해 주세요.' }, 404, headers);
+    return json(orderSummary(order), 200, headers);
+    return json(orderSummary(order), 200, headers);
+  }
+
+  return json({ error: 'not found' }, 404, headers);
+}
+
+// ---- Reviews ---------------------------------------------------------------------------------
+// Members write one review per product (rating, text, optional photo). Stored in ORDERS KV:
+//   review:<productId>:<newest-first key>   the review
+//   reviewall:<newest-first key>            pointer, for the all-reviews page
+//   reviewby:<email>:<productId>            one per member per product
+// Photos live in MEDIA as review-img:<id>.
+
+interface Review {
+  id: string;
+  productId: string;
+  productName: string;
+  author: string;
+  email: string;
+  rating: number;
+  text: string;
+  photo: boolean;
+  verified: boolean;
+  createdAt: string;
+}
+
+const REVIEW_PAGE = 10;
+const MAX_REVIEW_PHOTO = 900_000; // base64 chars (~650 KB JPEG)
+const maskName = (n: string) => (n.length <= 1 ? `${n}*` : `${n[0]}${'*'.repeat(Math.min(3, n.length - 1))}`);
+const publicReview = (r: Review) => ({ id: r.id, productId: r.productId, productName: r.productName, author: r.author, rating: r.rating, text: r.text, photo: r.photo, verified: r.verified, createdAt: r.createdAt });
+
+async function handleReviews(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const kv = env.ORDERS!;
+  const url = new URL(request.url);
+
+  if (path.startsWith('/reviews/photo/') && request.method === 'GET') {
+    const id = path.slice('/reviews/photo/'.length);
+    const data = /^[0-9a-z-]{8,60}$/.test(id) ? await env.MEDIA?.get(`review-img:${id}`) : null;
+    if (!data) return json({ error: 'not found' }, 404, headers);
+    const bin = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+    return new Response(bin, { headers: { ...headers, 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' } });
+  }
+
+  if (path === '/reviews' && request.method === 'GET') {
+    const product = url.searchParams.get('product') ?? '';
+    const page = Math.max(1, Math.min(50, Number(url.searchParams.get('page')) || 1));
+    const prefix = product ? `review:${product}:` : 'reviewall:';
+    if (product && !/^[a-z0-9-]{1,64}$/.test(product)) return json({ error: 'invalid product' }, 400, headers);
+    // KV lists keys in order; the key starts with an inverted time, so the newest come first.
+    const keys: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const l = await kv.list({ prefix, cursor, limit: 1000 });
+      keys.push(...l.keys.map((k) => k.name));
+      cursor = l.list_complete ? undefined : l.cursor;
+    } while (cursor && keys.length < 2000);
+    const slice = keys.slice((page - 1) * REVIEW_PAGE, page * REVIEW_PAGE);
+    const raws = await Promise.all(slice.map(async (k) => (product ? kv.get(k) : kv.get((await kv.get(k)) ?? ''))));
+    const viewer = env.USERS && request.headers.get('Authorization') ? await sessionUser(env.USERS, request) : null;
+    const reviews = raws.filter(Boolean).map((raw) => {
+      const r = JSON.parse(raw!) as Review;
+      return { ...publicReview(r), mine: !!viewer && viewer.user.email.toLowerCase() === r.email };
+    });
+    return json({ reviews, total: keys.length, page, pages: Math.max(1, Math.ceil(keys.length / REVIEW_PAGE)) }, 200, headers);
+  }
+
+  const me = env.USERS ? await sessionUser(env.USERS, request) : null;
+  if (!me) return json({ error: '로그인한 회원만 구매평을 쓸 수 있습니다.' }, 401, headers);
+  const email = me.user.email.toLowerCase();
+
+  if (path === '/reviews' && request.method === 'POST') {
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'invalid JSON' }, 400, headers);
+    }
+    const productId = clean(body.productId, 64);
+    const product = await publishedProduct(env, productId);
+    if (!product) return json({ error: '판매 중인 제품에만 구매평을 쓸 수 있습니다.' }, 400, headers);
+    const rating = Number(body.rating);
+    const text = clean(body.text, 1000);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) return json({ error: '별점을 선택해 주세요.' }, 400, headers);
+    if (text.length < 10) return json({ error: '구매평은 10자 이상 써 주세요.' }, 400, headers);
+    if (await kv.get(`reviewby:${email}:${productId}`)) return json({ error: '이 제품에는 이미 구매평을 남겼습니다.' }, 409, headers);
+    const photo = typeof body.photo === 'string' ? /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(body.photo)?.[1] : undefined;
+    if (body.photo && !photo) return json({ error: '사진은 JPEG로 올려 주세요.' }, 400, headers);
+    if (photo && photo.length > MAX_REVIEW_PHOTO) return json({ error: '사진 용량이 너무 큽니다.' }, 413, headers);
+
+    const bought = await kv.list({ prefix: `byemail:${email}:`, limit: 100 });
+    const lines = await Promise.all(bought.keys.map((k) => kv.get(k.name)));
+    const verified = lines.some((l) => (l ?? '').split(',').includes(productId));
+    const now = Date.now();
+    const id = `${(9_999_999_999_999 - now).toString().padStart(13, '0')}-${randomHex(4)}`;
+    const review: Review = {
+      id,
+      productId,
+      productName: product.name.value ?? productId,
+      author: maskName(me.user.name || email.split('@')[0]),
+      email,
+      rating,
+      text,
+      photo: !!photo,
+      verified,
+      createdAt: new Date(now).toISOString(),
+    };
+    if (photo) await env.MEDIA?.put(`review-img:${id}`, photo);
+    await kv.put(`review:${productId}:${id}`, JSON.stringify(review));
+    await kv.put(`reviewall:${id}`, `review:${productId}:${id}`);
+    await kv.put(`reviewby:${email}:${productId}`, id);
+    return json(publicReview(review), 201, headers);
+  }
+
+  if (path.startsWith('/reviews/') && request.method === 'DELETE') {
+    const [productId, id] = path.slice('/reviews/'.length).split('/');
+    const raw = productId && id ? await kv.get(`review:${productId}:${id}`) : null;
+    const review = raw ? (JSON.parse(raw) as Review) : null;
+    if (!review) return json({ error: '구매평을 찾을 수 없습니다.' }, 404, headers);
+    if (review.email !== email) return json({ error: '내가 쓴 구매평만 지울 수 있습니다.' }, 403, headers);
+    await Promise.all([kv.delete(`review:${productId}:${id}`), kv.delete(`reviewall:${id}`), kv.delete(`reviewby:${email}:${productId}`), env.MEDIA?.delete(`review-img:${id}`)]);
+    return json({ ok: true }, 200, headers);
+  }
+
+  // Which products this member already reviewed (to hide the form).
+  if (path === '/reviews/mine' && request.method === 'GET') {
+    const l = await kv.list({ prefix: `reviewby:${email}:`, limit: 200 });
+    return json({ products: l.keys.map((k) => k.name.split(':').pop()) }, 200, headers);
   }
 
   return json({ error: 'not found' }, 404, headers);
@@ -584,11 +732,20 @@ export default {
     const headers = cors(origin, env);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
+    const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
+    // Review photos are public images loaded by <img> tags, which send no Origin header.
+    if (path.startsWith('/reviews/photo/') && request.method === 'GET' && env.ORDERS) return handleReviews(path, request, env, headers);
+
     const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
     if (!origin || !allowed.includes(origin)) return json({ error: 'origin not allowed' }, 403, headers);
 
-    const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
-    if (path === '/orders' || path === '/payments/confirm' || path === '/admin/orders') {
+    if (path === '/reviews' || path.startsWith('/reviews/')) {
+      if (!env.ORDERS || !env.PRODUCTS_BASE_URL) return json({ error: '구매평 기능이 아직 연결되지 않았습니다.' }, 503, headers);
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      if (request.method !== 'GET' && throttled(`review:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+      return handleReviews(path, request, env, headers);
+    }
+    if (path === '/orders' || path === '/orders/lookup' || path === '/orders/mine' || path === '/payments/confirm' || path === '/admin/orders') {
       if (!env.ORDERS || !env.PRODUCTS_BASE_URL) return json({ error: '온라인 결제가 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
       if (throttled(`order:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);

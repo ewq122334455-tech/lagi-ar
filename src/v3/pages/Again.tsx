@@ -5,6 +5,7 @@ import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { CATEGORY_LABEL, price, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
+import { cleanImage } from '../ProductCard';
 
 /** Ways of wearing a product the AI is asked for — the same set the Worker prompt supports. */
 const STYLES = {
@@ -168,9 +169,10 @@ export default function Again() {
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 
   const chips = (
-    <div className="t-nav kr mt-4 flex flex-wrap gap-2">
+    <div className="mt-4 flex flex-wrap gap-2">
       {styles.map((s) => (
-        <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className={`tag px-4 py-3 ${style === s.key ? 'bg-[var(--c-white)] font-bold outline outline-2 -outline-offset-2 outline-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`}>
+        <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className="chip">
+          {style === s.key && <span aria-hidden="true">✓</span>}
           {s.label}
         </button>
       ))}
@@ -192,25 +194,35 @@ export default function Again() {
         </div>
       </header>
 
-      <div className="rule mt-12 flex flex-wrap gap-x-8 gap-y-2 pt-3" role="tablist" aria-label="체험 방식">
+      <div className="mt-12 grid grid-cols-2 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5 sm:inline-grid sm:min-w-[520px]" role="tablist" aria-label="체험 방식">
         {(
           [
             ['live', '실시간 착용', '카메라 영상 · 20초'],
             ['photo', '사진 합성', '사진 한 장 · 10~40초'],
           ] as const
         ).map(([m, label, sub]) => (
-          <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`tap text-left ${mode === m ? '' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}>
-            <span className={`t-h3 kr ${mode === m ? 'underline decoration-2 underline-offset-8' : ''}`}>{label}</span>
-            <span className="t-caption kr ml-2">{sub}</span>
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => setMode(m)}
+            className={`rounded-xl px-4 py-3 text-left transition-all ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+          >
+            <span className="t-value kr block">{label}</span>
+            <span className="t-caption kr block opacity-80">{sub}</span>
           </button>
         ))}
       </div>
 
       {mode === 'photo' && (
-      <ol className="t-caption kr mt-6 grid grid-cols-3 gap-2 pt-3 md:grid-cols-6" aria-label="진행 단계">
+      <ol className="t-caption kr mt-6 grid grid-cols-3 gap-2 md:grid-cols-6" aria-label="진행 단계">
         {['제품 선택', '사진', '착용 방식', '합성', '결과 확인', '저장 · 다시'].map((t, i) => (
-          <li key={t} aria-current={step === i + 1 ? 'step' : undefined} className={step === i + 1 ? 'font-bold' : step > i + 1 ? '' : 'text-[var(--c-mute)]'}>
-            <span className="t-mark tabular-nums">{pad(i + 1)}</span> {t}
+          <li key={t} aria-current={step === i + 1 ? 'step' : undefined} className="flex flex-col gap-1.5">
+            <span className={`h-1 rounded-full ${step > i ? 'bg-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`} />
+            <span className={step === i + 1 ? 'font-bold' : step > i + 1 ? '' : 'text-[var(--c-mute)]'}>
+              <span className="t-mark tabular-nums">{pad(i + 1)}</span> {t}
+            </span>
           </li>
         ))}
       </ol>
@@ -231,10 +243,15 @@ export default function Again() {
                   type="button"
                   aria-pressed={p.id === productId}
                   onClick={() => choose(p)}
-                  className={`block w-full text-left outline-offset-2 ${p.id === productId ? 'outline outline-2 outline-[var(--c-ink)]' : ''}`}
+                  className="group block w-full text-left"
                 >
-                  <span className="block aspect-square overflow-hidden bg-[var(--c-gray)]">
-                    <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
+                  <span className={`relative block aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
+                    <img src={cleanImage(p)} alt="" className="h-full w-full object-contain p-2" />
+                    {p.id === productId && (
+                      <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--c-ink)] text-[12px] text-white">
+                        ✓
+                      </span>
+                    )}
                   </span>
                   <span className="t-caption kr mt-2 block px-1 pb-1 font-bold">{p.name.value}</span>
                   <span className="t-caption kr block px-1 pb-1 text-[var(--c-mute)]">
@@ -270,7 +287,7 @@ export default function Again() {
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-ink)]/75 text-[var(--c-white)]" role="status">
                 <p className="t-value kr">이미지를 합성하고 있습니다… {elapsed}초</p>
                 <p className="t-caption kr text-white/80">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초, 처음 고른 제품은 조금 더 걸립니다.'}</p>
-                <button type="button" className="t-caption kr tag bg-[var(--c-white)] text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
+                <button type="button" className="btn !min-h-[40px] bg-white text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
                   취소
                 </button>
               </div>
@@ -280,7 +297,7 @@ export default function Again() {
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
-                className="t-caption kr tag bg-[var(--c-label)]"
+                className="chip"
                 onPointerDown={() => setBefore(true)}
                 onPointerUp={() => setBefore(false)}
                 onPointerLeave={() => setBefore(false)}
@@ -300,20 +317,25 @@ export default function Again() {
         </div>
 
         {/* Controls */}
-        <div className="space-y-10 lg:col-span-5">
+        <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
           <section aria-labelledby="s2">
             <h2 id="s2" className="t-h3 kr">
               <span className="t-mark text-[var(--c-mute)]">02</span> 사진
             </h2>
             <input ref={albumRef} type="file" accept="image/*" className="hidden" onChange={onPick} data-testid="photo-input" />
             <input ref={captureRef} type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
-            <div className="t-nav kr mt-4 flex flex-wrap gap-2">
-              <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => albumRef.current?.click()}>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" className="btn btn-line" onClick={() => albumRef.current?.click()}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <circle cx="9" cy="10" r="1.8" />
+                  <path d="m21 16-5-5-9 9" />
+                </svg>
                 사진 올리기
               </button>
               <button
                 type="button"
-                className="tag bg-[var(--c-label)] px-4 py-3"
+                className="btn btn-line"
                 onClick={() => {
                   setError(null);
                   setErrorDetail(null);
@@ -323,6 +345,10 @@ export default function Again() {
                   else captureRef.current?.click();
                 }}
               >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
                 카메라로 촬영
               </button>
             </div>
@@ -340,7 +366,7 @@ export default function Again() {
             <h2 id="s4" className="t-h3 kr">
               <span className="t-mark text-[var(--c-mute)]">04</span> 합성
             </h2>
-            <label className="t-caption kr mt-4 flex items-start gap-2">
+            <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
               <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               <span>
                 합성을 위해 내 사진이 AI 서버(Cloudflare를 거쳐 Google Gemini)로 한 번 전송되는 것에 동의합니다. 라기는 사진과 결과를 저장하지 않습니다.
@@ -350,9 +376,9 @@ export default function Again() {
               type="button"
               onClick={run}
               disabled={!photo || !product || busy || !consent}
-              className="t-nav tag btn-solid kr mt-5 px-5 py-3.5 disabled:cursor-not-allowed disabled:opacity-40"
+              className="btn btn-primary mt-4 w-full"
             >
-              {busy ? '합성 중…' : result ? '같은 사진으로 다시 합성' : 'AI 이미지 합성'}
+              {busy ? '합성 중…' : result ? '같은 사진으로 다시 합성' : 'AI 이미지 합성하기'}
             </button>
             {!product && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 제품을 고르세요.</p>}
             {product && !photo && <p className="t-caption kr mt-2 text-[var(--c-mute)]">사진을 올리거나 촬영하세요.</p>}
@@ -369,18 +395,18 @@ export default function Again() {
               <h2 id="s5" className="t-h3 kr">
                 <span className="t-mark text-[var(--c-mute)]">05</span> 저장 또는 다시
               </h2>
-              <div className="t-nav kr mt-4 flex flex-wrap gap-2">
-                <button type="button" className="tag tag-ink px-4 py-3" onClick={save}>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button type="button" className="btn btn-primary col-span-2" onClick={save}>
                   이미지 저장
                 </button>
                 {canShare && (
-                  <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={share}>
+                  <button type="button" className="btn btn-line" onClick={share}>
                     공유
                   </button>
                 )}
                 <button
                   type="button"
-                  className="tag bg-[var(--c-label)] px-4 py-3"
+                  className="btn btn-line"
                   onClick={() => {
                     setResult(null);
                     setPhoto(null);
@@ -520,11 +546,11 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
           <p className="t-body kr" role="alert">
             {problem}
           </p>
-          <div className="t-nav kr mt-6 flex flex-wrap justify-center gap-2">
-            <button type="button" className="tag bg-[var(--c-white)] px-4 py-3 text-[var(--c-ink)]" onClick={() => setAttempt((n) => n + 1)}>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <button type="button" className="btn bg-white text-[var(--c-ink)]" onClick={() => setAttempt((n) => n + 1)}>
               다시 시도
             </button>
-            <button type="button" className="tag border border-white px-4 py-3" onClick={onPick}>
+            <button type="button" className="btn border border-white/70 text-white hover:bg-white/10" onClick={onPick}>
               앨범에서 고르기
             </button>
           </div>
@@ -533,20 +559,36 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
         <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-black ${mirrored ? '-scale-x-100' : ''}`} />
       )}
       </div>
-      <div className="t-nav kr flex flex-wrap justify-center gap-2">
-        {!problem && (
-          <>
-            <button type="button" className="tag border border-white bg-[var(--c-white)] px-6 py-3 text-[var(--c-ink)] disabled:opacity-40" disabled={!ready} onClick={shoot}>
-              촬영
-            </button>
-            <button type="button" className="tag border border-white px-4 py-3 text-[var(--c-white)]" onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}>
-              카메라 전환
-            </button>
-          </>
-        )}
-        <button type="button" className="tag border border-white px-4 py-3 text-[var(--c-white)]" onClick={onClose}>
+      {/* Close · shutter · flip, like a phone camera */}
+      <div className="grid w-full max-w-sm grid-cols-3 items-center text-[var(--c-white)]">
+        <button type="button" className="justify-self-start rounded-full px-4 py-2.5 text-sm font-semibold hover:bg-white/10" onClick={onClose}>
           닫기
         </button>
+        {!problem ? (
+          <>
+            <button
+              type="button"
+              aria-label="촬영"
+              className="justify-self-center rounded-full border-[3px] border-white p-1 transition-transform active:scale-95 disabled:opacity-40"
+              disabled={!ready}
+              onClick={shoot}
+            >
+              <span className="block h-14 w-14 rounded-full bg-white" />
+            </button>
+            <button
+              type="button"
+              aria-label="카메라 전환"
+              className="flex h-11 w-11 items-center justify-center justify-self-end rounded-full bg-white/15 hover:bg-white/25"
+              onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5" />
+              </svg>
+            </button>
+          </>
+        ) : (
+          <span />
+        )}
       </div>
     </div>,
     document.body,
