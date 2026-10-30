@@ -168,6 +168,8 @@ export interface Product {
   details: Hotspot[];
   story: VerifiableField<string>;
   lagiSelectionReason: VerifiableField<string>;
+  /** How the store photo is shown on the page: what it depicts, and two close-up points (% of the photo). */
+  views?: { main: string; details: { x: number; y: number; label: string }[] };
   /** Three short points shown next to the price. */
   highlights?: VerifiableField<string[]>;
   /** How to look after it. */

@@ -4,6 +4,7 @@ import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import { isPublished } from '@/utils/contentStatus';
+import { ProductViews } from '../ProductViews';
 import { Point } from '../Point';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
 
@@ -219,6 +220,11 @@ export default function ProductPage() {
           </div>
         </aside>
       </div>
+
+      {/* 2a · Views, form and fit — the real photo, close-ups of it, and drawings from the verified size */}
+      {hero && p.views && (
+        <ProductViews src={hero} name={p.name.value ?? ''} views={p.views} dims={p.dimensions} small={(p.category.value ?? '') !== 'Bag'} />
+      )}
 
       {/* 2b · AI styling shots — labelled on every image, kept apart from the real product photos */}
       {!!p.styledImages?.length && (
