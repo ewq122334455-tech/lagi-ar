@@ -5,9 +5,12 @@
  * - Missing information is CONTENT_REQUIRED, not guessed.
  * - Uncertain information is UNKNOWN, never silently VERIFIED.
  * - AI-generated copy is AI_DRAFT until a human marks it VERIFIED.
+ * - BRAND_COPY is introduction copy LAGI wrote from the verified basics (name, short description,
+ *   size) and what the product photos show, published at the owner's request. It describes; it does
+ *   not add specifications, and the page says who wrote it.
  */
 
-export type ContentStatus = 'VERIFIED' | 'AI_DRAFT' | 'UNKNOWN' | 'CONTENT_REQUIRED';
+export type ContentStatus = 'VERIFIED' | 'BRAND_COPY' | 'AI_DRAFT' | 'UNKNOWN' | 'CONTENT_REQUIRED';
 
 /** Classification used when AI analyzes product photographs (spec §7, §70). */
 export type ObservationLevel = 'OBSERVED' | 'INFERRED' | 'UNKNOWN';
@@ -39,11 +42,17 @@ export function verified<T>(value: T, source?: string): VerifiableField<T> {
 }
 
 export function isDisplayable<T>(f: VerifiableField<T> | undefined | null): f is VerifiableField<T> & { value: T } {
-  return !!f && f.value !== null && (f.status === 'VERIFIED' || f.status === 'AI_DRAFT' || f.status === 'UNKNOWN');
+  return !!f && f.value !== null && (f.status === 'VERIFIED' || f.status === 'BRAND_COPY' || f.status === 'AI_DRAFT' || f.status === 'UNKNOWN');
+}
+
+/** Fit for the public product page: verified facts, or LAGI's published copy. Drafts stay hidden. */
+export function isPublished<T>(f: VerifiableField<T> | undefined | null): f is VerifiableField<T> & { value: T } {
+  return !!f && f.value !== null && (f.status === 'VERIFIED' || f.status === 'BRAND_COPY');
 }
 
 export const STATUS_LABEL: Record<ContentStatus, string> = {
   VERIFIED: '확인됨',
+  BRAND_COPY: '라기 작성',
   AI_DRAFT: 'AI 초안',
   UNKNOWN: '미확인',
   CONTENT_REQUIRED: '정보 미등록',

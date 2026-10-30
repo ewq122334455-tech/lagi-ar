@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "업사이클링 소재로 만든 휴대용 안경·선글라스 보관함이에요. 가방 속에서 렌즈가 긁히지 않게 지켜 주고, 작은 파우치로도 쓸 수 있습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "업사이클링 소재로 만든 휴대용 안경·선글라스 보관함이에요. 가방 속에서 안경이 다른 물건과 부딪히지 않도록 감싸 주고, 덮개와 고리가 있어 넣고 꺼내기 편해요. 파랑·빨강·노랑이 어우러진 테두리와 줄무늬 앞주머니가 포인트입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/glasses-case/images/main.jpg"
@@ -44,65 +44,65 @@
     {
       "name": {
         "value": "업사이클링 소재",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "characteristics": {
-        "value": "가볍고 렌즈를 보호하기 좋아요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓰임을 얻은 소재",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "productLocation": {
-        "value": "케이스 전체",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "본체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "reasonForUse": {
-        "value": "다시 쓰인 소재로 매일 쓰는 소품을 만들기 위해 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "버려질 소재에 새 쓰임을 주기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "재단",
+      "title": "소재 선별",
       "description": {
-        "value": "안경 크기에 맞게 재단합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓸 수 있는 소재를 골라 손질합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 2,
-      "title": "봉제",
+      "title": "재단",
       "description": {
-        "value": "입구와 마감을 박음질합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "안경이 들어갈 크기로 재단합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 3,
-      "title": "마무리 검수",
+      "title": "봉제",
       "description": {
-        "value": "안경이 잘 들어가는지 확인합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "덮개와 고리를 달아 완성합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "안경을 가방에 그냥 넣었다가 렌즈에 흠집이 난 적이 있나요? 그 작은 속상함에서 출발해, 안경 한 개가 꼭 맞게 들어가는 길쭉한 보관함을 만들었습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "안경을 가방에 그냥 넣었다가 렌즈에 흠집이 난 적 있나요? 안경 보관함은 그 작은 불편을 다시 쓴 소재로 감싸 줍니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
-    "value": "매일 쓰는 안경을 다시 꺼낼 때마다 라기를 떠올리게 해서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "매일 쓰는 물건을 꺼낼 때마다 라기를 떠올리게 해서요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/glasses-case/model/glasses.glb",
   "animations": [],
@@ -141,5 +141,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "업사이클링 소재로 만든 안경·선글라스 케이스",
+      "덮개와 고리가 달린 휴대용 파우치",
+      "가로 19 · 높이 9 · 폭 5cm, 가방 속에 쏙 들어가는 크기"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "오염은 물에 적신 천으로 가볍게 두드려 닦아 주세요. 업사이클링 소재 특성상 세탁기·건조기 사용과 다림질은 피해 주세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }

@@ -3,6 +3,7 @@ import { STATUS_LABEL } from '@/utils/contentStatus';
 
 const STYLES: Record<ContentStatus, string> = {
   VERIFIED: 'text-graphite border-line',
+  BRAND_COPY: 'text-graphite border-line',
   AI_DRAFT: 'text-graphite border-line',
   UNKNOWN: 'text-stone border-line',
   CONTENT_REQUIRED: 'text-stone border-dashed border-line',
