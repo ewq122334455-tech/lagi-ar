@@ -170,5 +170,52 @@
         "label": "덮개 테두리"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/glasses-case/images/drawings/front.jpg",
+      "label": "앞면 · 닫힌 모습",
+      "group": "view"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/angle.jpg",
+      "label": "사선 · 열린 모습",
+      "group": "view"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/open.jpg",
+      "label": "펼친 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/closed.jpg",
+      "label": "닫힌 모습 · 사선",
+      "group": "form"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/d-edge.jpg",
+      "label": "가장자리 마감",
+      "group": "detail"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/d-clip.jpg",
+      "label": "끈과 카라비너",
+      "group": "detail"
+    },
+    {
+      "src": "products/glasses-case/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }

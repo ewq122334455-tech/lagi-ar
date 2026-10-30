@@ -170,6 +170,8 @@ export interface Product {
   lagiSelectionReason: VerifiableField<string>;
   /** How the store photo is shown on the page: what it depicts, and two close-up points (% of the photo). */
   views?: { main: string; details: { x: number; y: number; label: string }[] };
+  /** Crops of the brand's 3D modelling reference sheet: views (구도), form (형태), details & material. */
+  drawings?: { src: string; label: string; group: 'view' | 'form' | 'detail' }[];
   /** Three short points shown next to the price. */
   highlights?: VerifiableField<string[]>;
   /** How to look after it. */

@@ -222,9 +222,7 @@ export default function ProductPage() {
       </div>
 
       {/* 2a · Views, form and fit — the real photo, close-ups of it, and drawings from the verified size */}
-      {hero && p.views && (
-        <ProductViews src={hero} name={p.name.value ?? ''} views={p.views} dims={p.dimensions} small={(p.category.value ?? '') !== 'Bag'} />
-      )}
+      {hero && (p.views || p.drawings?.length) && <ProductViews src={hero} name={p.name.value ?? ''} product={p} />}
 
       {/* 2b · AI styling shots — labelled on every image, kept apart from the real product photos */}
       {!!p.styledImages?.length && (

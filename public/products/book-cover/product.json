@@ -171,5 +171,67 @@
         "label": "안쪽 프린트"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/book-cover/images/drawings/front.jpg",
+      "label": "앞면 · 닫힌 모습",
+      "group": "view"
+    },
+    {
+      "src": "products/book-cover/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/book-cover/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/book-cover/images/drawings/angle.jpg",
+      "label": "사선 · 펼친 모습",
+      "group": "view"
+    },
+    {
+      "src": "products/book-cover/images/drawings/open.jpg",
+      "label": "펼친 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/book-cover/images/drawings/closed.jpg",
+      "label": "닫힌 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/book-cover/images/drawings/thick.jpg",
+      "label": "두께 · 빈 상태와 채운 상태",
+      "group": "form"
+    },
+    {
+      "src": "products/book-cover/images/drawings/d-cord.jpg",
+      "label": "고리 끈과 스토퍼",
+      "group": "detail"
+    },
+    {
+      "src": "products/book-cover/images/drawings/d-corner.jpg",
+      "label": "모서리 마감",
+      "group": "detail"
+    },
+    {
+      "src": "products/book-cover/images/drawings/d-flap.jpg",
+      "label": "덮개 가장자리",
+      "group": "detail"
+    },
+    {
+      "src": "products/book-cover/images/drawings/d-strap.jpg",
+      "label": "안쪽 스트랩",
+      "group": "detail"
+    },
+    {
+      "src": "products/book-cover/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }
