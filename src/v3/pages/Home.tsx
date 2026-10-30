@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CurvedGallery } from '../CurvedGallery';
 import { BrandFilmOverlay } from '../BrandFilm';
+import { IntroMotion, introSeen } from '../IntroMotion';
 import { OFFICIAL_LINKS, useImageRatios, useRealProducts } from '../data';
 import { ProductCard, cleanImage } from '../ProductCard';
 
@@ -29,6 +30,8 @@ export default function Home() {
   const ratios = useImageRatios(products);
   const ready = products.length > 0 && products.every((p) => ratios[p.id]);
   const [film, setFilm] = useState(false);
+  // The brand motion plays once per visit before the home page.
+  const [intro, setIntro] = useState(() => !introSeen());
   const byId = (id: string) => products.find((p) => p.id === id);
   const archive = [
     { to: '/why', en: 'Why LAGI', kr: '라기가 제품을 고르는 네 가지 기준', img: byId('plano-bag')?.images[0], tone: 'photo' },
@@ -38,6 +41,7 @@ export default function Home() {
 
   return (
     <div>
+      {intro && <IntroMotion onDone={() => setIntro(false)} />}
       {/* 1 · The curved gallery, one screen (vertical scroll moves the page; drag sideways to turn it). */}
       <section className="relative h-[100svh] overflow-hidden bg-[var(--c-gray)]" aria-label="LAGI 제품 갤러리">
         {ready && <CurvedGallery products={products} ratios={ratios} pageScroll />}
@@ -46,8 +50,8 @@ export default function Home() {
           ▶ Brand film
         </button>
         {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}
-        <div className="pointer-events-none absolute bottom-6 left-[var(--page-x)] z-[150] mix-blend-difference">
-          <h1 className="t-display t-mark text-white">
+        <div className="pointer-events-none absolute bottom-6 left-[var(--page-x)] z-[150]">
+          <h1 className="t-display t-mark text-[var(--c-ink)]">
             LAGI
             <br />
             in AGAIN
