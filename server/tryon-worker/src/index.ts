@@ -178,6 +178,26 @@ async function productDescription(env: Env, url: string, product: { mime: string
   }
 }
 
+const MATTE_PROMPT = [
+  'Place this exact product, alone, on a perfectly flat pure green background (#00FF00), filling most of the frame, seen from the front.',
+  'No shadow, no reflection, no gradient, no floor: every background pixel is the same pure green.',
+  'Keep the product exactly as it is: same shape, colours, prints, text, materials, hardware and proportions. Do not redesign it.',
+  'Return only the image.',
+].join(' ');
+
+/** The product on pure green, for the browser to key out and lay over the live video. Cached per product. */
+async function productMatte(env: Env, url: string, product: { mime: string; data: string }): Promise<{ mime: string; data: string } | undefined> {
+  const key = `matte:v1:${url}`;
+  const cached = await env.MEDIA?.get(key);
+  if (cached) return JSON.parse(cached) as { mime: string; data: string };
+  const out = await geminiImage(env, [{ text: MATTE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  const m = out.image && /^data:([^;]+);base64,(.+)$/.exec(out.image);
+  if (!m) return undefined;
+  const matte = { mime: m[1], data: m[2] };
+  await env.MEDIA?.put(key, JSON.stringify(matte));
+  return matte;
+}
+
 // ---- Members: sign-up / log-in --------------------------------------------------------------
 
 interface StoredUser {
@@ -494,7 +514,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
 
   if (path === '/cutout') {
     if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
-    let body: { productImage?: string };
+    let body: { productImage?: string; matte?: boolean };
     try {
       body = await request.json();
     } catch {
@@ -503,6 +523,11 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
     const product = await fetchProductImage(body.productImage ?? '', allowed);
     if ('error' in product) return json({ error: product.error }, product.status, headers);
+    if (body.matte) {
+      const matte = env.GEMINI_API_KEY ? await productMatte(env, body.productImage!, product) : undefined;
+      if (!matte) return json({ error: '제품 이미지를 준비하지 못했습니다.' }, 502, headers);
+      return json({ matte: `data:${matte.mime};base64,${matte.data}` }, 200, headers);
+    }
     const [{ cut }, desc] = env.GEMINI_API_KEY
       ? await Promise.all([productCutout(env, body.productImage!, product), productDescription(env, body.productImage!, product)])
       : [{}, {}];

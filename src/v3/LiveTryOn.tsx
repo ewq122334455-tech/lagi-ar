@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
+import type { PoseLandmarker } from '@mediapipe/tasks-vision';
+import { keyMatte, loadPose, paint, placeFor, smooth, type Placement } from './productOverlay';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 
@@ -66,6 +68,11 @@ function sessionToken() {
   }
 }
 
+function productUrl(p: Product) {
+  const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
+  return new URL(p.images[0], base).toString();
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   // The member session goes along so the owner's account can skip the daily limit.
   const token = sessionToken();
@@ -80,17 +87,20 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 /**
- * Realtime try-on (Decart Lucy VTON): the visitor's camera goes to Decart over WebRTC and comes back
+ * Realtime try-on (Decart Lucy 2.6, with the real product photo laid over it): the visitor's camera goes to Decart over WebRTC and comes back
  * as a live video of them wearing / carrying the product. Sessions are capped at 20 seconds — the
  * token from our Worker carries that limit, so Decart ends the session even if this page does not.
  * The SDK (WebRTC client) is loaded only when a session starts.
  */
 export function LiveTryOn({
   product,
+  styleKey,
   stylePrompt,
   styleChips,
 }: {
   product: Product | undefined;
+  /** Way of wearing (shoulder, hand, …) — decides where the real-product overlay sits. */
+  styleKey: string;
   stylePrompt: string;
   styleChips: React.ReactNode;
 }) {
@@ -108,6 +118,13 @@ export function LiveTryOn({
   const local = useRef<HTMLVideoElement>(null);
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
   const garment = useRef<{ id: string; blob: Blob; description?: string } | null>(null);
+  // Real-product overlay: the actual photo, keyed, laid over the AI video and moved with the body.
+  const ov = useRef<HTMLCanvasElement>(null);
+  const [overlayOn, setOverlayOn] = useState(true);
+  const [overlayNote, setOverlayNote] = useState<string | null>(null);
+  const overlay = useRef<{ id: string; img: HTMLCanvasElement } | null>(null);
+  const pose = useRef<Promise<PoseLandmarker> | null>(null);
+  const placed = useRef<Placement | null>(null);
 
   // Never leave a paid session running: stop on unmount and when the tab is hidden.
   useEffect(() => {
@@ -124,10 +141,79 @@ export function LiveTryOn({
     if (phase === 'live' && product) void session.current?.setPrompt(promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
   }, [stylePrompt, product, phase]);
 
+  // Draw the real product over the AI video while live (tracking runs on the AI video itself, so the
+  // overlay lines up with the arm and shoulder the AI drew).
+  useEffect(() => {
+    const c = ov.current;
+    const clear = () => c?.getContext('2d')?.clearRect(0, 0, c.width, c.height);
+    placed.current = null;
+    if (phase !== 'live' || waiting || !overlayOn || !product) {
+      clear();
+      return;
+    }
+    let alive = true;
+    let raf = 0;
+    let marker: PoseLandmarker | null = null;
+    let lm: { x: number; y: number; visibility?: number }[] | null = null;
+    let lastDetect = 0;
+    let lastT = -1;
+    void pose.current?.then((m) => (marker = m)).catch(() => undefined);
+    const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'acc';
+    const loop = (now: number) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(loop);
+      const v = out.current;
+      const img = overlay.current?.id === product.id ? overlay.current.img : null;
+      if (!v || !c) return;
+      const r = c.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) {
+        c.width = Math.round(r.width * dpr);
+        c.height = Math.round(r.height * dpr);
+      }
+      const ctx = c.getContext('2d')!;
+      ctx.clearRect(0, 0, c.width, c.height);
+      if (!marker || !img || v.readyState < 2 || !v.videoWidth) return;
+      // ~15 detections a second is plenty; the placement is eased in between.
+      if (now - lastDetect > 66 && v.currentTime !== lastT) {
+        lastDetect = now;
+        lastT = v.currentTime;
+        lm = marker.detectForVideo(v, now).landmarks[0] ?? null;
+      }
+      if (!lm) return;
+      const p = placeFor(styleKey, kind, lm, v.videoWidth, v.videoHeight, img.width / img.height, product.dimensions.widthCm ?? undefined);
+      if (!p) return;
+      placed.current = smooth(placed.current, p);
+      const s = Math.min(c.width / v.videoWidth, c.height / v.videoHeight);
+      paint(ctx, img, placed.current, { s, ox: (c.width - v.videoWidth * s) / 2, oy: (c.height - v.videoHeight * s) / 2 });
+    };
+    raf = requestAnimationFrame(loop);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      clear();
+    };
+  }, [phase, waiting, overlayOn, product, styleKey]);
+
+  /** Keyed product photo + pose model, prepared alongside the live connection; failure only drops the overlay. */
+  async function prepareOverlay(p: Product) {
+    setOverlayNote(null);
+    try {
+      pose.current ??= loadPose();
+      if (overlay.current?.id !== p.id) {
+        const { matte } = await post<{ matte: string }>('/cutout', { productImage: productUrl(p), matte: true });
+        overlay.current = { id: p.id, img: await keyMatte(matte) };
+      }
+      await pose.current;
+    } catch {
+      pose.current = null;
+      setOverlayNote('실제 제품 덮기를 준비하지 못해 AI 영상만 보여 드려요.');
+    }
+  }
+
   async function garmentBlob(p: Product) {
     if (garment.current?.id === p.id) return garment.current;
-    const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-    const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
+    const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: productUrl(p) });
     const blob = await smallReference(await (await fetch(image)).blob());
     garment.current = { id: p.id, blob, description };
     return garment.current;
@@ -157,6 +243,7 @@ export function LiveTryOn({
       // Only a session that actually ran "ended"; a failed start goes back to the start state.
       setPhase(wentLive ? 'ended' : 'idle');
     };
+    void prepareOverlay(product);
     try {
       const [ref, token, sdk] = await Promise.all([
         garmentBlob(product),
@@ -284,6 +371,7 @@ export function LiveTryOn({
     c.height = v.videoHeight;
     const ctx = c.getContext('2d')!;
     ctx.drawImage(v, 0, 0);
+    if (overlayOn && placed.current && overlay.current?.id === product.id) paint(ctx, overlay.current.img, placed.current, { s: 1, ox: 0, oy: 0 });
     const fs = Math.max(14, Math.round(c.width / 48));
     ctx.font = `700 ${fs}px sans-serif`;
     const text = 'AI GENERATED · LAGI';
@@ -308,6 +396,7 @@ export function LiveTryOn({
       <div className="lg:col-span-7">
         <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-[var(--c-ink)]" data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting ? '' : 'opacity-0'}`} />
+          <canvas ref={ov} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" data-testid="product-overlay" />
           {(!live || waiting) && (
             <p className="t-body kr relative max-w-xs px-6 text-center text-white/80" data-testid="live-status">
               {live ? waiting : phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
@@ -332,12 +421,16 @@ export function LiveTryOn({
             <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={saveFrame}>
               이 장면 저장
             </button>
+            <button type="button" aria-pressed={overlayOn} className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => setOverlayOn((o) => !o)} data-testid="overlay-toggle">
+              실제 제품 덮기 {overlayOn ? '켬' : '끔'}
+            </button>
             <button type="button" className="tag bg-[var(--c-label)] px-4 py-3" onClick={() => session.current?.stop()}>
               끝내기
             </button>
           </div>
         )}
-        {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
+        {overlayNote && live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">{overlayNote}</p>}
+        {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">‘실제 제품 덮기’가 켜져 있으면 실제 제품 사진을 몸에 맞춰 덮어 보여 드려요. 위치는 조금 어긋날 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
         {(exact.busy || exact.image || exact.error) && (
           <div className="mt-6" data-testid="exact-result" aria-live="polite">
             {exact.busy && <p className="t-body kr">이 포즈에 실제 제품을 합성하고 있습니다… (10~40초)</p>}

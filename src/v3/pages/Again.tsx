@@ -247,7 +247,7 @@ export default function Again() {
         )}
       </section>
 
-      {mode === 'live' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+      {mode === 'live' && <LiveTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
       <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
