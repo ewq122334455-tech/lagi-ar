@@ -43,11 +43,11 @@ export function CartPage() {
                     {l.name}
                   </Link>
                   <div className="t-caption mt-2 inline-flex items-center gap-1">
-                    <button type="button" className="tag bg-[var(--c-label)] px-3" aria-label="수량 줄이기" onClick={() => setQuantity(lineKey(l), l.quantity - 1)}>
+                    <button type="button" className="h-9 w-9 rounded-full border border-black/15 hover:bg-[var(--c-label)]" aria-label="수량 줄이기" onClick={() => setQuantity(lineKey(l), l.quantity - 1)}>
                       −
                     </button>
                     <span className="w-8 text-center tabular-nums">{l.quantity}</span>
-                    <button type="button" className="tag bg-[var(--c-label)] px-3" aria-label="수량 늘리기" onClick={() => setQuantity(lineKey(l), Math.min(20, l.quantity + 1))}>
+                    <button type="button" className="h-9 w-9 rounded-full border border-black/15 hover:bg-[var(--c-label)]" aria-label="수량 늘리기" onClick={() => setQuantity(lineKey(l), Math.min(20, l.quantity + 1))}>
                       +
                     </button>
                   </div>
@@ -352,7 +352,7 @@ export function CheckoutPage() {
                   <input type="checkbox" className="mt-1" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
                   <span>주문 상품, 금액, 배송 정보를 확인했으며 결제 진행에 동의합니다.</span>
                 </label>
-                <button type="button" onClick={toPayment} disabled={busy} className="t-nav tag btn-solid kr mt-5 w-full px-5 py-4 text-center disabled:opacity-50">
+                <button type="button" onClick={toPayment} disabled={busy} className="btn btn-primary mt-5 w-full">
                   {busy ? '주문서 만드는 중…' : '결제 수단 선택'}
                 </button>
               </>
@@ -361,7 +361,7 @@ export function CheckoutPage() {
                 <p className="t-caption kr mt-6 text-[var(--c-mute)]">주문번호 {order.orderId}</p>
                 <div id="toss-methods" className="mt-3 bg-[var(--c-white)]" />
                 <div id="toss-agreement" className="bg-[var(--c-white)]" />
-                <button type="button" onClick={pay} disabled={busy || !widgetReady} className="t-nav tag btn-solid kr mt-4 w-full px-5 py-4 text-center disabled:opacity-50">
+                <button type="button" onClick={pay} disabled={busy || !widgetReady} className="btn btn-primary mt-4 w-full">
                   {price(order.amount)} 결제하기
                 </button>
                 <button
@@ -468,13 +468,19 @@ export function CheckoutSuccessPage() {
             </div>
           ))}
       </dl>
-      <div className="t-nav kr mt-8 flex flex-wrap gap-2">
+      <p className="t-caption kr mt-4 max-w-2xl rounded-[var(--radius-card)] bg-[var(--c-gray)] p-4">
+        주문번호 <b className="tabular-nums">{order.orderId}</b>를 메모해 두세요. 비회원도 <Link to="/order" className="underline underline-offset-2">주문 조회</Link>에서 주문번호와 휴대폰 번호로 확인할 수 있습니다.
+      </p>
+      <div className="mt-8 flex flex-wrap gap-2">
         {order.payment?.receiptUrl && (
-          <a href={order.payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="tag bg-[var(--c-label)] px-4 py-3">
+          <a href={order.payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="btn btn-line">
             영수증 ↗
           </a>
         )}
-        <Link to="/" className="tag tag-ink px-4 py-3">
+        <Link to={`/product/${order.lines[0]?.productId ?? ''}`} className="btn btn-line">
+          구매평 쓰기
+        </Link>
+        <Link to="/" className="btn btn-primary">
           홈으로
         </Link>
       </div>
@@ -498,7 +504,7 @@ export function CheckoutFailPage() {
         <Link to="/checkout" className="tag tag-ink px-4 py-3">
           다시 결제하기
         </Link>
-        <Link to="/cart" className="tag bg-[var(--c-label)] px-4 py-3">
+        <Link to="/cart" className="btn btn-line">
           장바구니
         </Link>
       </div>

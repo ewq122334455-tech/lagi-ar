@@ -8,9 +8,10 @@
   --c-mute: #626262; /* 5.9:1 on white, 5.1:1 on #f1f1f1 (WCAG AA) */
   --c-label: rgb(230, 230, 230);
 
-  --page-x: 20px;
-  --gap: 20px;
-  --top: 96px;
+  /* Side margins grow with the screen (20px on phones → 96px on very wide screens). */
+  --page-x: clamp(20px, 4.2vw, 96px);
+  --gap: clamp(14px, 1.4vw, 24px);
+  --top: 88px;
   --radius-card: 4px;
   --radius-sheet: 50px;
 
@@ -44,9 +45,11 @@
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
 }
+@media (min-width: 1024px) {
+  .v3 { --top: 156px; }
+}
 @media (min-width: 1200px) {
   .v3 {
-    --top: 128px;
     --radius-card: 8px;
   }
 }
@@ -88,6 +91,34 @@
 .v3 .rule-1 { border-top: 1px solid var(--c-line); }
 .v3 :focus-visible { outline: 2px solid var(--c-blue); outline-offset: 3px; }
 
+/* Header: two rows on wide screens; the logo row folds away on scroll and a small logo appears. */
+.v3 .header-top { height: 76px; transition: height var(--dur-std) var(--ease-out), opacity var(--dur-fast) linear; overflow: hidden; }
+.v3 .site-header[data-folded] .header-top { height: 0; opacity: 0; }
+.v3 .header-mini { opacity: 0; pointer-events: none; transition: opacity var(--dur-std) var(--ease-out); }
+.v3 .site-header[data-folded] .header-mini { opacity: 1; pointer-events: auto; }
+:where(.v3 .icon-btn) { display: inline-flex; }
+.v3 .icon-btn { align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 6px; border-radius: 999px; transition: background-color var(--dur-fast) linear; }
+.v3 .icon-btn:hover { background: var(--c-label); }
+.v3 .nav-link { position: relative; padding: 6px 0; }
+.v3 .nav-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform var(--dur-std) var(--ease-out); }
+.v3 .nav-link:hover::after, .v3 .nav-link[aria-current='page']::after { transform: scaleX(1); }
+.v3 .nav-link[aria-current='page'] { color: var(--c-blue); }
+/* Rounded pill choices (styles, filters, suggestions). */
+.v3 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid rgba(0,0,0,0.18); border-radius: 999px; font-family: var(--font-kr); font-size: 13px; font-weight: 500; background: var(--c-white); transition: border-color var(--dur-fast), background-color var(--dur-fast), color var(--dur-fast); }
+.v3 .chip:hover { border-color: var(--c-ink); }
+.v3 .chip[aria-pressed='true'], .v3 .chip[aria-selected='true'] { background: var(--c-ink); border-color: var(--c-ink); color: var(--c-white); }
+/* Primary / secondary buttons with a consistent height and corner. */
+.v3 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 6px; font-family: var(--font-kr); font-size: 14px; font-weight: 700; letter-spacing: 0; transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast); }
+.v3 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.v3 .btn-primary { background: var(--c-ink); color: var(--c-white); }
+.v3 .btn-primary:not(:disabled):hover { background: var(--c-blue); }
+.v3 .btn-line { border: 1px solid var(--c-ink); background: var(--c-white); color: var(--c-ink); }
+.v3 .btn-line:not(:disabled):hover { background: var(--c-ink); color: var(--c-white); }
+.v3 .btn-blue { background: var(--c-blue); color: var(--c-white); }
+.v3 .btn-blue:not(:disabled):hover { background: var(--c-ink); }
+/* A block that used to run edge to edge, now inset by the page margins with soft corners. */
+.v3 .inset { margin-left: var(--page-x); margin-right: var(--page-x); border-radius: calc(var(--radius-card) * 2); overflow: hidden; }
+
 /* Content sheet that slides off the fixed footer (reference: white sheet, 50px bottom corners). */
 .v3 .sheet {
   position: relative;
@@ -121,4 +152,22 @@
   .v3 .tag { min-height: 40px; min-width: 40px; }
   :where(.v3 .tap) { display: inline-block; }
   .v3 .tap { padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* Brand intro (home): emblem pieces assemble on black, the letters cut in, a tap lifts the sheet. */
+@keyframes intro-piece { from { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.7); } to { opacity: 1; transform: none; } }
+@keyframes intro-cut { from { opacity: 0; } to { opacity: 1; } }
+@keyframes intro-line { from { opacity: 0; transform: translateY(14px); letter-spacing: 0.3em; } to { opacity: 1; transform: none; } }
+@keyframes intro-hint { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes intro-leave { to { transform: translateY(-100%); } }
+@keyframes intro-mark-leave { to { transform: scale(1.12); opacity: 0; } }
+.v3 .intro-piece { transform-box: fill-box; transform-origin: center; opacity: 0; animation: intro-piece 1100ms var(--ease-out) both; }
+.v3 .intro-cut { opacity: 0; animation: intro-cut 500ms linear both; }
+.v3 .intro-line { opacity: 0; animation: intro-line 900ms var(--ease-out) both; }
+.v3 .intro-hint { animation: intro-hint 1.8s ease-in-out infinite; }
+.v3.intro-leave { animation: intro-leave 900ms var(--ease-in-out) both; }
+.v3.intro-leave .intro-mark { animation: intro-mark-leave 600ms var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .v3 .intro-piece, .v3 .intro-cut, .v3 .intro-line { animation: none; opacity: 1; }
+  .v3.intro-leave { animation: none; opacity: 0; }
 }
