@@ -170,5 +170,67 @@
         "label": "손잡이"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/daily-pouch-bag/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/side-r.jpg",
+      "label": "오른쪽 측면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/side-l.jpg",
+      "label": "왼쪽 측면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/top-open.jpg",
+      "label": "윗면 · 열린 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/bottom.jpg",
+      "label": "바닥",
+      "group": "form"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/d-pocket.jpg",
+      "label": "앞주머니",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/d-buckle.jpg",
+      "label": "손잡이 버클",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/d-cord.jpg",
+      "label": "옆면 끈",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/m-fabric.jpg",
+      "label": "소재 · 포대 원단",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-pouch-bag/images/drawings/m-handle.jpg",
+      "label": "소재 · 손잡이 웨빙",
+      "group": "detail"
+    }
+  ]
 }

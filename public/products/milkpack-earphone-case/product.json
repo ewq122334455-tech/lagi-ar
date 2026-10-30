@@ -171,5 +171,57 @@
         "label": "끈과 뚜껑 장식"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/p-front.jpg",
+      "label": "파우치 · 앞",
+      "group": "form"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/p-side.jpg",
+      "label": "파우치 · 옆",
+      "group": "form"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/p-back.jpg",
+      "label": "파우치 · 뒤",
+      "group": "form"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/caps.jpg",
+      "label": "구성 · 병뚜껑 장식",
+      "group": "detail"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/cords.jpg",
+      "label": "구성 · 매듭 끈",
+      "group": "detail"
+    },
+    {
+      "src": "products/milkpack-earphone-case/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }

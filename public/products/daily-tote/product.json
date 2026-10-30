@@ -175,5 +175,67 @@
         "label": "앞주머니와 프린트"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/daily-tote/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/top-open.jpg",
+      "label": "윗면 · 열린 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/bottom.jpg",
+      "label": "바닥",
+      "group": "form"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/handle.jpg",
+      "label": "손잡이",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/d-binding.jpg",
+      "label": "윗단 마감",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/d-pocket.jpg",
+      "label": "앞주머니",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/d-corner.jpg",
+      "label": "옆 모서리",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/m-fabric.jpg",
+      "label": "소재 · 포대 원단",
+      "group": "detail"
+    },
+    {
+      "src": "products/daily-tote/images/drawings/m-strap.jpg",
+      "label": "소재 · 손잡이 웨빙",
+      "group": "detail"
+    }
+  ]
 }

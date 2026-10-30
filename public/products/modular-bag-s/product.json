@@ -171,5 +171,72 @@
         "label": "손잡이"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/modular-bag-s/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/strap.jpg",
+      "label": "스트랩 연결",
+      "group": "view"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/open.jpg",
+      "label": "열린 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/top.jpg",
+      "label": "윗면",
+      "group": "form"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/bottom.jpg",
+      "label": "바닥",
+      "group": "form"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/d-binding.jpg",
+      "label": "덮개 테두리",
+      "group": "detail"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/d-zip.jpg",
+      "label": "옆면 지퍼",
+      "group": "detail"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/d-hook.jpg",
+      "label": "고리 연결",
+      "group": "detail"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/d-pocket.jpg",
+      "label": "안쪽 포켓",
+      "group": "detail"
+    },
+    {
+      "src": "products/modular-bag-s/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }

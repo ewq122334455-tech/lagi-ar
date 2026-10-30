@@ -1,9 +1,9 @@
-import type { Product, ProductDimensions } from '@/data/productTypes';
+import type { Product } from '@/data/productTypes';
 
-type ProductViewsData = NonNullable<Product['views']>;
+type Drawing = NonNullable<Product['drawings']>[number];
 
-/** A close-up of the real photo — the same pixels, cropped, never generated. */
-function Detail({ src, x, y, label, zoom = 2.4 }: { src: string; x: number; y: number; label: string; zoom?: number }) {
+/** A close-up of the real store photo — the same pixels, cropped, never generated. */
+function PhotoDetail({ src, x, y, label, zoom = 2.4 }: { src: string; x: number; y: number; label: string; zoom?: number }) {
   return (
     <figure data-testid="product-detail-crop">
       <div
@@ -17,75 +17,43 @@ function Detail({ src, x, y, label, zoom = 2.4 }: { src: string; x: number; y: n
   );
 }
 
-/** Oblique size drawing from the verified dimensions (cm). */
-function SizeDrawing({ w, h, d }: { w: number; h: number; d: number }) {
-  const s = 100 / Math.max(w + d * 0.5, h + d * 0.5); // fit in 100 units
-  const W = w * s;
-  const H = h * s;
-  const dx = d * s * 0.5;
-  const dy = d * s * 0.35;
-  const x0 = 18;
-  const y0 = 14 + dy;
-  const line = 'stroke-[var(--c-ink)]';
+function Tile({ d, name, fit = 'contain' }: { d: Drawing; name: string; fit?: 'contain' | 'cover' }) {
   return (
-    <svg viewBox={`0 0 ${x0 + W + dx + 34} ${y0 + H + 26}`} className="max-h-full w-full" role="img" aria-label={`크기 도면: 가로 ${w}cm, 높이 ${h}cm, 폭 ${d}cm`} data-testid="size-drawing">
-      <g fill="none" strokeWidth={0.6} className={line}>
-        <path d={`M${x0} ${y0} h${W} v${H} h${-W} Z`} className="fill-[var(--c-gray)]" />
-        <path d={`M${x0} ${y0} l${dx} ${-dy} h${W} l${-dx} ${dy}`} />
-        <path d={`M${x0 + W + dx} ${y0 - dy} v${H} l${-dx} ${dy}`} />
-      </g>
-      <g className="fill-[var(--c-blue)] stroke-[var(--c-blue)]" strokeWidth={0.5}>
-        <path d={`M${x0} ${y0 + H + 7} h${W}`} />
-        <path d={`M${x0 - 7} ${y0} v${H}`} />
-        <path d={`M${x0 + W + 5} ${y0 + H + 3} l${dx} ${-dy}`} />
-      </g>
-      <g className="fill-[var(--c-ink)] kr" fontSize={5}>
-        <text x={x0 + W / 2} y={y0 + H + 15} textAnchor="middle">
-          가로 {w}cm
-        </text>
-        <text x={x0 - 10} y={y0 + H / 2} textAnchor="middle" transform={`rotate(-90 ${x0 - 10} ${y0 + H / 2})`}>
-          높이 {h}cm
-        </text>
-        <text x={x0 + W + dx / 2 + 8} y={y0 + H - dy / 2 + 2}>폭 {d}cm</text>
-      </g>
-    </svg>
+    <figure data-testid="product-drawing">
+      <div className={`flex items-center justify-center overflow-hidden bg-white ${fit === 'contain' ? 'aspect-[4/5] p-4' : 'aspect-square'}`}>
+        <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className={fit === 'contain' ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-cover'} />
+      </div>
+      <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
+    </figure>
+  );
+}
+
+function Block({ title, en, note, children }: { title: string; en: string; note?: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-14 first:mt-6">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h3 className="t-value kr font-semibold">{title}</h3>
+        <span className="t-label t-mark text-[var(--c-mute)]">{en}</span>
+        {note && <span className="t-caption kr text-[var(--c-mute)] md:ml-auto">{note}</span>}
+      </div>
+      <div className="mt-4">{children}</div>
+    </div>
   );
 }
 
 /**
- * Size next to a 170 cm figure. A guide drawn to scale from the verified size — not a worn photo.
- * Bags hang from the hand; small things are held at the waist.
+ * The product from every side. 구도 · 형태 · 디테일 come from the brand's 3D modelling reference
+ * sheet (renderings, labelled as such); 착용 is the real store photo and close-ups of it.
  */
-function ScaleGuide({ w, h, small }: { w: number; h: number; small: boolean }) {
-  const handY = small ? 100 : 76; // cm above the floor
-  const top = 180 - handY - (small ? h / 2 : 0);
-  const x = 66;
-  return (
-    <svg viewBox="0 0 140 186" className="h-full max-w-full" role="img" aria-label={`크기 가이드: 키 170cm 사람 옆의 ${w} × ${h}cm`} data-testid="scale-guide">
-      <g className="fill-[var(--c-label)]">
-        <circle cx={45} cy={21} r={10.5} />
-        <path d="M33 34 h24 q6 0 7 7 l5 42 q1 6 -4 6 h-2 l-4 -36 v38 l2 89 h-10 l-3 -70 l-3 70 h-10 l2 -89 v-38 l-4 36 h-2 q-5 0 -4 -6 l5 -42 q1 -7 7 -7 Z" />
-      </g>
-      <path d="M0 180.5 H140" className="stroke-[var(--c-ink)]" strokeWidth={0.5} />
-      <rect x={x} y={top} width={w} height={h} rx={1.2} className="fill-[var(--c-blue)] opacity-80" />
-      <g className="fill-[var(--c-ink)] kr" fontSize={5.5}>
-        <text x={x} y={Math.max(14, top - 3)}>
-          {w} × {h}cm
-        </text>
-        <text x={4} y={8}>
-          170cm
-        </text>
-      </g>
-    </svg>
-  );
-}
-
-/**
- * The product's views: the store photo (labelled with what it shows), two close-ups of it, a size
- * drawing and a size guide. Everything comes from the real photo and the verified dimensions.
- */
-export function ProductViews({ src, name, views, dims, small }: { src: string; name: string; views: ProductViewsData; dims: ProductDimensions; small: boolean }) {
-  const hasSize = !!(dims.widthCm && dims.heightCm);
+export function ProductViews({ src, name, product }: { src: string; name: string; product: Product }) {
+  const drawings = product.drawings ?? [];
+  const views = drawings.filter((d) => d.group === 'view');
+  const forms = drawings.filter((d) => d.group === 'form');
+  // Wide sample strips (several materials side by side) read best uncropped, on their own row.
+  const isStrip = (d: Drawing) => d.label.startsWith('소재') && !d.label.includes('·');
+  const details = drawings.filter((d) => d.group === 'detail' && !isStrip(d));
+  const strips = drawings.filter((d) => d.group === 'detail' && isStrip(d));
+  const photo = product.views;
   return (
     <section className="mt-24 px-page lg:mt-36" aria-labelledby="views-title">
       <div className="rule flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pt-4">
@@ -94,31 +62,61 @@ export function ProductViews({ src, name, views, dims, small }: { src: string; n
         </h2>
         <p className="t-label t-mark text-[var(--c-mute)]">Views, form & fit</p>
       </div>
-      <div className="mt-6 grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-4">
-        <figure className="col-span-2 row-span-2" data-testid="product-view-main">
-          <img src={src} alt={`${name} — ${views.main}`} loading="lazy" className="block aspect-square w-full bg-[var(--c-gray)] object-cover" />
-          <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{views.main}</figcaption>
-        </figure>
-        {views.details.slice(0, 2).map((d) => (
-          <Detail key={d.label} src={src} x={d.x} y={d.y} label={d.label} />
-        ))}
-        {hasSize && (
-          <>
-            <figure className="flex flex-col">
-              <div className="flex aspect-square items-center justify-center overflow-hidden bg-[var(--c-gray)] p-4">
-                <SizeDrawing w={dims.widthCm!} h={dims.heightCm!} d={dims.depthCm ?? 0} />
-              </div>
-              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">형태 · 크기 도면</figcaption>
+
+      {views.length > 0 && (
+        <Block title="구도" en="Views" note="제품 도면(3D 모델링 렌더링) · 실제 제품과 세부가 다를 수 있어요">
+          <div className={`grid grid-cols-2 gap-[var(--gap)] ${views.length >= 5 ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+            {views.map((d) => (
+              <Tile key={d.src} d={d} name={name} />
+            ))}
+          </div>
+        </Block>
+      )}
+
+      {forms.length > 0 && (
+        <Block title="형태" en="Form">
+          <div className="grid grid-cols-1 gap-[var(--gap)] sm:grid-cols-2 lg:grid-cols-3">
+            {forms.map((d) => (
+              <figure key={d.src} data-testid="product-drawing">
+                <div className="flex aspect-[3/2] items-center justify-center overflow-hidden bg-white p-4">
+                  <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="max-h-full max-w-full object-contain" />
+                </div>
+                <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </Block>
+      )}
+
+      {(details.length > 0 || strips.length > 0) && (
+        <Block title="디테일 · 소재" en="Details & material">
+          <div className="grid grid-cols-2 gap-[var(--gap)] md:grid-cols-4">
+            {details.map((d) => (
+              <Tile key={d.src} d={d} name={name} fit="cover" />
+            ))}
+          </div>
+          {strips.map((d) => (
+            <figure key={d.src} className="mt-[var(--gap)]" data-testid="product-drawing">
+              <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="block h-auto w-full bg-white" />
+              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
             </figure>
-            <figure className="flex flex-col">
-              <div className="flex aspect-square items-end justify-center overflow-hidden bg-[var(--c-gray)] px-4 pt-4">
-                <ScaleGuide w={dims.widthCm!} h={dims.heightCm!} small={small} />
-              </div>
-              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">착용 · 키 170cm 기준 크기 비교</figcaption>
+          ))}
+        </Block>
+      )}
+
+      {photo && (
+        <Block title="실제 사진 · 착용" en="Real photo, worn & in use" note="실제 제품 사진">
+          <div className="grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-4">
+            <figure className="col-span-2 row-span-2" data-testid="product-view-main">
+              <img src={src} alt={`${name} — ${photo.main}`} loading="lazy" className="block aspect-square w-full bg-[var(--c-gray)] object-cover" />
+              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{photo.main}</figcaption>
             </figure>
-          </>
-        )}
-      </div>
+            {photo.details.slice(0, 2).map((d) => (
+              <PhotoDetail key={d.label} src={src} x={d.x} y={d.y} label={d.label} />
+            ))}
+          </div>
+        </Block>
+      )}
     </section>
   );
 }

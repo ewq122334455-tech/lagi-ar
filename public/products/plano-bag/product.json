@@ -171,5 +171,77 @@
         "label": "버클과 스트랩"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/plano-bag/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/side-r.jpg",
+      "label": "오른쪽 측면",
+      "group": "view"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/side-l.jpg",
+      "label": "왼쪽 측면",
+      "group": "view"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/top.jpg",
+      "label": "윗면",
+      "group": "form"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/bottom.jpg",
+      "label": "바닥",
+      "group": "form"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/inside.jpg",
+      "label": "안쪽 · 열린 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/strap.jpg",
+      "label": "숄더 스트랩",
+      "group": "form"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/d-buckle.jpg",
+      "label": "앞면 버클",
+      "group": "detail"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/d-handle.jpg",
+      "label": "손잡이 스티치",
+      "group": "detail"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/d-hook.jpg",
+      "label": "D링과 스트랩 고리",
+      "group": "detail"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/d-edge.jpg",
+      "label": "모서리 마감",
+      "group": "detail"
+    },
+    {
+      "src": "products/plano-bag/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }

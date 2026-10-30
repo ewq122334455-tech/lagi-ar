@@ -123,5 +123,57 @@
         "label": "웨빙 손잡이"
       }
     ]
-  }
+  },
+  "drawings": [
+    {
+      "src": "products/origami-picnic-bag/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/side.jpg",
+      "label": "측면",
+      "group": "view"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/angle.jpg",
+      "label": "사선",
+      "group": "view"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/top-open.jpg",
+      "label": "윗면 · 열린 모습",
+      "group": "form"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/bottom.jpg",
+      "label": "바닥",
+      "group": "form"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/d-buckle.jpg",
+      "label": "윗단 마감과 버클",
+      "group": "detail"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/d-rivet.jpg",
+      "label": "리벳",
+      "group": "detail"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/d-inside.jpg",
+      "label": "안쪽",
+      "group": "detail"
+    },
+    {
+      "src": "products/origami-picnic-bag/images/drawings/m-all.jpg",
+      "label": "소재",
+      "group": "detail"
+    }
+  ]
 }
