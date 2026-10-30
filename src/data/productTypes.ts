@@ -154,6 +154,11 @@ export interface Product {
   description: VerifiableField<string>;
   images: string[];
   gallery: string[];
+  /**
+   * AI-generated styling shots (the product being carried). Never product photos: shown in their own
+   * section, each labelled as AI imagery that may differ from the real product.
+   */
+  styledImages?: string[];
   colors: string[];
   /** Optional: products published before variants existed simply have none. */
   variants?: ProductVariant[];
@@ -163,6 +168,8 @@ export interface Product {
   details: Hotspot[];
   story: VerifiableField<string>;
   lagiSelectionReason: VerifiableField<string>;
+  /** How the store photo is shown on the page: what it depicts, and two close-up points (% of the photo). */
+  views?: { main: string; details: { x: number; y: number; label: string }[] };
   /** Three short points shown next to the price. */
   highlights?: VerifiableField<string[]>;
   /** How to look after it. */
