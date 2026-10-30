@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "리사이클 소재로 만든 모듈러 백 스몰 사이즈예요. 손에 들거나 메는 투웨이로 쓸 수 있고, 얇고 납작해 다른 가방 안에 넣어 다니기에도 좋습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "리사이클·업사이클링 소재로 만든 모듈러백 스몰 사이즈예요. 손잡이로 들거나 스트랩을 연결해 메는 투웨이백이라 그날의 차림에 맞춰 쓸 수 있어요. 얇고 납작한 형태라 큰 가방 안에 파우치처럼 넣어 쓰기에도 좋습니다. 오프화이트 몸판에 빨강·파랑·노랑·초록 테두리가 경쾌해요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/modular-bag-s/images/main.jpg"
@@ -44,66 +44,66 @@
   "materials": [
     {
       "name": {
-        "value": "리사이클 원단",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "리사이클·업사이클링 소재",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "characteristics": {
-        "value": "가볍고 얇아 휴대가 편해요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓰임을 얻은 소재",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "productLocation": {
-        "value": "몸판 · 플랩",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (2026-10-22 개별 수정)"
+        "value": "본체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "reasonForUse": {
-        "value": "다시 쓰인 원단으로 새 쓰임을 만들기 위해 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "버려질 소재에 새 쓰임을 주기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "재단",
+      "title": "소재 선별",
       "description": {
-        "value": "납작한 플랩 형태에 맞게 재단합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓸 수 있는 소재를 골라 손질합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 2,
-      "title": "봉제",
+      "title": "재단",
       "description": {
-        "value": "플랩과 스트랩을 달아 완성합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "납작한 모듈러백 형태로 재단합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 3,
-      "title": "마무리 검수",
+      "title": "봉제",
       "description": {
-        "value": "잠금과 스트랩 연결을 확인합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "손잡이와 스트랩 고리, 지퍼를 달아 완성합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "큰 가방 안에서 작은 물건들이 늘 굴러다녔어요. 얇고 납작한 모듈러백 S는 단독으로 들어도, 다른 가방 속에 정리용으로 넣어도 되도록 만든 ‘가방 속 가방’입니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "큰 가방 속에서 작은 물건들이 늘 굴러다니곤 해요. 모듈러백 S는 그 물건들을 한데 모아 주고, 필요할 땐 혼자서도 가방이 되어 줍니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
     "value": "작은 크기로 여러 가방과 조합해 다시 쓰기 좋은 제품이라서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/modular-bag-s/model/mini-flap.glb",
   "animations": [],
@@ -142,5 +142,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "리사이클·업사이클링 소재의 투웨이백",
+      "손잡이와 스트랩 고리, 옆면 지퍼",
+      "가로 22 · 높이 14 · 폭 2.5cm 슬림한 형태"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "오염은 물에 적신 천으로 가볍게 두드려 닦아 주세요. 업사이클링 소재 특성상 세탁기·건조기 사용과 다림질은 피해 주세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }

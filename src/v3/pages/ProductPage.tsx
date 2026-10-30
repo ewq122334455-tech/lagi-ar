@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
+import { isPublished } from '@/utils/contentStatus';
 import { Point } from '../Point';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
 
@@ -43,9 +44,10 @@ function SharpImage({ src, alt, className = '', testId, eager }: { src: string; 
 
 /**
  * Product detail. The first screen carries one message: the product (photo) and how to buy it.
- * Only checked facts are shown — name, price, the store's one-line description, category, size,
- * shipping and the brand line. Draft copy (description, materials, process, story, selection
- * reason) stays hidden until the brand confirms it; sections without facts are left out.
+ * Shown: checked facts (name, price, the store's one-line description, category, size, shipping,
+ * brand line) and LAGI's published copy (BRAND_COPY: introduction, story, materials, making,
+ * selection reason, care) — the page says LAGI wrote it. AI drafts stay hidden; sections without
+ * content are left out.
  */
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,6 +79,29 @@ export default function ProductPage() {
   const hero = p.images[0];
   const more = [...p.images.slice(1), ...p.gallery];
   const storeUrl = p.shopUrl.value ?? OFFICIAL_LINKS.store;
+  const highlights = isPublished(p.highlights) ? p.highlights.value : [];
+  const intro = isPublished(p.description) ? p.description.value : null;
+  const story = isPublished(p.story) ? p.story.value : null;
+  const reason = isPublished(p.lagiSelectionReason) ? p.lagiSelectionReason.value : null;
+  const care = isPublished(p.care) ? p.care.value : null;
+  const materials = p.materials.filter((m) => isPublished(m.name));
+  const steps = p.process.filter((s) => isPublished(s.description)).sort((a, b) => a.order - b.order);
+  const materialText = materials.length ? materials.map((m) => m.name.value).join(', ') : null;
+  const usesCopy = [p.highlights, p.description, p.story, p.lagiSelectionReason, p.care].some((f) => f?.status === 'BRAND_COPY');
+  const info = (
+    [
+      ['제품명', p.name.value],
+      ['브랜드 표기', p.brandLabel ?? 'LAGI'],
+      ['제작', maker ? `${maker} (라기는 발견하고 선별해 소개합니다)` : null],
+      ['분류', category || null],
+      ['크기', size ? `가로 × 높이 × 폭 ${size}` : null],
+      ['주요 소재', materialText],
+      ['가격', price(p.price.value)],
+      ['배송', p.shipping ? shippingText(p.shipping) : null],
+      ['관리 방법', care],
+      ['교환 · 반품', '라기 공식 스마트스토어 기준을 따릅니다.'],
+    ] as [string, string | null][]
+  ).filter(([, v]) => v);
   const related = [
     ...products.filter((o) => o.id !== p.id && o.category.value === p.category.value),
     ...products.filter((o) => o.id !== p.id && o.category.value !== p.category.value),
@@ -133,6 +158,16 @@ export default function ProductPage() {
             <h1 className="t-h1 kr mt-6 !font-bold">{p.name.value}</h1>
             {p.shortDescription.value && <p className="t-kr-sub mt-2">{p.shortDescription.value}</p>}
             <p className="t-h2 kr mt-6 tabular-nums">{price(p.price.value)}</p>
+            {highlights.length > 0 && (
+              <ul className="t-caption kr mt-5 grid gap-1.5" data-testid="product-highlights">
+                {highlights.map((h) => (
+                  <li key={h} className="flex gap-2">
+                    <span aria-hidden="true" className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-[var(--c-blue)]" />
+                    {h}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="rule-1 mt-6 flex items-center justify-between pt-4">
               <p className="t-caption kr text-[var(--c-mute)]">수량</p>
@@ -201,8 +236,29 @@ export default function ProductPage() {
         </section>
       )}
 
-      {/* 4–5 · Material & making — confirmed facts only */}
-      {(p.shortDescription.value || maker) && (
+      {/* 4 · Introduction and story */}
+      {(intro || story) && (
+        <section className="mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 px-page lg:mt-36 lg:grid-cols-12" aria-labelledby="intro-title">
+          <div className="lg:col-span-3">
+            <h2 id="intro-title" className="t-h3 kr">
+              제품 소개
+            </h2>
+            <p className="t-label t-mark mt-1 text-[var(--c-mute)]">About this piece</p>
+          </div>
+          <div className="lg:col-span-7 lg:col-start-5" data-testid="product-intro">
+            {intro && <p className="t-h3 kr !font-medium !leading-[1.6]">{intro}</p>}
+            {story && (
+              <div className="rule-1 mt-10 pt-5">
+                <p className="t-label t-mark text-[var(--c-mute)]">Story</p>
+                <p className="t-body kr mt-3 text-[var(--c-mute)]">{story}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 5 · Material & making */}
+      {(materials.length > 0 || steps.length > 0 || maker) && (
         <section className="mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 px-page lg:mt-36 lg:grid-cols-12" aria-labelledby="made-title">
           <div className="lg:col-span-3">
             <h2 id="made-title" className="t-h3 kr">
@@ -211,9 +267,32 @@ export default function ProductPage() {
             <p className="t-label t-mark mt-1 text-[var(--c-mute)]">Material & making</p>
           </div>
           <div className="lg:col-span-7 lg:col-start-5">
-            {p.shortDescription.value && <p className="t-h1 kr !font-medium">{p.shortDescription.value}</p>}
+            {materials.map((m) => (
+              <div key={m.name.value} className="rule-1 grid grid-cols-1 gap-x-6 gap-y-1 py-4 md:grid-cols-[10rem_1fr]" data-testid="material">
+                <p className="t-value kr font-semibold">{m.name.value}</p>
+                <div className="t-body kr">
+                  {isPublished(m.characteristics) && <p>{m.characteristics.value}</p>}
+                  <p className="t-caption mt-1 text-[var(--c-mute)]">
+                    {[isPublished(m.productLocation) ? `사용 부위 · ${m.productLocation.value}` : null, isPublished(m.reasonForUse) ? `${m.reasonForUse.value}` : null]
+                      .filter(Boolean)
+                      .join(' — ')}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {steps.length > 0 && (
+              <ol className="mt-8 grid grid-cols-1 gap-x-[var(--gap)] gap-y-6 md:grid-cols-3" data-testid="process">
+                {steps.map((st, i) => (
+                  <li key={st.order} className="border-t border-[var(--c-ink)] pt-4">
+                    <span className="t-label t-mark tabular-nums text-[var(--c-mute)]">{pad(i + 1)}</span>
+                    <p className="t-value kr mt-2 font-semibold">{st.title}</p>
+                    <p className="t-caption kr mt-1 text-[var(--c-mute)]">{st.description.value}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
             {maker && (
-              <p className="t-body kr mt-5 text-[var(--c-mute)]">
+              <p className="t-body kr mt-8 text-[var(--c-mute)]">
                 협업 브랜드 {maker}. 제품은 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.
               </p>
             )}
@@ -230,9 +309,16 @@ export default function ProductPage() {
               이 제품을 고른 이유
             </h2>
           </div>
-          <p className="t-body kr text-white/80 lg:col-span-5 lg:col-start-8 lg:self-end">
-            라기의 모든 제품은 네 가지 기준을 모두 통과해야 소개됩니다. {p.name.value}도 같은 기준으로 선정되었습니다.
-          </p>
+          <div className="lg:col-span-5 lg:col-start-8 lg:self-end">
+            {reason && (
+              <p className="t-h3 kr !font-medium" data-testid="selection-reason">
+                “{reason}”
+              </p>
+            )}
+            <p className={`t-body kr text-white/80 ${reason ? 'mt-4' : ''}`}>
+              라기의 모든 제품은 네 가지 기준을 모두 통과해야 소개됩니다. {p.name.value}도 같은 기준으로 선정되었습니다.
+            </p>
+          </div>
         </div>
         <ol className="mt-12 grid grid-cols-1 gap-x-[var(--gap)] md:grid-cols-2 lg:grid-cols-4">
           {WHY_LAGI.map((c, i) => (
@@ -268,7 +354,36 @@ export default function ProductPage() {
         </section>
       )}
 
-      {/* 8 · Purchase */}
+      {/* 8 · Product information */}
+      <section className="mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 px-page lg:mt-32 lg:grid-cols-12" aria-labelledby="info-title">
+        <div className="lg:col-span-3">
+          <h2 id="info-title" className="t-h3 kr">
+            제품 정보
+          </h2>
+          <p className="t-label t-mark mt-1 text-[var(--c-mute)]">Details</p>
+        </div>
+        <div className="lg:col-span-7 lg:col-start-5">
+          <dl data-testid="product-info">
+            {info.map(([k, v]) => (
+              <div key={k} className="rule-1 grid grid-cols-[7rem_1fr] gap-4 py-3 md:grid-cols-[9rem_1fr]">
+                <dt className="t-caption kr text-[var(--c-mute)]">{k}</dt>
+                <dd className="t-caption kr text-[var(--c-ink)]">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {usesCopy && (
+            <p className="t-caption kr mt-4 text-[var(--c-mute)]">
+              제품 소개 문구는 라기가 제품 기본 정보와 사진을 바탕으로 작성했습니다. 소재와 제작의 세부 사항은 제작사 기준을 따르며, 정확한 정보는{' '}
+              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                스마트스토어
+              </a>
+              에서 확인할 수 있습니다.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* 9 · Purchase */}
       <section className="mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 px-page lg:mt-32 lg:grid-cols-12" aria-labelledby="buy-title">
         <h2 id="buy-title" className="t-h3 kr lg:col-span-3">
           구매

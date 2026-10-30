@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "우유팩을 업사이클링해 만든 이어폰 케이스예요. 키링으로 가방에 걸어 두면 이어폰을 바로 꺼내 쓸 수 있고, 우유팩 특유의 그래픽이 귀여운 포인트가 됩니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "우유팩을 업사이클링해 만든 이어폰 케이스예요. 키링처럼 가방이나 열쇠에 걸어 두고 이어폰을 넣어 다니기 좋아요. 흰 몸판에 파랑·빨강 테두리를 두르고, 매듭 끈에 컬러 뚜껑 장식을 달아 귀여운 포인트를 더했습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/milkpack-earphone-case/images/main.jpg"
@@ -45,65 +45,65 @@
     {
       "name": {
         "value": "우유팩",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "characteristics": {
-        "value": "가볍고 물기에 강해요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다 마신 우유팩",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "productLocation": {
-        "value": "케이스 몸판",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "몸판",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "reasonForUse": {
-        "value": "매일 버려지는 우유팩에 다시 쓰임을 주기 위해 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "매일 버려지는 우유팩에 다시 쓰임을 주기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "수거·세척",
+      "title": "수거",
       "description": {
-        "value": "다 마신 우유팩을 모아 깨끗이 씻고 말립니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다 마신 우유팩을 모읍니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 2,
-      "title": "재단",
+      "title": "손질·재단",
       "description": {
-        "value": "케이스 모양에 맞게 재단합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "우유팩을 손질해 케이스 모양으로 재단합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 3,
-      "title": "봉제·조립",
+      "title": "봉제·마감",
       "description": {
-        "value": "끈과 키링을 달아 완성합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "테두리와 끈을 달아 키링으로 완성합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "매일 아침 비우는 우유팩은 안쪽이 코팅돼 있어 물에 강하고 생각보다 질겨요. 씻어서 말린 우유팩을 접어 이어폰이 쏙 들어가는 작은 케이스로 만들었습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "매일 아침 비우는 우유팩은 가장 흔한 쓰레기 중 하나예요. 이 케이스는 그 우유팩에 작은 쓰임을 다시 붙여, 가방에 매달린 소품으로 만들었습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
     "value": "가장 흔한 쓰레기가 가장 귀여운 소품이 되는 제품이라서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/milkpack-earphone-case/model/keychain.glb",
   "animations": [],
@@ -142,5 +142,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "우유팩을 다시 쓴 업사이클링 이어폰 케이스",
+      "가방·열쇠에 거는 키링 디자인",
+      "가로 8 · 높이 8 · 폭 4cm"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "물에 적신 천으로 가볍게 닦아 주세요. 물에 오래 담그거나 세탁기에 넣지 마세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }

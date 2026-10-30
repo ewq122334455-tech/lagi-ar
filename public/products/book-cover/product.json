@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "업사이클링 소재로 하나하나 손으로 만든 북커버예요. 아끼는 책을 감싸 오래 깨끗하게 지켜 주고, 들고 다닐 때 북케이스로도 쓸 수 있습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "업사이클링 소재를 손으로 재단하고 꿰매 만든 핸드메이드 북커버예요. 책을 감싸 표지와 모서리를 지켜 주고, 안쪽 포켓에는 메모나 카드 같은 작은 물건을 함께 넣을 수 있어요. 펼칠 때마다 파란 테두리와 빨간 고리, 알록달록한 안쪽 프린트가 보입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/book-cover/images/main.jpg"
@@ -45,65 +45,65 @@
     {
       "name": {
         "value": "업사이클링 소재",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "characteristics": {
-        "value": "책을 감싸기 좋게 유연해요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓰임을 얻은 소재",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "productLocation": {
-        "value": "커버 전체",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "본체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "reasonForUse": {
-        "value": "버려질 소재에 다시 쓰임을 주기 위해 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "버려질 소재에 새 쓰임을 주기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "재단",
+      "title": "소재 선별",
       "description": {
-        "value": "책 크기에 맞게 재단합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "다시 쓸 수 있는 소재를 골라 손질합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 2,
-      "title": "핸드메이드 봉제",
+      "title": "재단",
       "description": {
-        "value": "한 장씩 손으로 박음질합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "책 크기에 맞춰 재단합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 3,
-      "title": "마무리 검수",
+      "title": "핸드메이드 봉제",
       "description": {
-        "value": "책이 잘 들어가는지 확인합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "하나하나 손으로 꿰매 완성합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "좋아하는 책일수록 가방 속에서 모서리가 닳기 쉬워요. 책 한 권의 크기를 재고 손으로 한 땀씩 박아, 읽던 페이지까지 함께 지켜 주는 커버를 만들었습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "좋아하는 책일수록 가방 속에서 쉽게 닳아요. 북커버는 다시 쓴 소재로 책 한 권의 옷을 지어, 아끼는 책을 오래 들고 다닐 수 있게 해 줍니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
     "value": "좋아하는 책을 다시 펼치고 싶게 만드는 물건이라서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/book-cover/model/document.glb",
   "animations": [],
@@ -142,5 +142,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "업사이클링 소재로 만든 핸드메이드 북커버",
+      "책을 감싸 표지와 모서리를 보호",
+      "안쪽 포켓 · 가로 25 · 높이 17 · 폭 4cm"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "오염은 물에 적신 천으로 가볍게 두드려 닦아 주세요. 업사이클링 소재 특성상 세탁기·건조기 사용과 다림질은 피해 주세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }

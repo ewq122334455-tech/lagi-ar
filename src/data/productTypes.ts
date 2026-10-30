@@ -163,6 +163,10 @@ export interface Product {
   details: Hotspot[];
   story: VerifiableField<string>;
   lagiSelectionReason: VerifiableField<string>;
+  /** Three short points shown next to the price. */
+  highlights?: VerifiableField<string[]>;
+  /** How to look after it. */
+  care?: VerifiableField<string>;
 
   /** Empty string = no verified 3D asset yet; viewer falls back to a labeled placeholder. */
   model3D: string;

@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "펼치면 돗자리, 접으면 가방이 되는 오리가미 피크닉백이에요. 공원이나 여행지에서 바로 펼쳐 앉고, 다 쓰면 다시 접어 들고 돌아오면 됩니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "펼치면 돗자리, 접으면 가방이 되는 오리가미 피크닉백이에요. 공원이나 여행지에서 가방을 펼쳐 바로 앉을 자리를 만들 수 있어요. 빨강과 오프화이트 패널을 이어 붙인 색 배합에 회색 웨빙 손잡이와 버클 스트랩을 더했습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/origami-picnic-bag/images/main.jpg"
@@ -40,69 +40,18 @@
   "shipping": {
     "fee": 0
   },
-  "materials": [
-    {
-      "name": {
-        "value": "업사이클링 원단",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      },
-      "characteristics": {
-        "value": "넓게 펼쳐도 가볍고, 바닥에 깔아도 부담 없는 소재예요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      },
-      "productLocation": {
-        "value": "가방 전체(돗자리 겸용)",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      },
-      "reasonForUse": {
-        "value": "가방과 매트 두 가지로 다시 쓰일 수 있게 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      }
-    }
-  ],
-  "process": [
-    {
-      "order": 1,
-      "title": "재단",
-      "description": {
-        "value": "돗자리로 펼쳤을 때의 크기에 맞춰 재단합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      }
-    },
-    {
-      "order": 2,
-      "title": "접기 설계",
-      "description": {
-        "value": "종이접기처럼 접히는 선을 잡아 가방 형태를 만듭니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      }
-    },
-    {
-      "order": 3,
-      "title": "봉제",
-      "description": {
-        "value": "손잡이와 마감을 더해 완성합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
-      }
-    }
-  ],
+  "materials": [],
+  "process": [],
   "details": [],
   "story": {
-    "value": "피크닉을 갈 때마다 가방과 돗자리를 따로 챙기는 게 번거로웠어요. 종이접기처럼 한 장을 접고 펴는 방식으로, 앉을 자리가 그대로 가방이 되도록 설계했습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "피크닉을 갈 때마다 가방과 돗자리를 따로 챙기는 건 번거로워요. 오리가미 피크닉백은 종이접기처럼 접고 펼쳐, 하나의 물건을 두 가지로 씁니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
     "value": "하나의 물건이 두 가지로 다시 쓰인다는 라기의 생각이 가장 잘 드러나는 제품이라서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/origami-picnic-bag/model/diagonal-L.glb",
   "animations": [],
@@ -145,5 +94,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "펼치면 돗자리가 되는 피크닉백",
+      "회색 웨빙 손잡이와 버클 스트랩",
+      "가방 상태 기준 가로 60 · 높이 33 · 폭 14cm"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "오염은 물에 적신 천으로 가볍게 닦아 주세요. 돗자리로 쓴 뒤에는 흙과 물기를 털고 말린 다음 접어 주세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }

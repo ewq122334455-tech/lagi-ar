@@ -23,9 +23,9 @@
     "source": "LAGI 공식 네이버 스마트스토어 상품 페이지 (2026-10-22 캡처 제공)"
   },
   "description": {
-    "value": "자동차 번호판을 업사이클링한 투웨이 백이에요. 손에 들거나 어깨에 메는 두 가지 방법으로 쓸 수 있고, 각진 큐브 형태가 독특한 인상을 줍니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "자동차 번호판을 업사이클링해 만든 투웨이백이에요. 손잡이로 들거나 숄더 스트랩으로 메고 다닐 수 있어요. 광택 있는 검정 앞면에 큼직한 흰 글자가 남아, 번호판이었던 흔적을 그대로 보여 줍니다. 가로·높이·폭이 모두 14cm인 정육면체 모양이에요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "images": [
     "products/plano-bag/images/main.jpg"
@@ -45,65 +45,65 @@
     {
       "name": {
         "value": "자동차 번호판",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "characteristics": {
-        "value": "단단해서 가방의 형태를 잡아 줘요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "번호판의 글자가 그대로 남은 소재",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "productLocation": {
-        "value": "가방 패널",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "앞면",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       },
       "reasonForUse": {
-        "value": "쓰임을 다한 번호판에 다시 쓰임을 주기 위해 골랐어요.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "오래 쓰인 번호판에 다시 쓰임을 주기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "process": [
     {
       "order": 1,
-      "title": "수거·정리",
+      "title": "수거",
       "description": {
-        "value": "사용이 끝난 번호판을 모아 정리합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "사용을 마친 번호판을 모읍니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 2,
-      "title": "가공",
+      "title": "손질·가공",
       "description": {
-        "value": "가방 패널로 쓸 수 있게 다듬습니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "번호판을 가방에 쓸 수 있도록 손질합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     },
     {
       "order": 3,
-      "title": "조립·봉제",
+      "title": "조립",
       "description": {
-        "value": "패널과 스트랩을 이어 투웨이 백으로 완성합니다.",
-        "status": "AI_DRAFT",
-        "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+        "value": "손잡이와 스트랩을 달아 투웨이백으로 완성합니다.",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
       }
     }
   ],
   "details": [],
   "story": {
-    "value": "번호판은 한 대의 차와 수년을 함께 달린 물건이에요. 폐차와 함께 버려지던 그 단단한 판을 가방의 벽으로 세웠더니, 반듯한 큐브 모양의 플라노백이 나왔습니다.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (2026-10-22 개별 수정)"
+    "value": "번호판은 한 대의 차와 오랜 시간을 함께 달린 물건이에요. 플라노백은 그 번호판에 새 쓰임을 주어, 전혀 다른 물건으로 다시 태어나게 합니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "lagiSelectionReason": {
-    "value": "전혀 다른 물건이 가방으로 다시 태어나는 과정이 가장 놀라운 제품이라서요.",
-    "status": "AI_DRAFT",
-    "source": "AI 초안 (스마트스토어 한 줄 설명 기반, 2026-10-22)"
+    "value": "전혀 다른 물건이 가방으로 다시 태어나는 과정을 가장 놀랍게 보여 주는 제품이라서요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
   },
   "model3D": "products/plano-bag/model/mini-box.glb",
   "animations": [],
@@ -142,5 +142,19 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": true,
-  "featured": true
+  "featured": true,
+  "highlights": {
+    "value": [
+      "자동차 번호판을 다시 쓴 업사이클링 가방",
+      "손잡이와 숄더 스트랩의 투웨이백",
+      "14 × 14 × 14cm 정육면체 형태"
+    ],
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  },
+  "care": {
+    "value": "물에 적신 천으로 닦아 주세요. 날카로운 물건과 강한 충격은 피해 주세요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 기본 정보(제품명·한 줄 설명·크기)와 제품 사진 기반 (2026-10-30)"
+  }
 }
