@@ -11,7 +11,7 @@
   /* Side margins grow with the screen (20px on phones → 96px on very wide screens). */
   --page-x: clamp(20px, 4.2vw, 96px);
   --gap: clamp(14px, 1.4vw, 24px);
-  --top: 88px;
+  --top: 96px;
   --radius-card: 4px;
   --radius-sheet: 50px;
 
@@ -23,8 +23,8 @@
   --t-h1: clamp(22px, 19px + 0.75vw, 30px);
   --t-h2: clamp(26px, 22px + 1vw, 36px);
   --t-h3: clamp(17px, 16px + 0.3vw, 20px);
-  --t-lead: clamp(16px, 15.3px + 0.2vw, 18px);
-  --t-body: clamp(14px, 13.6px + 0.1vw, 15px);
+  --t-lead: clamp(17px, 16.3px + 0.2vw, 19px);
+  --t-body: clamp(15px, 14.6px + 0.15vw, 17px);
   --t-en: clamp(20px, 16.5px + 0.95vw, 30px);
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -46,7 +46,7 @@
   word-break: keep-all;
 }
 @media (min-width: 1024px) {
-  .v3 { --top: 156px; }
+  .v3 { --top: 188px; }
 }
 @media (min-width: 1200px) {
   .v3 {
@@ -67,10 +67,10 @@
 /* English statement line (Posterama, light) with a smaller, quieter Korean line under it. */
 .v3 .t-en { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); font-size: var(--t-en); font-weight: 400; line-height: 1.2; letter-spacing: 0.01em; }
 .v3 .t-kr-sub { font-family: var(--font-kr); font-size: var(--t-body); font-weight: 400; line-height: 1.7; color: #626262; }
-.v3 .t-value { font-size: 14px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
-.v3 .t-label { font-size: 11px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
-.v3 .t-nav { font-size: 12px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em; }
-.v3 .t-caption { font-size: 12px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
+.v3 .t-value { font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.v3 .t-label { font-size: 12.5px; font-weight: 400; line-height: 1.5; letter-spacing: 0.08em; }
+.v3 .t-nav { font-size: 13.5px; font-weight: 700; line-height: 1.2; letter-spacing: 0.08em; }
+.v3 .t-caption { font-size: 14px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
 /* Brand words in Latin (DISCOVER, WHY LAGI …): Posterama, tracked out. */
 .v3 .t-mark { font-family: 'posterama-2001', 'Posterama 2001', var(--font-kr); letter-spacing: 0.06em; }
 /* Korean-only text: skip Posterama so Latin inside Korean sentences reads in Pretendard. */
@@ -92,7 +92,7 @@
 .v3 :focus-visible { outline: 2px solid var(--c-blue); outline-offset: 3px; }
 
 /* Header: two rows on wide screens; the logo row folds away on scroll and a small logo appears. */
-.v3 .header-top { height: 76px; transition: height var(--dur-std) var(--ease-out), opacity var(--dur-fast) linear; overflow: hidden; }
+.v3 .header-top { height: 100px; transition: height var(--dur-std) var(--ease-out), opacity var(--dur-fast) linear; overflow: hidden; }
 .v3 .site-header[data-folded] .header-top { height: 0; opacity: 0; }
 .v3 .header-mini { opacity: 0; pointer-events: none; transition: opacity var(--dur-std) var(--ease-out); }
 .v3 .site-header[data-folded] .header-mini { opacity: 1; pointer-events: auto; }
@@ -104,11 +104,11 @@
 .v3 .nav-link:hover::after, .v3 .nav-link[aria-current='page']::after { transform: scaleX(1); }
 .v3 .nav-link[aria-current='page'] { color: var(--c-blue); }
 /* Rounded pill choices (styles, filters, suggestions). */
-.v3 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid rgba(0,0,0,0.18); border-radius: 999px; font-family: var(--font-kr); font-size: 13px; font-weight: 500; background: var(--c-white); transition: border-color var(--dur-fast), background-color var(--dur-fast), color var(--dur-fast); }
+.v3 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid rgba(0,0,0,0.18); border-radius: 999px; font-family: var(--font-kr); font-size: 14px; font-weight: 500; background: var(--c-white); transition: border-color var(--dur-fast), background-color var(--dur-fast), color var(--dur-fast); }
 .v3 .chip:hover { border-color: var(--c-ink); }
 .v3 .chip[aria-pressed='true'], .v3 .chip[aria-selected='true'] { background: var(--c-ink); border-color: var(--c-ink); color: var(--c-white); }
 /* Primary / secondary buttons with a consistent height and corner. */
-.v3 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 6px; font-family: var(--font-kr); font-size: 14px; font-weight: 700; letter-spacing: 0; transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast); }
+.v3 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 6px; font-family: var(--font-kr); font-size: 15px; font-weight: 700; letter-spacing: 0; transition: background-color var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast); }
 .v3 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .v3 .btn-primary { background: var(--c-ink); color: var(--c-white); }
 .v3 .btn-primary:not(:disabled):hover { background: var(--c-blue); }

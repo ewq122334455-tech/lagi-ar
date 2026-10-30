@@ -46,7 +46,7 @@ export default function Home() {
       <section className="relative h-[100svh] overflow-hidden bg-[var(--c-gray)]" aria-label="LAGI 제품 갤러리">
         {ready && <CurvedGallery products={products} ratios={ratios} pageScroll />}
         {error && <p className="t-caption kr absolute left-[var(--page-x)] top-24">{error}</p>}
-        <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-20 z-[160] lg:top-[150px]">
+        <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-24 z-[160] lg:top-[176px]">
           ▶ Brand film
         </button>
         {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}
