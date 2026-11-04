@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
+import type { HandLandmarker, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
-import { keyMatte, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
+import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
@@ -50,12 +50,13 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
+  const hands = useRef<Promise<HandLandmarker | null> | null>(null);
+  const [handSeen, setHandSeen] = useState(false);
   const matte = useRef<{ id: string; img: HTMLCanvasElement } | null>(null);
   const placed = useRef<Placement | null>(null);
   // Live values the drawing loop reads without restarting.
-  // Turning the 3D bag: drag on the stage, the view buttons, or auto-spin; the hand's twist and the body add to it.
+  // Turning the 3D bag: the hand turns it; dragging on the stage adds a turn of its own.
   const spin = useRef(0);
-  const [auto, setAuto] = useState(false);
   const dragX = useRef<number | null>(null);
   // AI realism: the composited scene goes to the realtime AI, which only re-lights it.
   const [aiOn, setAiOn] = useState(false);
@@ -63,8 +64,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   const aiVideo = useRef<HTMLVideoElement>(null);
   const aiOut = useRef<HTMLCanvasElement>(null);
   const aiConn = useRef<{ stop: () => void } | null>(null);
-  const opts = useRef({ styleKey, size, product, facing, auto, aiOn });
-  opts.current = { styleKey, size, product, facing, auto, aiOn };
+  const opts = useRef({ styleKey, size, product, facing, aiOn });
+  opts.current = { styleKey, size, product, facing, aiOn };
 
   const stop = () => {
     stream.current?.getTracks().forEach((t) => t.stop());
@@ -82,7 +83,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
 
   // A different product while live: fetch its image; the loop picks it up.
   useEffect(() => {
-    if (phase !== 'live' || !product || matte.current?.id === product.id) return;
+    if (phase !== 'live' || !product || product.model3d || matte.current?.id === product.id) return;
     let alive = true;
     setStatus('제품 이미지를 준비하고 있습니다…');
     matteFor(product)
@@ -110,6 +111,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       await v.play().catch(() => undefined);
       setStatus('몸 인식 모델과 제품 이미지를 불러오고 있습니다…');
       pose.current ??= loadPose();
+      // The hand model turns a held 3D bag with the hand; without it the bag still follows the wrist.
+      if (product.model3d) hands.current ??= loadHands().catch(() => null);
       const model = product.model3d;
       const [marker, img] = await Promise.all([
         pose.current,
@@ -124,7 +127,9 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       }
       setStatus(null);
       setPhase('live');
-      run(marker);
+      // Never wait long for the hand model: the bag follows the wrist until it is ready.
+      const handReady = product.model3d && hands.current ? await Promise.race([hands.current, new Promise<null>((ok) => window.setTimeout(() => ok(null), 8000))]) : null;
+      run(marker, handReady);
     } catch (e) {
       stop();
       setPhase('idle');
@@ -142,7 +147,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   }
 
   /** The drawing loop: mirrored camera frame, product on the body, then the holding hand on top. */
-  function run(marker: PoseLandmarker) {
+  function run(marker: PoseLandmarker, handMarker: HandLandmarker | null) {
     const v = video.current;
     const c = canvas.current;
     if (!v || !c) return;
@@ -152,6 +157,11 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lm: Pt[] | null = null;
     let bodyYaw = 0;
     let handYaw = 0;
+    // Where the hand holds the bag (knuckle line) when the hand model sees it, in video pixels.
+    let grip: { x: number; y: number } | null = null;
+    let handMiss = 0;
+    const handCrop = document.createElement('canvas');
+    const handCtx = handCrop.getContext('2d', { willReadFrequently: true })!;
     let brightness = 0.6;
     let tick = 0;
     const tctx = top.current?.getContext('2d');
@@ -198,13 +208,45 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           const dz = wl[12].z - wl[11].z;
           const target = Math.max(-1.3, Math.min(1.3, Math.atan2(dz, Math.abs(dx)) * (mirrored ? -1 : 1) * Math.sign(dx || 1) * -1));
           bodyYaw += (target - bodyYaw) * 0.35;
-          // The hand's twist (index knuckle vs little-finger knuckle, in depth) turns a held bag.
-          const right = (wl[16]?.visibility ?? 0) >= (wl[15]?.visibility ?? 0);
-          const [pk, ix] = right ? [wl[18], wl[20]] : [wl[17], wl[19]];
-          if (pk && ix && (pk.visibility ?? 1) > 0.4 && (ix.visibility ?? 1) > 0.4) {
-            const t = Math.atan2(ix.z - pk.z, Math.abs(ix.x - pk.x) + 1e-3) * (mirrored ? -1 : 1);
-            handYaw += (Math.max(-1.4, Math.min(1.4, t * 1.6)) - handYaw) * 0.3;
+        }
+        // The hand: its full turn (palm, side, back of the hand) turns the held bag the same way.
+        if (handMarker) {
+          // A hand far from the camera is small; look at an enlarged square around the wrist the pose found.
+          let crop: { x: number; y: number; size: number } | null = null;
+          if (lm) {
+            const useR = (lm[16]?.visibility ?? 0) >= (lm[15]?.visibility ?? 0);
+            const wr = lm[useR ? 16 : 15];
+            const el = lm[useR ? 14 : 13];
+            if ((wr?.visibility ?? 0) > 0.4) {
+              const fore = el ? Math.hypot(wr.x - el.x, wr.y - el.y) : W * 0.1;
+              const size = Math.max(96, Math.min(W, H, fore * 2.4));
+              // Centre a little past the wrist, towards the fingers.
+              const cxm = wr.x + (el ? (wr.x - el.x) * 0.35 : 0);
+              const cym = wr.y + (el ? (wr.y - el.y) * 0.35 : 0);
+              const cx = mirrored ? W - cxm : cxm; // back to raw camera coordinates
+              crop = { x: Math.max(0, Math.min(W - size, cx - size / 2)), y: Math.max(0, Math.min(H - size, cym - size / 2)), size };
+            }
           }
+          let src: HTMLCanvasElement | HTMLVideoElement = v;
+          if (crop && crop.size < Math.min(W, H) * 0.8) {
+            handCrop.width = handCrop.height = 256;
+            handCtx.drawImage(v, crop.x, crop.y, crop.size, crop.size, 0, 0, 256, 256);
+            src = handCrop;
+          } else crop = null;
+          const hr = handMarker.detectForVideo(src, now);
+          const hw = hr.worldLandmarks?.[0];
+          const hl = hr.landmarks?.[0];
+          const side = (hr.handedness?.[0]?.[0]?.categoryName ?? 'Right') as 'Left' | 'Right';
+          if (hw && hl) {
+            handYaw = easeAngle(handYaw, handYawOf(hw, side, mirrored), 0.45);
+            const nx = (hl[5].x + hl[17].x) / 2;
+            const ny = (hl[5].y + hl[17].y) / 2;
+            const gx = crop ? crop.x + nx * crop.size : nx * W;
+            const gy = crop ? crop.y + ny * crop.size : ny * H;
+            grip = { x: mirrored ? W - gx : gx, y: gy };
+            handMiss = 0;
+          } else if (++handMiss > 8) grip = null;
+          setHandSeen(handMiss < 8 && !!grip);
         }
         const m = res.segmentationMasks?.[0];
         mask = m ? { data: m.getAsFloat32Array().slice(), w: m.width, h: m.height } : null;
@@ -233,10 +275,15 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         l3?.l.render(W, H, null);
         return;
       }
+      // Held: hang from the knuckles the hand model found (more exact than the pose's wrist).
+      if (l3 && grip && HELD.has(style)) {
+        next.cx = grip.x;
+        next.top = grip.y - 0.02 * next.w;
+      }
       placed.current = smooth(placed.current, next);
-      if (opts.current.auto) spin.current += 0.025;
       const held = ['hand', 'elbow'].includes(style);
-      const yaw = spin.current + bodyYaw + (held ? handYaw : 0);
+      // Held and the hand seen: the bag turns with the hand, all the way round. Otherwise it follows the body.
+      const yaw = spin.current + (held && grip ? handYaw : bodyYaw);
       if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
       else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
@@ -453,7 +500,6 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           onPointerDown={(e) => {
             if (!product?.model3d) return;
             dragX.current = e.clientX;
-            setAuto(false);
           }}
           onPointerMove={(e) => {
             if (dragX.current == null) return;
@@ -534,34 +580,15 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         {product?.model3d && (
           <section aria-labelledby="m25">
             <h2 id="m25" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">03</span> 구도 돌려 보기
+              <span className="t-mark text-[var(--c-mute)]">03</span> 손으로 돌려 보기
             </h2>
-            <p className="t-caption kr mt-2 text-[var(--c-mute)]">화면을 좌우로 끌거나, 손목을 돌리면 가방이 돌아갑니다.</p>
-            <div className="mt-3 flex flex-wrap gap-2" data-testid="views">
-              {(
-                [
-                  ['정면', 0],
-                  ['사선', Math.PI / 4],
-                  ['옆면', Math.PI / 2],
-                  ['뒷면', Math.PI],
-                ] as const
-              ).map(([label, a]) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="chip"
-                  onClick={() => {
-                    setAuto(false);
-                    spin.current = a;
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-              <button type="button" className="chip" aria-pressed={auto} onClick={() => setAuto((x) => !x)} data-testid="auto-spin">
-                360° 자동 회전
-              </button>
-            </div>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">
+              ‘손에 들기’로 손바닥이 보이게 들고, 손을 천천히 돌려 보세요. 손바닥 → 옆 → 손등으로 돌리면 가방도 정면 → 옆면 → 뒷면으로 같이 돌아갑니다.
+            </p>
+            <p className={`t-caption kr mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${live && handSeen ? 'bg-[var(--c-blue)] text-white' : 'bg-[var(--c-gray)] text-[var(--c-mute)]'}`} data-testid="hand-status">
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${live && handSeen ? 'bg-white' : 'bg-[#b5b5b5]'}`} />
+              {live ? (handSeen ? '손 인식 중 · 손을 돌려 보세요' : '손이 화면에 보이게 해 주세요') : '착용을 시작하면 손을 인식합니다'}
+            </p>
           </section>
         )}
 
