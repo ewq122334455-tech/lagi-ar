@@ -320,33 +320,31 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         const pts = handPts;
         const palmW = Math.hypot(pts[5].x - pts[17].x, pts[5].y - pts[17].y);
         hmctx.clearRect(0, 0, W, H);
-        hmctx.filter = `blur(${Math.max(1, palmW * 0.04)}px)`;
+        hmctx.filter = `blur(${Math.max(1, palmW * 0.025)}px)`;
         hmctx.fillStyle = hmctx.strokeStyle = '#fff';
         hmctx.lineCap = hmctx.lineJoin = 'round';
+        // Only the part of the hand that closes over the handle: fingers and the top of the palm (a third of the
+        // way from the knuckles to the wrist). The wrist and forearm hang behind the bag, not through it.
+        const towardWrist = (i: number) => ({ x: pts[i].x + (pts[0].x - pts[i].x) * 0.35, y: pts[i].y + (pts[0].y - pts[i].y) * 0.35 });
+        const palmTop = [pts[2], pts[5], pts[9], pts[13], pts[17], towardWrist(17), towardWrist(13), towardWrist(9), towardWrist(5), towardWrist(2)];
         hmctx.beginPath();
-        [0, 1, 2, 5, 9, 13, 17].forEach((i, n) => (n ? hmctx.lineTo(pts[i].x, pts[i].y) : hmctx.moveTo(pts[i].x, pts[i].y)));
+        palmTop.forEach((q, n) => (n ? hmctx.lineTo(q.x, q.y) : hmctx.moveTo(q.x, q.y)));
         hmctx.closePath();
         hmctx.fill();
-        hmctx.lineWidth = palmW * 0.36;
+        hmctx.lineWidth = palmW * 0.22;
         hmctx.stroke();
         for (const finger of [
-          [1, 2, 3, 4],
+          [2, 3, 4],
           [5, 6, 7, 8],
           [9, 10, 11, 12],
           [13, 14, 15, 16],
           [17, 18, 19, 20],
         ]) {
-          hmctx.lineWidth = palmW * (finger[0] === 1 ? 0.34 : 0.3);
+          hmctx.lineWidth = palmW * (finger[0] === 2 ? 0.32 : 0.3);
           hmctx.beginPath();
           finger.forEach((i, n) => (n ? hmctx.lineTo(pts[i].x, pts[i].y) : hmctx.moveTo(pts[i].x, pts[i].y)));
           hmctx.stroke();
         }
-        // The wrist too, so the arm does not end at a hard edge over the bag.
-        hmctx.lineWidth = palmW * 0.7;
-        hmctx.beginPath();
-        hmctx.moveTo(pts[0].x, pts[0].y);
-        hmctx.lineTo(pts[0].x + (pts[0].x - pts[9].x) * 0.6, pts[0].y + (pts[0].y - pts[9].y) * 0.6);
-        hmctx.stroke();
         hmctx.filter = 'none';
         hmctx.globalCompositeOperation = 'source-in';
         hmctx.drawImage(raw, 0, 0);
