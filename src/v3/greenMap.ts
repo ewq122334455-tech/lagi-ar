@@ -28,11 +28,20 @@ export function greenReference(product: HTMLCanvasElement, size = 640): Promise<
   return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('reference'))), 'image/jpeg', 0.92));
 }
 
-/** How green a pixel is (0 = not, 1 = clearly chroma green), from its RGB. */
+/**
+ * How green a pixel is (0 = not, 1 = clearly the chroma green the AI was asked for). Hue/saturation
+ * based, so a dull or pale AI green still counts; skin (red-led) and denim (blue-led) never do.
+ */
 function greenness(r: number, g: number, b: number) {
-  const m = Math.max(r, b);
-  if (g < 60 || g - m < 30) return 0;
-  return Math.min(1, (g - m - 30) / 50);
+  if (g < r || g < b) return 0;
+  const mn = Math.min(r, b);
+  const c = g - mn;
+  if (c < 18) return 0;
+  const hue = 60 * ((b - r) / c) + 120; // 60 (yellow-green) … 180 (cyan-green)
+  if (hue < 72 || hue > 168) return 0;
+  const sat = c / g;
+  const val = g / 255;
+  return Math.min(1, Math.max(0, (sat - 0.22) / 0.18)) * Math.min(1, Math.max(0, (val - 0.14) / 0.14));
 }
 
 export interface DesignMapper {
@@ -40,20 +49,18 @@ export interface DesignMapper {
   draw(ctx: CanvasRenderingContext2D, src: CanvasImageSource, W: number, H: number): boolean;
 }
 
-/** A mapper for one product image (keyed, transparent background). */
+/**
+ * A mapper for one product image (keyed, transparent background). The product is drawn at its own
+ * proportions where the AI put the green bag, so the shape on screen is the real one; green the AI
+ * drew outside that shape is filled from the colours beside it; anything in front of the bag (a hand)
+ * stays in front.
+ */
 export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
-  // The product's dominant colour, for green the AI drew just outside the product's own outline.
-  const fill = (() => {
-    const d = product.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, product.width, product.height).data;
-    let r = 0, g = 0, b = 0, n = 0;
-    for (let i = 0; i < d.length; i += 16) if (d[i + 3] > 200) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
-    return n ? [r / n, g / n, b / n] : [200, 200, 200];
-  })();
   const small = document.createElement('canvas');
   const sctx = small.getContext('2d', { willReadFrequently: true })!;
   const fit = document.createElement('canvas');
   const fctx = fit.getContext('2d', { willReadFrequently: true })!;
-  // Smoothed box so the design does not shake when the green edge flickers.
+  const aspect = product.width / product.height;
   let box: { x: number; y: number; w: number; h: number } | null = null;
   let miss = 0;
 
@@ -73,18 +80,17 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
       for (let y = 0; y < sh; y++)
         for (let x = 0; x < sw; x++) {
           const i = (y * sw + x) * 4;
-          if (greenness(sp[i], sp[i + 1], sp[i + 2]) > 0.3) {
+          if (greenness(sp[i], sp[i + 1], sp[i + 2]) > 0.35) {
             cols[x]++;
             rows[y]++;
             total++;
           }
         }
-      if (total < 40) {
+      if (total < 30) {
         if (++miss > 6) box = null;
         return false;
       }
       miss = 0;
-      // Trim 0.5% of green from each side so stray specks do not stretch the box (thin handles stay in).
       const edge = (arr: number[], from: boolean) => {
         let acc = 0;
         const lim = total * 0.005;
@@ -94,52 +100,109 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
       };
       const kx = W / sw;
       const ky = H / sh;
-      const next = { x: edge(cols, true) * kx, y: edge(rows, true) * ky, w: (edge(cols, false) - edge(cols, true) + 1) * kx, h: (edge(rows, false) - edge(rows, true) + 1) * ky };
+      const gx0 = edge(cols, true), gx1 = edge(cols, false), gy0 = edge(rows, true), gy1 = edge(rows, false);
+      const next = { x: gx0 * kx, y: gy0 * ky, w: (gx1 - gx0 + 1) * kx, h: (gy1 - gy0 + 1) * ky };
       const e = 0.35;
       box = box ? { x: box.x + (next.x - box.x) * e, y: box.y + (next.y - box.y) * e, w: box.w + (next.w - box.w) * e, h: box.h + (next.h - box.h) * e } : next;
 
-      // 2 · Full resolution inside the box (grown a little for edges).
-      const pad = Math.max(4, box.w * 0.06);
-      const x0 = Math.max(0, Math.floor(box.x - pad));
-      const y0 = Math.max(0, Math.floor(box.y - pad));
-      const x1 = Math.min(W, Math.ceil(box.x + box.w + pad));
-      const y1 = Math.min(H, Math.ceil(box.y + box.h + pad));
+      // 2 · The real product at its own proportions, fitted inside the green box (bottom-aligned: bags hang).
+      let pw = box.w;
+      let ph = pw / aspect;
+      if (ph > box.h) {
+        ph = box.h;
+        pw = ph * aspect;
+      }
+      const px = box.x + (box.w - pw) / 2;
+      const py = box.y + box.h - ph;
+      const pad = Math.max(6, box.w * 0.08);
+      const x0 = Math.max(0, Math.floor(Math.min(box.x, px) - pad));
+      const y0 = Math.max(0, Math.floor(Math.min(box.y, py) - pad));
+      const x1 = Math.min(W, Math.ceil(Math.max(box.x + box.w, px + pw) + pad));
+      const y1 = Math.min(H, Math.ceil(Math.max(box.y + box.h, py + ph) + pad));
       const bw = x1 - x0;
       const bh = y1 - y0;
       if (bw < 8 || bh < 8) return false;
       const frame = ctx.getImageData(x0, y0, bw, bh);
       const fp = frame.data;
-      // The product laid over the green box itself.
+      const orig = new Uint8ClampedArray(fp);
       fit.width = bw;
       fit.height = bh;
       fctx.clearRect(0, 0, bw, bh);
-      fctx.drawImage(product, box.x - x0, box.y - y0, box.w, box.h);
+      fctx.drawImage(product, px - x0, py - y0, pw, ph);
       const pp = fctx.getImageData(0, 0, bw, bh).data;
-      // Light and shadow: the green channel relative to its average over the bag.
+
+      // Light and shadow from the green, and per row the span the AI's bag covers.
       let gs = 0;
       let gn = 0;
-      for (let i = 0; i < fp.length; i += 4) if (greenness(fp[i], fp[i + 1], fp[i + 2]) > 0.5) { gs += fp[i + 1]; gn++; }
-      const gMean = gn ? gs / gn : 200;
-      for (let i = 0; i < fp.length; i += 4) {
-        const r = fp[i];
-        const g = fp[i + 1];
-        const b = fp[i + 2];
-        const a = greenness(r, g, b);
-        if (a <= 0) {
-          // Green spill on edges (hands, outline): pull green down to the other channels.
-          const m = Math.max(r, b);
-          if (g > m + 12) fp[i + 1] = m + 12;
-          continue;
+      const gmask = new Float32Array(bw * bh);
+      const spanL = new Int32Array(bh).fill(-1);
+      const spanR = new Int32Array(bh).fill(-1);
+      for (let y = 0; y < bh; y++)
+        for (let x = 0; x < bw; x++) {
+          const i = (y * bw + x) * 4;
+          const a = greenness(orig[i], orig[i + 1], orig[i + 2]);
+          gmask[y * bw + x] = a;
+          if (a > 0.5) {
+            gs += orig[i + 1];
+            gn++;
+            if (spanL[y] < 0) spanL[y] = x;
+            spanR[y] = x;
+          }
         }
-        const shade = Math.max(0.5, Math.min(1.3, g / gMean));
-        const pa = pp[i + 3] / 255;
-        // Inside the green but outside the product shape (the AI drew a slightly different outline): the product's main colour.
-        const pr = pp[i] * pa + fill[0] * (1 - pa);
-        const pg = pp[i + 1] * pa + fill[1] * (1 - pa);
-        const pb = pp[i + 2] * pa + fill[2] * (1 - pa);
-        fp[i] = Math.min(255, r * (1 - a) + pr * shade * a);
-        fp[i + 1] = Math.min(255, Math.max(r, b) * (1 - a) + pg * shade * a);
-        fp[i + 2] = Math.min(255, b * (1 - a) + pb * shade * a);
+      const gMean = gn ? gs / gn : 200;
+      // Fill colours are eased down each column so the patch reads as background, not streaks.
+      const prev = new Float32Array(bw * 3).fill(-1);
+
+      for (let y = 0; y < bh; y++) {
+        // Colours just outside the green on this row, to fill green the real shape does not cover.
+        const l = spanL[y];
+        const r = spanR[y];
+        const li = l > 3 ? (y * bw + l - 4) * 4 : -1;
+        const ri = r >= 0 && r < bw - 4 ? (y * bw + r + 4) * 4 : -1;
+        for (let x = 0; x < bw; x++) {
+          const j = y * bw + x;
+          const i = j * 4;
+          const a = gmask[j];
+          const pa = pp[i + 3] / 255;
+          const inSpan = l >= 0 && x >= l && x <= r;
+          if (pa > 0.02 && (a > 0 || !inSpan)) {
+            // Product pixel: over the green it takes the green's light; outside the AI bag it is drawn as is.
+            const shade = a > 0 ? Math.max(0.5, Math.min(1.3, orig[i + 1] / gMean)) : 1;
+            const k = a > 0 ? pa * Math.max(a, 0.6) : pa;
+            for (let ch = 0; ch < 3; ch++) fp[i + ch] = Math.min(255, orig[i + ch] * (1 - k) + pp[i + ch] * shade * k);
+            if (a > 0 && k < 1) {
+              const m = Math.max(fp[i], fp[i + 2]);
+              if (fp[i + 1] > m + 8) fp[i + 1] = m + 8;
+            }
+          } else if (a > 0) {
+            // Green outside the real shape: fill from beside it (blend left/right by position).
+            let fr = 200, fg = 200, fb = 200;
+            if (li >= 0 || ri >= 0) {
+              const t = li >= 0 && ri >= 0 ? (x - l) / Math.max(1, r - l) : li >= 0 ? 0 : 1;
+              const A = li >= 0 ? li : ri;
+              const B = ri >= 0 ? ri : li;
+              fr = orig[A] * (1 - t) + orig[B] * t;
+              fg = Math.min(orig[A + 1] * (1 - t) + orig[B + 1] * t, Math.max(fr, orig[A + 2]) + 10);
+              fb = orig[A + 2] * (1 - t) + orig[B + 2] * t;
+            }
+            const c = x * 3;
+            if (prev[c] >= 0) {
+              fr = prev[c] * 0.85 + fr * 0.15;
+              fg = prev[c + 1] * 0.85 + fg * 0.15;
+              fb = prev[c + 2] * 0.85 + fb * 0.15;
+            }
+            prev[c] = fr;
+            prev[c + 1] = fg;
+            prev[c + 2] = fb;
+            fp[i] = orig[i] * (1 - a) + fr * a;
+            fp[i + 1] = Math.max(orig[i], orig[i + 2]) * (1 - a) + fg * a;
+            fp[i + 2] = orig[i + 2] * (1 - a) + fb * a;
+          } else {
+            // Edges and hands: remove green spill.
+            const m = Math.max(orig[i], orig[i + 2]);
+            if (orig[i + 1] > m + 14 && greenness(orig[i], orig[i + 1], orig[i + 2]) === 0 && orig[i + 1] - m < 40) fp[i + 1] = m + 14;
+          }
+        }
       }
       ctx.putImageData(frame, x0, y0);
       return true;
