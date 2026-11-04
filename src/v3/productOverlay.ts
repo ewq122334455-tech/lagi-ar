@@ -3,10 +3,11 @@
  * over the visitor's own camera where the product should be, following the body with MediaPipe pose
  * tracking, so its shape and print never change. Runs entirely in the browser.
  */
-import type { PoseLandmarker } from '@mediapipe/tasks-vision';
+import type { HandLandmarker, PoseLandmarker } from '@mediapipe/tasks-vision';
 
 const MP_VERSION = '0.10.21';
 const WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;
+const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
 /** Product on a flat green background → canvas with that background transparent, cropped to the product. */
@@ -104,6 +105,40 @@ export async function loadPose(): Promise<PoseLandmarker> {
   } catch {
     return make('CPU');
   }
+}
+
+/** The hand model (21 joints with 3D coordinates), for turning a held product with the hand. */
+export async function loadHands(): Promise<HandLandmarker> {
+  const { FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision');
+  const files = await FilesetResolver.forVisionTasks(WASM);
+  const make = (delegate: 'GPU' | 'CPU') =>
+    HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: HAND_MODEL, delegate }, runningMode: 'VIDEO', numHands: 1, minHandDetectionConfidence: 0.4, minTrackingConfidence: 0.4 });
+  try {
+    return await make('GPU');
+  } catch {
+    return make('CPU');
+  }
+}
+
+type P3 = { x: number; y: number; z: number };
+/**
+ * How far the hand is turned about the vertical axis, in radians (0 = palm facing the camera, ±π = back
+ * of the hand), from the knuckle line (index → little finger) in the hand's 3D coordinates. Left and right
+ * hands are made to agree; a mirrored (front-camera) view is turned the way the visitor sees it.
+ */
+export function handYaw(world: P3[], handedness: 'Left' | 'Right', mirrored: boolean): number {
+  const a = { x: world[5].x - world[17].x, z: world[5].z - world[17].z };
+  const sign = handedness === 'Right' ? 1 : -1;
+  const yaw = Math.atan2(-a.z * sign, a.x * sign);
+  return mirrored ? -yaw : yaw;
+}
+
+/** Shortest-way easing between angles (so 179° → -179° does not spin the long way round). */
+export function easeAngle(from: number, to: number, k: number) {
+  let d = to - from;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return from + d * k;
 }
 
 export type Pt = { x: number; y: number; visibility?: number };
