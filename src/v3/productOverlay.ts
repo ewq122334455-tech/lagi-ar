@@ -155,8 +155,8 @@ export function placeFor(style: string, kind: 'bag' | 'acc', lm: Pt[], aspect: n
       return { cx: e.x + out * 0.08 * w, top: e.y - 0.1 * h, w, rot: sway };
     case 'shoulder':
     case 'back':
-      // Handles over the shoulder; a small bag on a strap hangs lower, its bottom ~45 cm below the shoulder.
-      return { cx: s.x + out * 0.22 * w, top: s.y + Math.max(-0.06 * h, 45 * pxPerCm * size - h), w, rot: tilt * 0.6 };
+      // Handles over the shoulder, the bag beside the body; a small bag on a strap hangs lower (bottom ~45 cm down).
+      return { cx: s.x + out * 0.42 * w, top: s.y + Math.max(-0.06 * h, 45 * pxPerCm * size - h), w, rot: tilt * 0.6 };
     case 'cross':
       return { cx: (seen(hp) ? hp.x : s.x) + out * 0.12 * w, top: s.y + torso * 0.5, w, rot: tilt * 0.4 };
     case 'hug':

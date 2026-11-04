@@ -170,6 +170,18 @@ export interface Product {
   lagiSelectionReason: VerifiableField<string>;
   /** How the store photo is shown on the page: what it depicts, and two close-up points (% of the photo). */
   views?: { main: string; details: { x: number; y: number; label: string }[] };
+  /** A simple textured 3D model built from the reference sheet's views (for the live try-on). */
+  model3d?: {
+    type: 'tote';
+    widthCm: number;
+    heightCm: number;
+    depthCm: number;
+    handleCm: number;
+    handleColor: string;
+    rimColor: string;
+    textures: { front: string; back: string; side: string; bottom: string };
+    source?: string;
+  };
   /** Crops of the brand's 3D modelling reference sheet: views (구도), form (형태), details & material. */
   drawings?: { src: string; label: string; group: 'view' | 'form' | 'detail' }[];
   /** Three short points shown next to the price. */
