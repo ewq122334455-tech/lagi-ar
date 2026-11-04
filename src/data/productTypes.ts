@@ -172,14 +172,23 @@ export interface Product {
   views?: { main: string; details: { x: number; y: number; label: string }[] };
   /** A simple textured 3D model built from the reference sheet's views (for the live try-on). */
   model3d?: {
-    type: 'tote';
+    /** tote: soft open tote; box: a rigid box (photos on each face, piped edges, strap handles). */
+    type: 'tote' | 'box';
+    /** box only: faces from the product photos (missing ones are plain `bodyColor`). */
+    faces?: { front?: string; back?: string; left?: string; right?: string; top?: string; bottom?: string };
+    openTop?: boolean;
+    bodyColor?: string;
+    edgeColor?: string;
+    liningColor?: string;
+    /** Handles across the width: x0/x1 as fractions of the width (-0.5…0.5), z as a fraction of the depth. */
+    handles?: { x0: number; x1: number; z: number; color: string; widthCm: number }[];
     widthCm: number;
     heightCm: number;
     depthCm: number;
     handleCm: number;
     handleColor: string;
     rimColor: string;
-    textures: { front: string; back: string; side: string; bottom: string };
+    textures?: { front: string; back: string; side: string; bottom: string };
     source?: string;
   };
   /** Crops of the brand's 3D modelling reference sheet: views (구도), form (형태), details & material. */

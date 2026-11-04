@@ -16,6 +16,104 @@ export interface Bag3D {
 }
 
 export async function buildBag(model: Model, base: string): Promise<Bag3D> {
+  return model.type === 'box' ? buildBox(model, base) : buildTote(model, base);
+}
+
+/**
+ * A rigid box bag from product photos: each face carries its own photo (perspective-corrected),
+ * the edges are piped (rounded tubes), and webbing/leather handles rise from the top.
+ */
+async function buildBox(model: Model, base: string): Promise<Bag3D> {
+  const w = model.widthCm / 100;
+  const h = model.heightCm / 100;
+  const d = model.depthCm / 100;
+  const handleH = model.handleCm / 100;
+  const disposables: { dispose: () => void }[] = [];
+  const loader = new THREE.TextureLoader();
+  const load = (u?: string) =>
+    u
+      ? new Promise<THREE.Texture | null>((ok) =>
+          loader.load(
+            new URL(u, base).toString(),
+            (t) => {
+              t.colorSpace = THREE.SRGBColorSpace;
+              t.anisotropy = 8;
+              disposables.push(t);
+              ok(t);
+            },
+            undefined,
+            () => ok(null),
+          ),
+        )
+      : Promise.resolve(null);
+  const f = model.faces ?? {};
+  const [front, back, left, right, top, bottom] = await Promise.all([f.front, f.back ?? f.front, f.left, f.right ?? f.left, f.top, f.bottom].map(load));
+  const mat = (map: THREE.Texture | null, opts: THREE.MeshStandardMaterialParameters = {}) => {
+    const m = new THREE.MeshStandardMaterial({ map: map ?? undefined, color: map ? '#ffffff' : model.bodyColor ?? '#222222', roughness: 0.7, metalness: 0, ...opts });
+    disposables.push(m);
+    return m;
+  };
+  const geo = <T extends THREE.BufferGeometry>(g: T) => (disposables.push(g), g);
+  const none = new THREE.MeshBasicMaterial({ visible: false });
+  disposables.push(none);
+  const bag = new THREE.Group();
+  // BoxGeometry face order: +x (right), -x (left), +y (top), -y (bottom), +z (front), -z (back).
+  const faces = [mat(right), mat(left), model.openTop ? none : mat(top), mat(bottom), mat(front), mat(back)];
+  const body = new THREE.Mesh(geo(new THREE.BoxGeometry(w, h, d)), faces);
+  body.position.y = h / 2;
+  bag.add(body);
+  if (model.openTop) {
+    const lining = new THREE.MeshStandardMaterial({ color: model.liningColor ?? '#ece6d8', roughness: 0.95, side: THREE.BackSide });
+    disposables.push(lining);
+    const inner = new THREE.Mesh(geo(new THREE.BoxGeometry(w * 0.97, h * 0.99, d * 0.94)), [lining, lining, none, lining, lining, lining]);
+    inner.position.y = h / 2 + h * 0.005;
+    bag.add(inner);
+  }
+  // Piped edges: a tube along each of the 12 edges (softens the box's silhouette like real binding).
+  const edgeMat = new THREE.MeshStandardMaterial({ color: model.edgeColor ?? '#c9c9c9', roughness: 0.35, metalness: model.edgeColor ? 0.2 : 0.6 });
+  disposables.push(edgeMat);
+  const r = Math.min(w, h, d) * 0.022;
+  const edge = (len: number, axis: 'x' | 'y' | 'z', x: number, y: number, z: number) => {
+    const m = new THREE.Mesh(geo(new THREE.CylinderGeometry(r, r, len + r * 2, 10)), edgeMat);
+    if (axis === 'x') m.rotation.z = Math.PI / 2;
+    if (axis === 'z') m.rotation.x = Math.PI / 2;
+    m.position.set(x, y, z);
+    bag.add(m);
+  };
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) edge(h, 'y', (sx * w) / 2, h / 2, (sz * d) / 2);
+  for (const y of [0, h]) {
+    for (const sz of [-1, 1]) edge(w, 'x', 0, y, (sz * d) / 2);
+    for (const sx of [-1, 1]) edge(d, 'z', (sx * w) / 2, y, 0);
+  }
+  // Handles: flat straps arching over the top.
+  for (const hd of model.handles ?? []) {
+    const hm = new THREE.MeshStandardMaterial({ color: hd.color, roughness: 0.6 });
+    disposables.push(hm);
+    const x0 = hd.x0 * w;
+    const x1 = hd.x1 * w;
+    const z = hd.z * d;
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(x0, h * 0.98, z),
+      new THREE.Vector3(x0, h + handleH * 0.6, z),
+      new THREE.Vector3(x0 + (x1 - x0) * 0.25, h + handleH, z),
+      new THREE.Vector3(x0 + (x1 - x0) * 0.75, h + handleH, z),
+      new THREE.Vector3(x1, h + handleH * 0.6, z),
+      new THREE.Vector3(x1, h * 0.98, z),
+    ]);
+    // A flat strap: a thin ribbon swept along the curve.
+    const sw = hd.widthCm / 100;
+    const m = new THREE.Mesh(geo(new THREE.TubeGeometry(curve, 64, sw / 2, 10, false)), hm);
+    m.scale.z = 0.25;
+    m.position.z = z * 0.75;
+    bag.add(m);
+  }
+  bag.position.y = -(h + handleH);
+  const group = new THREE.Group();
+  group.add(bag);
+  return { group, widthM: w, dispose: () => disposables.forEach((x) => x.dispose()) };
+}
+
+async function buildTote(model: Model, base: string): Promise<Bag3D> {
   const w = model.widthCm / 100;
   const h = model.heightCm / 100;
   const d = model.depthCm / 100;
@@ -34,7 +132,8 @@ export async function buildBag(model: Model, base: string): Promise<Bag3D> {
         fail,
       ),
     );
-  const [front, back, side, bottom] = await Promise.all([model.textures.front, model.textures.back, model.textures.side, model.textures.bottom].map(load));
+  const tx = model.textures!;
+  const [front, back, side, bottom] = await Promise.all([tx.front, tx.back, tx.side, tx.bottom].map(load));
   const sideR = side.clone();
   sideR.wrapS = THREE.RepeatWrapping;
   sideR.repeat.x = -1;

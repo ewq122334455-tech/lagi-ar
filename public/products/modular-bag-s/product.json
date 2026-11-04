@@ -238,5 +238,38 @@
       "label": "소재",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "box",
+    "widthCm": 22,
+    "heightCm": 16.6,
+    "depthCm": 8,
+    "handleCm": 11,
+    "openTop": true,
+    "bodyColor": "#f1efe8",
+    "edgeColor": "#1f4fd1",
+    "liningColor": "#efe9dc",
+    "faces": {
+      "front": "products/modular-bag-s/model/front.jpg",
+      "left": "products/modular-bag-s/model/side.jpg",
+      "bottom": "products/modular-bag-s/model/bottom.jpg"
+    },
+    "handles": [
+      {
+        "x0": -0.18,
+        "x1": 0.18,
+        "z": 0.5,
+        "color": "#b4182f",
+        "widthCm": 2.4
+      },
+      {
+        "x0": -0.18,
+        "x1": 0.18,
+        "z": -0.5,
+        "color": "#b4182f",
+        "widthCm": 2.4
+      }
+    ],
+    "source": "라기 제작 — 실제 제품 사진(정면·옆면·바닥)으로 만든 3D 모델. 높이·폭은 사진 비율로 추정"
+  }
 }

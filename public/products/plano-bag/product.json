@@ -243,5 +243,31 @@
       "label": "소재",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "box",
+    "widthCm": 14,
+    "heightCm": 15.4,
+    "depthCm": 8.9,
+    "handleCm": 5,
+    "bodyColor": "#141414",
+    "edgeColor": "#c8c8c8",
+    "faces": {
+      "front": "products/plano-bag/model/front.jpg",
+      "back": "products/plano-bag/model/back.jpg",
+      "left": "products/plano-bag/model/left.jpg",
+      "right": "products/plano-bag/model/right.jpg",
+      "top": "products/plano-bag/model/top.jpg"
+    },
+    "handles": [
+      {
+        "x0": -0.28,
+        "x1": 0.28,
+        "z": 0,
+        "color": "#161616",
+        "widthCm": 2.2
+      }
+    ],
+    "source": "라기 제작 — 실제 제품 사진(정면·뒷면·양옆·윗면)으로 만든 3D 모델. 깊이·높이는 사진 비율로 추정"
+  }
 }
