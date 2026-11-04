@@ -47,7 +47,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   // and the holding hand is drawn on a layer above it.
   const gl = useRef<HTMLCanvasElement>(null);
   const top = useRef<HTMLCanvasElement>(null);
-  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number } | null>(null);
+  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
   const hands = useRef<Promise<HandLandmarker | null> | null>(null);
@@ -123,7 +123,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         layer.current?.l.dispose();
         const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
         const bag = await buildBag(model, base);
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm) };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm };
       }
       setStatus(null);
       setPhase('live');
@@ -276,20 +276,30 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       const img = p && matte.current?.id === p.id ? matte.current.img : null;
       const out = l3 ? tctx ?? ctx : ctx;
       if (tctx && top.current) tctx.clearRect(0, 0, top.current.width, top.current.height);
-      if (!lm || !p || (!img && !l3)) {
+      // Held in a hand the hand model sees: size and place from the hand itself. The knuckle line
+      // (index to little finger) is about 7.5 cm, which holds even when the shoulders are off screen.
+      const fromHand = !!(l3 && grip && handPts && HELD.has(style) && p);
+      if (!p || (!img && !l3) || (!lm && !fromHand)) {
         l3?.l.render(W, H, null);
         return;
       }
       const kind = (p.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'acc';
-      const next = placeFor(style, kind, lm, l3 ? l3.aspect : img!.width / img!.height, p.dimensions.widthCm ?? undefined, sz);
+      let next = lm ? placeFor(style, kind, lm, l3 ? l3.aspect : img!.width / img!.height, p.dimensions.widthCm ?? undefined, sz) : null;
+      if (fromHand) {
+        const hp = handPts!;
+        const palm = Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y);
+        const pxPerCm = palm / 7.5;
+        const widthCm = l3!.widthCm;
+        // The handle runs through the curled fingers: between the knuckles and the middle joints.
+        const ys = [5, 9, 13, 17, 6, 10, 14, 18].map((i) => hp[i].y);
+        const xs = [5, 9, 13, 17].map((i) => hp[i].x);
+        const gx = xs.reduce((a, b) => a + b, 0) / xs.length;
+        const gy = ys.reduce((a, b) => a + b, 0) / ys.length;
+        next = { cx: gx, top: gy, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
+      }
       if (!next) {
         l3?.l.render(W, H, null);
         return;
-      }
-      // Held: hang from the knuckles the hand model found (more exact than the pose's wrist).
-      if (l3 && grip && HELD.has(style)) {
-        next.cx = grip.x;
-        next.top = grip.y - 0.02 * next.w;
       }
       placed.current = smooth(placed.current, next);
       const held = ['hand', 'elbow'].includes(style);
@@ -342,7 +352,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         hmctx.drawImage(raw, 0, 0);
         hmctx.globalCompositeOperation = 'source-over';
         out.drawImage(handMask, 0, 0);
-      } else if (holding && mask) {
+      } else if (holding && mask && lm) {
         const useRight = (lm[16]?.visibility ?? 0) > 0.5 && ((lm[15]?.visibility ?? 0) <= 0.5 || lm[16].y >= lm[15].y);
         const wr = lm[useRight ? 16 : 15];
         const sh = Math.hypot(lm[11].x - lm[12].x, lm[11].y - lm[12].y);
@@ -579,7 +589,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           {live && (
             <>
               <span className="t-label t-mark absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[var(--c-ink)]">Real product · AR</span>
-              {(!found || status) && (
+              {((!found && !handSeen) || status) && (
                 <p className="t-caption kr absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-white" role="status">
                   {status ?? '상반신이 화면에 들어오게 서 주세요'}
                 </p>
