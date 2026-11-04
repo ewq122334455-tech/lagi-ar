@@ -3,6 +3,7 @@ import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { keyMatte, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
+import { buildBag, createBagLayer } from './bag3d';
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
 
@@ -42,6 +43,11 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  // Products with a 3D model: the bag is rendered in 3D (it turns with the body) on a WebGL layer,
+  // and the holding hand is drawn on a layer above it.
+  const gl = useRef<HTMLCanvasElement>(null);
+  const top = useRef<HTMLCanvasElement>(null);
+  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
   const matte = useRef<{ id: string; img: HTMLCanvasElement } | null>(null);
@@ -94,11 +100,18 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       await v.play().catch(() => undefined);
       setStatus('몸 인식 모델과 제품 이미지를 불러오고 있습니다…');
       pose.current ??= loadPose();
+      const model = product.model3d;
       const [marker, img] = await Promise.all([
         pose.current,
-        matte.current?.id === product.id ? Promise.resolve(matte.current.img) : matteFor(product),
+        model ? Promise.resolve(null) : matte.current?.id === product.id ? Promise.resolve(matte.current.img) : matteFor(product),
       ]);
-      matte.current = { id: product.id, img };
+      if (img) matte.current = { id: product.id, img };
+      if (model && layer.current?.id !== product.id) {
+        layer.current?.l.dispose();
+        const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
+        const bag = await buildBag(model, base);
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm) };
+      }
       setStatus(null);
       setPhase('live');
       run(marker);
@@ -127,6 +140,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     const raw = document.createElement('canvas');
     const rctx = raw.getContext('2d', { willReadFrequently: true })!;
     let lm: Pt[] | null = null;
+    let yaw = 0;
+    let brightness = 0.6;
+    let tick = 0;
+    const tctx = top.current?.getContext('2d');
     let mask: { data: Float32Array; w: number; h: number } | null = null;
     let lastDetect = 0;
     let lastT = -1;
@@ -141,6 +158,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       if (c.width !== W || c.height !== H) {
         c.width = raw.width = W;
         c.height = raw.height = H;
+        if (top.current) {
+          top.current.width = W;
+          top.current.height = H;
+        }
       }
       const { styleKey: style, size: sz, product: p, facing: f } = opts.current;
       const mirrored = f === 'user';
@@ -159,19 +180,44 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         const res = marker.detectForVideo(v, now);
         const l = res.landmarks[0];
         lm = l ? l.map((q) => ({ x: (mirrored ? 1 - q.x : q.x) * W, y: q.y * H, visibility: q.visibility })) : null;
+        // Body turn from the 3D landmarks (metres): the shoulder line's depth gives the yaw.
+        const wl = res.worldLandmarks?.[0];
+        if (wl) {
+          const dx = wl[12].x - wl[11].x;
+          const dz = wl[12].z - wl[11].z;
+          const target = Math.max(-1.3, Math.min(1.3, Math.atan2(dz, Math.abs(dx)) * (mirrored ? -1 : 1) * Math.sign(dx || 1) * -1));
+          yaw += (target - yaw) * 0.35;
+        }
         const m = res.segmentationMasks?.[0];
         mask = m ? { data: m.getAsFloat32Array().slice(), w: m.width, h: m.height } : null;
         res.segmentationMasks?.forEach((x) => x.close());
         misses = lm ? 0 : misses + 1;
         setFound(misses < 10);
       }
+      // Scene brightness now and then, so the 3D bag is lit like the room.
+      if (++tick % 30 === 1) {
+        const px = rctx.getImageData(W >> 2, H >> 2, 8, 8).data;
+        let L = 0;
+        for (let i = 0; i < px.length; i += 4) L += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        brightness = Math.min(1, L / (px.length / 4) / 200);
+      }
+      const l3 = p && layer.current?.id === p.id ? layer.current : null;
       const img = p && matte.current?.id === p.id ? matte.current.img : null;
-      if (!lm || !img || !p) return;
+      const out = l3 ? tctx ?? ctx : ctx;
+      if (tctx && top.current) tctx.clearRect(0, 0, top.current.width, top.current.height);
+      if (!lm || !p || (!img && !l3)) {
+        l3?.l.render(W, H, null);
+        return;
+      }
       const kind = (p.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'acc';
-      const next = placeFor(style, kind, lm, img.width / img.height, p.dimensions.widthCm ?? undefined, sz);
-      if (!next) return;
+      const next = placeFor(style, kind, lm, l3 ? l3.aspect : img!.width / img!.height, p.dimensions.widthCm ?? undefined, sz);
+      if (!next) {
+        l3?.l.render(W, H, null);
+        return;
+      }
       placed.current = smooth(placed.current, next);
-      paint(ctx, img, placed.current, { s: 1, ox: 0, oy: 0 });
+      if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
+      else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
       // The holding hand goes back on top of the handles: person pixels from the mask, around the wrist.
       const held = HELD.has(kind === 'acc' ? `acc-${style}` : style);
@@ -204,7 +250,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           tmp.width = w;
           tmp.height = h;
           tmp.getContext('2d')!.putImageData(patch, 0, 0);
-          ctx.drawImage(tmp, x0, y0);
+          out.drawImage(tmp, x0, y0);
         }
       }
     };
@@ -219,6 +265,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     out.height = c.height;
     const ctx = out.getContext('2d')!;
     ctx.drawImage(c, 0, 0);
+    if (layer.current?.id === product.id) {
+      if (gl.current) ctx.drawImage(gl.current, 0, 0, c.width, c.height);
+      if (top.current) ctx.drawImage(top.current, 0, 0, c.width, c.height);
+    }
     const fs = Math.max(14, Math.round(c.width / 50));
     ctx.font = `700 ${fs}px sans-serif`;
     const text = 'LAGI · 실제 제품 이미지 착용 미리보기';
@@ -280,6 +330,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)] md:aspect-video" data-testid="map-stage">
           <video ref={video} playsInline muted className="hidden" />
           <canvas ref={canvas} className={`h-full w-full object-contain ${live ? '' : 'hidden'}`} data-testid="map-canvas" />
+          <canvas ref={gl} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} data-testid="map-gl" />
+          <canvas ref={top} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} />
           {!live && (
             <p className="t-body kr max-w-xs px-6 text-center text-white/80" data-testid="map-status">
               {status ?? (phase === 'ended' ? '착용을 끝냈습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면에 실제 제품 이미지가 몸을 따라 입혀집니다.')}

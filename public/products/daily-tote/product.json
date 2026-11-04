@@ -237,5 +237,21 @@
       "label": "소재 · 손잡이 웨빙",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "tote",
+    "widthCm": 28,
+    "heightCm": 25,
+    "depthCm": 13,
+    "handleCm": 13,
+    "handleColor": "#d8282a",
+    "rimColor": "#1d2f6b",
+    "textures": {
+      "front": "products/daily-tote/model/front.jpg",
+      "back": "products/daily-tote/model/back.jpg",
+      "side": "products/daily-tote/model/side.jpg",
+      "bottom": "products/daily-tote/model/bottom.jpg"
+    },
+    "source": "라기 제작 — 제품 3D 모델링 도면(정면·뒷면·측면·바닥)으로 만든 3D 모델"
+  }
 }

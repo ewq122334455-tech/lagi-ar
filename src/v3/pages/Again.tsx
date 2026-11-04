@@ -46,8 +46,10 @@ export default function Again() {
   const [params, setParams] = useSearchParams();
   const productId = params.get('p');
   // Realtime try-on (video) or photo compositing. Realtime is the default.
-  type Mode = 'live' | 'photo' | 'map';
-  const mode: Mode = params.get('m') === 'photo' ? 'photo' : params.get('m') === 'map' ? 'map' : 'live';
+  type Mode = 'map' | 'photo' | 'live';
+  // Products with a 3D model open in the 3D live try-on; others in the AI video.
+  const m = params.get('m');
+  const mode: Mode = m === 'photo' || m === 'map' || m === 'live' ? m : products.find((x) => x.id === productId)?.model3d ? 'map' : 'live';
   const product = products.find((p) => p.id === productId);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
@@ -81,7 +83,7 @@ export default function Again() {
   const step = !product ? 1 : !photo ? 2 : !result ? (busy ? 4 : 3) : 5;
 
   function choose(p: Product) {
-    setParams(mode === 'live' ? { p: p.id } : { p: p.id, m: mode }, { replace: true });
+    setParams({ p: p.id, m: mode }, { replace: true });
     setResult(null);
     setError(null);
     setErrorDetail(null);
@@ -180,7 +182,7 @@ export default function Again() {
       ))}
     </div>
   );
-  const setMode = (m: Mode) => setParams({ ...(productId ? { p: productId } : {}), ...(m !== 'live' ? { m } : {}) }, { replace: true });
+  const setMode = (next: Mode) => setParams({ ...(productId ? { p: productId } : {}), m: next }, { replace: true });
 
   return (
     <div className="px-page pb-32 pt-page">
@@ -199,9 +201,9 @@ export default function Again() {
       <div className="mt-12 grid grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5 lg:inline-grid lg:min-w-[760px]" role="tablist" aria-label="체험 방식">
         {(
           [
-            ['live', '실시간 착용', 'AI 영상 + 실제 디자인 · 20초'],
+            ['map', '실시간 3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
             ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
-            ['map', '간편 착용', '실제 사진 맞춰 보기 · 무료'],
+            ['live', 'AI 영상 (베타)', 'AI가 다시 그리는 영상 · 20초'],
           ] as const
         ).map(([m, label, sub]) => (
           <button
