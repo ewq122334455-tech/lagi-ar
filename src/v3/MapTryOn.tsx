@@ -53,8 +53,18 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   const matte = useRef<{ id: string; img: HTMLCanvasElement } | null>(null);
   const placed = useRef<Placement | null>(null);
   // Live values the drawing loop reads without restarting.
-  const opts = useRef({ styleKey, size, product, facing });
-  opts.current = { styleKey, size, product, facing };
+  // Turning the 3D bag: drag on the stage, the view buttons, or auto-spin; the hand's twist and the body add to it.
+  const spin = useRef(0);
+  const [auto, setAuto] = useState(false);
+  const dragX = useRef<number | null>(null);
+  // AI realism: the composited scene goes to the realtime AI, which only re-lights it.
+  const [aiOn, setAiOn] = useState(false);
+  const [aiState, setAiState] = useState<{ busy: boolean; left?: number; error?: string }>({ busy: false });
+  const aiVideo = useRef<HTMLVideoElement>(null);
+  const aiOut = useRef<HTMLCanvasElement>(null);
+  const aiConn = useRef<{ stop: () => void } | null>(null);
+  const opts = useRef({ styleKey, size, product, facing, auto, aiOn });
+  opts.current = { styleKey, size, product, facing, auto, aiOn };
 
   const stop = () => {
     stream.current?.getTracks().forEach((t) => t.stop());
@@ -140,7 +150,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     const raw = document.createElement('canvas');
     const rctx = raw.getContext('2d', { willReadFrequently: true })!;
     let lm: Pt[] | null = null;
-    let yaw = 0;
+    let bodyYaw = 0;
+    let handYaw = 0;
     let brightness = 0.6;
     let tick = 0;
     const tctx = top.current?.getContext('2d');
@@ -186,7 +197,14 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           const dx = wl[12].x - wl[11].x;
           const dz = wl[12].z - wl[11].z;
           const target = Math.max(-1.3, Math.min(1.3, Math.atan2(dz, Math.abs(dx)) * (mirrored ? -1 : 1) * Math.sign(dx || 1) * -1));
-          yaw += (target - yaw) * 0.35;
+          bodyYaw += (target - bodyYaw) * 0.35;
+          // The hand's twist (index knuckle vs little-finger knuckle, in depth) turns a held bag.
+          const right = (wl[16]?.visibility ?? 0) >= (wl[15]?.visibility ?? 0);
+          const [pk, ix] = right ? [wl[18], wl[20]] : [wl[17], wl[19]];
+          if (pk && ix && (pk.visibility ?? 1) > 0.4 && (ix.visibility ?? 1) > 0.4) {
+            const t = Math.atan2(ix.z - pk.z, Math.abs(ix.x - pk.x) + 1e-3) * (mirrored ? -1 : 1);
+            handYaw += (Math.max(-1.4, Math.min(1.4, t * 1.6)) - handYaw) * 0.3;
+          }
         }
         const m = res.segmentationMasks?.[0];
         mask = m ? { data: m.getAsFloat32Array().slice(), w: m.width, h: m.height } : null;
@@ -216,12 +234,15 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         return;
       }
       placed.current = smooth(placed.current, next);
+      if (opts.current.auto) spin.current += 0.025;
+      const held = ['hand', 'elbow'].includes(style);
+      const yaw = spin.current + bodyYaw + (held ? handYaw : 0);
       if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
       else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
       // The holding hand goes back on top of the handles: person pixels from the mask, around the wrist.
-      const held = HELD.has(kind === 'acc' ? `acc-${style}` : style);
-      if (held && mask) {
+      const holding = HELD.has(kind === 'acc' ? `acc-${style}` : style);
+      if (holding && mask) {
         const useRight = (lm[16]?.visibility ?? 0) > 0.5 && ((lm[15]?.visibility ?? 0) <= 0.5 || lm[16].y >= lm[15].y);
         const wr = lm[useRight ? 16 : 15];
         const sh = Math.hypot(lm[11].x - lm[12].x, lm[11].y - lm[12].y);
@@ -253,9 +274,108 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           out.drawImage(tmp, x0, y0);
         }
       }
+      if (l3 && opts.current.aiOn) composeAi(W, H);
     };
     requestAnimationFrame(frame);
   }
+
+  /** The full scene (camera + 3D bag + hand) as one canvas — what the AI receives. */
+  const scene = useRef<HTMLCanvasElement | null>(null);
+  function composeScene(W: number, H: number) {
+    const sc = (scene.current ??= document.createElement('canvas'));
+    if (sc.width !== W || sc.height !== H) {
+      sc.width = W;
+      sc.height = H;
+    }
+    const x = sc.getContext('2d')!;
+    x.drawImage(canvas.current!, 0, 0, W, H);
+    if (gl.current) x.drawImage(gl.current, 0, 0, W, H);
+    if (top.current) x.drawImage(top.current, 0, 0, W, H);
+    return sc;
+  }
+  /** AI frame back, with the real 3D design laid over it (the AI only contributes light and texture). */
+  function composeAi(W: number, H: number) {
+    composeScene(W, H);
+    const v = aiVideo.current;
+    const o = aiOut.current;
+    if (!v || !o || v.readyState < 2 || !v.videoWidth) return;
+    if (o.width !== W || o.height !== H) {
+      o.width = W;
+      o.height = H;
+    }
+    const x = o.getContext('2d')!;
+    x.globalAlpha = 1;
+    x.drawImage(v, 0, 0, W, H);
+    // Design stays ours: the 3D bag on top at high opacity, so the AI's shading shows through a little.
+    x.globalAlpha = 0.82;
+    if (gl.current) x.drawImage(gl.current, 0, 0, W, H);
+    x.globalAlpha = 1;
+    if (top.current) x.drawImage(top.current, 0, 0, W, H);
+  }
+
+  async function startAi() {
+    if (aiOn || aiState.busy || !product) return;
+    if (!window.confirm('20초 동안 화면 영상이 AI 서버(Decart)로 실시간 전송되어 실사처럼 보정됩니다. 라기는 영상을 저장하지 않습니다. 진행할까요?')) return;
+    setAiState({ busy: true });
+    try {
+      let token: string | null = null;
+      try {
+        token = localStorage.getItem('lagi-session');
+      } catch {
+        // private mode
+      }
+      const res = await fetch(`${AI_TRYON_URL}/realtime/token`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: '{}' });
+      const tk = (await res.json().catch(() => ({}))) as { apiKey?: string; seconds?: number; error?: string };
+      if (!res.ok || !tk.apiKey) throw new Error(tk.error ?? 'AI 보정을 시작하지 못했습니다.');
+      const sdk = await import('@decartai/sdk');
+      const model = sdk.models.realtime('lucy-2.6');
+      const v = video.current!;
+      const sc = composeScene(v.videoWidth, v.videoHeight);
+      const input = sc.captureStream(30);
+      const client = sdk.createDecartClient({ apiKey: tk.apiKey });
+      const conn = await client.realtime.connect(input, {
+        model,
+        onRemoteStream: (remote: MediaStream) => {
+          const av = aiVideo.current;
+          if (!av) return;
+          av.srcObject = remote;
+          void av.play().catch(() => undefined);
+        },
+      });
+      await conn.setPrompt(
+        'Photorealistic video. Keep everything exactly as it is: the person, the background, and the tote bag in their hand with its exact shape, position, colours and print. Only make the bag look real: natural fabric, soft contact shadows, light that matches the room, fingers wrapped around the handles.',
+        { enhance: false },
+      );
+      const until = Date.now() + (tk.seconds ?? 20) * 1000;
+      const timer = window.setInterval(() => {
+        const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+        setAiState({ busy: false, left });
+        if (left <= 0) stopAi();
+      }, 250);
+      const stopAi = () => {
+        window.clearInterval(timer);
+        conn.disconnect();
+        input.getTracks().forEach((t) => t.stop());
+        if (aiVideo.current) aiVideo.current.srcObject = null;
+        aiConn.current = null;
+        setAiOn(false);
+        setAiState({ busy: false });
+      };
+      conn.on('sessionEnded', stopAi);
+      conn.on('error', (e: { message?: string }) => {
+        stopAi();
+        setAiState({ busy: false, error: e?.message ? `AI 연결이 끊겼습니다: ${e.message}` : 'AI 연결이 끊겼습니다.' });
+      });
+      aiConn.current = { stop: stopAi };
+      setAiOn(true);
+    } catch (e) {
+      setAiState({ busy: false, error: (e as Error).message });
+    }
+  }
+  useEffect(() => () => aiConn.current?.stop(), []);
+  useEffect(() => {
+    if (phase !== 'live') aiConn.current?.stop();
+  }, [phase]);
 
   function save() {
     const c = canvas.current;
@@ -264,8 +384,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     out.width = c.width;
     out.height = c.height;
     const ctx = out.getContext('2d')!;
-    ctx.drawImage(c, 0, 0);
-    if (layer.current?.id === product.id) {
+    ctx.drawImage(aiOn && aiOut.current?.width ? aiOut.current : c, 0, 0, c.width, c.height);
+    if (layer.current?.id === product.id && !aiOn) {
       if (gl.current) ctx.drawImage(gl.current, 0, 0, c.width, c.height);
       if (top.current) ctx.drawImage(top.current, 0, 0, c.width, c.height);
     }
@@ -327,11 +447,31 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   return (
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
       <div className="lg:col-span-7">
-        <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)] md:aspect-video" data-testid="map-stage">
+        <div
+          className={`relative flex aspect-[4/3] touch-pan-y items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)] md:aspect-video ${live && product?.model3d ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          data-testid="map-stage"
+          onPointerDown={(e) => {
+            if (!product?.model3d) return;
+            dragX.current = e.clientX;
+            setAuto(false);
+          }}
+          onPointerMove={(e) => {
+            if (dragX.current == null) return;
+            spin.current += (e.clientX - dragX.current) * 0.012;
+            dragX.current = e.clientX;
+          }}
+          onPointerUp={() => (dragX.current = null)}
+          onPointerLeave={() => (dragX.current = null)}
+        >
           <video ref={video} playsInline muted className="hidden" />
           <canvas ref={canvas} className={`h-full w-full object-contain ${live ? '' : 'hidden'}`} data-testid="map-canvas" />
           <canvas ref={gl} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} data-testid="map-gl" />
           <canvas ref={top} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} />
+          <video ref={aiVideo} playsInline muted className="hidden" />
+          <canvas ref={aiOut} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && aiOn ? '' : 'hidden'}`} data-testid="map-ai" />
+          {live && aiOn && (
+            <span className="t-label t-mark absolute right-3 top-3 rounded-full bg-[var(--c-blue)] px-2.5 py-1 text-white tabular-nums">AI 실사 · {aiState.left ?? 20}</span>
+          )}
           {!live && (
             <p className="t-body kr max-w-xs px-6 text-center text-white/80" data-testid="map-status">
               {status ?? (phase === 'ended' ? '착용을 끝냈습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면에 실제 제품 이미지가 몸을 따라 입혀집니다.')}
@@ -391,9 +531,61 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           {styleChips}
         </section>
 
+        {product?.model3d && (
+          <section aria-labelledby="m25">
+            <h2 id="m25" className="t-h3 kr">
+              <span className="t-mark text-[var(--c-mute)]">03</span> 구도 돌려 보기
+            </h2>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">화면을 좌우로 끌거나, 손목을 돌리면 가방이 돌아갑니다.</p>
+            <div className="mt-3 flex flex-wrap gap-2" data-testid="views">
+              {(
+                [
+                  ['정면', 0],
+                  ['사선', Math.PI / 4],
+                  ['옆면', Math.PI / 2],
+                  ['뒷면', Math.PI],
+                ] as const
+              ).map(([label, a]) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="chip"
+                  onClick={() => {
+                    setAuto(false);
+                    spin.current = a;
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+              <button type="button" className="chip" aria-pressed={auto} onClick={() => setAuto((x) => !x)} data-testid="auto-spin">
+                360° 자동 회전
+              </button>
+            </div>
+          </section>
+        )}
+
+        {product?.model3d && (
+          <section aria-labelledby="m26">
+            <h2 id="m26" className="t-h3 kr">
+              <span className="t-mark text-[var(--c-mute)]">04</span> AI 실사 보정 · 20초
+            </h2>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">3D 가방은 그대로 두고, AI가 조명·그림자·천의 질감을 실제처럼 보정합니다. 디자인과 형태는 바뀌지 않아요.</p>
+            <button type="button" className="btn btn-blue mt-3 w-full" disabled={!live || aiOn || aiState.busy} onClick={startAi} data-testid="ai-refine">
+              {aiState.busy ? 'AI 연결 중…' : aiOn ? `AI 보정 중 · ${aiState.left ?? 20}초` : 'AI 실사 보정 켜기'}
+            </button>
+            {!live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 실시간 착용을 시작하세요.</p>}
+            {aiState.error && (
+              <p className="t-caption kr mt-2 text-[var(--c-blue)]" role="alert">
+                {aiState.error}
+              </p>
+            )}
+          </section>
+        )}
+
         <section aria-labelledby="m3">
           <h2 id="m3" className="t-h3 kr">
-            <span className="t-mark text-[var(--c-mute)]">03</span> 크기 · 카메라
+            <span className="t-mark text-[var(--c-mute)]">{product?.model3d ? '05' : '03'}</span> 크기 · 카메라
           </h2>
           <label className="t-caption kr mt-4 block">
             <span className="flex justify-between">
