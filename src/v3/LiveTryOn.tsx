@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
+import { keyMatte } from './productOverlay';
+import { createDesignMapper, greenReference, type DesignMapper } from './greenMap';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 
@@ -11,6 +13,12 @@ function promptFor(product: Product, stylePrompt: string, description?: string) 
   if (description)
     return `Add the ${kind} from the reference image, ${stylePrompt}. The ${kind}: ${description} It is an accessory, not clothing: do not change the person's clothes. Copy its exact design, colours and prints; keep the person and background unchanged.`;
   return `Add the ${kind} from the reference image, ${stylePrompt}. It is an accessory, not clothing: do not change the person's clothes. Keep the ${kind}'s exact shape, colours, prints and proportions, realistic size and natural shadows. Keep the person and background unchanged.`;
+}
+
+/** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
+function greenPromptFor(product: Product, stylePrompt: string) {
+  const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
+  return `Add a ${kind} with exactly the shape of the green ${kind} in the reference image, ${stylePrompt}. The ${kind} is plain flat chroma-key green (#00FF00) all over: no print, no logo, no texture, no other colour. It is an accessory, not clothing: do not change the person's clothes. Keep the person and background unchanged.`;
 }
 
 /** Bounding box of the non-white pixels, so the reference is the product and not mostly empty background. */
@@ -107,7 +115,11 @@ export function LiveTryOn({
   const out = useRef<HTMLVideoElement>(null);
   const local = useRef<HTMLVideoElement>(null);
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
-  const garment = useRef<{ id: string; blob: Blob; description?: string } | null>(null);
+  const garment = useRef<{ id: string; blob: Blob; description?: string; green?: Blob; product?: HTMLCanvasElement } | null>(null);
+  // Real design mapped onto the green bag the AI draws (on by default); off shows the AI's own drawing.
+  const [mapOn, setMapOn] = useState(true);
+  const mapped = useRef<HTMLCanvasElement>(null);
+  const mapper = useRef<DesignMapper | null>(null);
 
   // Never leave a paid session running: stop on unmount and when the tab is hidden.
   useEffect(() => {
@@ -121,15 +133,42 @@ export function LiveTryOn({
 
   // A new product or way of wearing it while live: send the new instruction without reconnecting.
   useEffect(() => {
-    if (phase === 'live' && product) void session.current?.setPrompt(promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
-  }, [stylePrompt, product, phase]);
+    if (phase === 'live' && product)
+      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt) : promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
+  }, [stylePrompt, product, phase, mapOn]);
+
+  // Mapping loop: AI frame in, real design on the green bag out.
+  useEffect(() => {
+    if (phase !== 'live' || waiting || !mapOn) return;
+    let raf = 0;
+    const loop = () => {
+      raf = requestAnimationFrame(loop);
+      const v = out.current;
+      const c = mapped.current;
+      const m = mapper.current;
+      if (!v || !c || !m || v.readyState < 2 || !v.videoWidth) return;
+      if (c.width !== v.videoWidth || c.height !== v.videoHeight) {
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+      }
+      m.draw(c.getContext('2d', { willReadFrequently: true })!, v, c.width, c.height);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, waiting, mapOn]);
 
   async function garmentBlob(p: Product) {
-    if (garment.current?.id === p.id) return garment.current;
+    if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;
     const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
     const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
     const blob = await smallReference(await (await fetch(image)).blob());
     garment.current = { id: p.id, blob, description };
+    if (mapOn) {
+      // The product on green (matte) → transparent product for mapping, and its green silhouette for the AI.
+      const { matte } = await post<{ matte: string }>('/cutout', { productImage: new URL(p.images[0], base).toString(), matte: true });
+      const product = await keyMatte(matte);
+      garment.current = { ...garment.current, product, green: await greenReference(product) };
+    }
     return garment.current;
   }
 
@@ -187,7 +226,10 @@ export function LiveTryOn({
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
-        await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description), enhance: false });
+        if (mapOn && ref.green && ref.product) {
+          mapper.current = createDesignMapper(ref.product);
+          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt), enhance: false });
+        } else await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description), enhance: false });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
@@ -283,7 +325,7 @@ export function LiveTryOn({
     c.width = v.videoWidth;
     c.height = v.videoHeight;
     const ctx = c.getContext('2d')!;
-    ctx.drawImage(v, 0, 0);
+    ctx.drawImage(mapOn && mapped.current?.width ? mapped.current : v, 0, 0, c.width, c.height);
     const fs = Math.max(14, Math.round(c.width / 48));
     ctx.font = `700 ${fs}px sans-serif`;
     const text = 'AI GENERATED · LAGI';
@@ -307,7 +349,8 @@ export function LiveTryOn({
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
       <div className="lg:col-span-7">
         <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)]" data-testid="live-stage">
-          <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting ? '' : 'opacity-0'}`} />
+          <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && !mapOn ? '' : 'opacity-0'}`} />
+          <canvas ref={mapped} aria-hidden="true" className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && mapOn ? '' : 'hidden'}`} data-testid="mapped-canvas" />
           {(!live || waiting) && (
             <p className="t-body kr relative max-w-xs px-6 text-center text-white/80" data-testid="live-status">
               {live ? waiting : phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
@@ -380,6 +423,13 @@ export function LiveTryOn({
               </button>
             ))}
           </div>
+          <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
+            <input type="checkbox" className="mt-1" checked={mapOn} disabled={live || phase === 'starting'} onChange={(e) => setMapOn(e.target.checked)} data-testid="map-toggle" />
+            <span>
+              <b className="block text-[var(--c-ink)]">실제 디자인 입히기 (권장)</b>
+              AI는 제품 모양의 초록 가방을 자연스럽게 들게 만들고, 그 위에 실제 제품 디자인을 그대로 입힙니다. 끄면 AI가 그린 제품이 그대로 보여 모양과 무늬가 달라질 수 있어요.
+            </span>
+          </label>
           <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>체험하는 20초 동안 카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
