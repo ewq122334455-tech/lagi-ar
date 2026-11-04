@@ -16,12 +16,11 @@ function promptFor(product: Product, stylePrompt: string, description?: string) 
 }
 
 /** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
-function greenPromptFor(product: Product, stylePrompt: string, description?: string) {
+function greenPromptFor(product: Product, stylePrompt: string) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
   const dims = product.dimensions.widthCm ? ` about ${product.dimensions.widthCm} cm wide and ${product.dimensions.heightCm ?? ''} cm tall,` : '';
-  // The written description pins the outline (its colours are ignored: the bag must stay green).
-  const shape = description ? ` Its shape (ignore the colours): ${description}` : '';
-  return `Add a ${kind} with exactly the outline of the green ${kind} in the reference image,${dims} ${stylePrompt}.${shape} The ${kind} is plain flat chroma-key green (#00FF00) all over: no print, no logo, no texture, no other colour. It is an accessory, not clothing: do not change the person's clothes. Keep the person and background unchanged.`;
+  // No written description here: its colours made the AI paint the bag instead of keeping it green.
+  return `Add a ${kind} with exactly the outline of the green ${kind} in the reference image,${dims} ${stylePrompt}. The ${kind} is plain flat chroma-key green (#00FF00) all over: no print, no logo, no texture, no other colour. It is an accessory, not clothing: do not change the person's clothes. Keep the person and background unchanged.`;
 }
 
 /** Bounding box of the non-white pixels, so the reference is the product and not mostly empty background. */
@@ -137,7 +136,7 @@ export function LiveTryOn({
   // A new product or way of wearing it while live: send the new instruction without reconnecting.
   useEffect(() => {
     if (phase === 'live' && product)
-      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, garment.current?.description) : promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
+      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt) : promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
   }, [stylePrompt, product, phase, mapOn]);
 
   // Mapping loop: AI frame in, real design on the green bag out.
@@ -231,7 +230,7 @@ export function LiveTryOn({
       try {
         if (mapOn && ref.green && ref.product) {
           mapper.current = createDesignMapper(ref.product);
-          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt, ref.description), enhance: false });
+          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt), enhance: false });
         } else await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description), enhance: false });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
