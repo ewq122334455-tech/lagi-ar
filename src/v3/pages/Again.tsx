@@ -46,8 +46,8 @@ export default function Again() {
   const [params, setParams] = useSearchParams();
   const productId = params.get('p');
   // Realtime try-on (video) or photo compositing. Realtime is the default.
-  type Mode = 'map' | 'photo' | 'ai';
-  const mode: Mode = params.get('m') === 'photo' ? 'photo' : params.get('m') === 'ai' ? 'ai' : 'map';
+  type Mode = 'live' | 'photo' | 'map';
+  const mode: Mode = params.get('m') === 'photo' ? 'photo' : params.get('m') === 'map' ? 'map' : 'live';
   const product = products.find((p) => p.id === productId);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
@@ -81,7 +81,7 @@ export default function Again() {
   const step = !product ? 1 : !photo ? 2 : !result ? (busy ? 4 : 3) : 5;
 
   function choose(p: Product) {
-    setParams(mode === 'map' ? { p: p.id } : { p: p.id, m: mode }, { replace: true });
+    setParams(mode === 'live' ? { p: p.id } : { p: p.id, m: mode }, { replace: true });
     setResult(null);
     setError(null);
     setErrorDetail(null);
@@ -180,7 +180,7 @@ export default function Again() {
       ))}
     </div>
   );
-  const setMode = (m: Mode) => setParams({ ...(productId ? { p: productId } : {}), ...(m !== 'map' ? { m } : {}) }, { replace: true });
+  const setMode = (m: Mode) => setParams({ ...(productId ? { p: productId } : {}), ...(m !== 'live' ? { m } : {}) }, { replace: true });
 
   return (
     <div className="px-page pb-32 pt-page">
@@ -199,9 +199,9 @@ export default function Again() {
       <div className="mt-12 grid grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5 lg:inline-grid lg:min-w-[760px]" role="tablist" aria-label="체험 방식">
         {(
           [
-            ['map', '실시간 착용', '실제 제품 이미지 · 무료'],
-            ['photo', '사진 합성', 'AI 실사 · 10~40초'],
-            ['ai', 'AI 영상 (베타)', '20초 · 모양이 달라질 수 있음'],
+            ['live', '실시간 착용', 'AI 영상 + 실제 디자인 · 20초'],
+            ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
+            ['map', '간편 착용', '실제 사진 맞춰 보기 · 무료'],
           ] as const
         ).map(([m, label, sub]) => (
           <button
@@ -268,7 +268,7 @@ export default function Again() {
       </section>
 
       {mode === 'map' && <MapTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
-      {mode === 'ai' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+      {mode === 'live' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
       <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
