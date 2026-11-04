@@ -47,7 +47,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   // and the holding hand is drawn on a layer above it.
   const gl = useRef<HTMLCanvasElement>(null);
   const top = useRef<HTMLCanvasElement>(null);
-  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number } | null>(null);
+  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number; handleCm: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
   const hands = useRef<Promise<HandLandmarker | null> | null>(null);
@@ -123,7 +123,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         layer.current?.l.dispose();
         const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
         const bag = await buildBag(model, base);
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
       }
       setStatus(null);
       setPhase('live');
@@ -290,12 +290,12 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         const palm = Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y);
         const pxPerCm = palm / 7.5;
         const widthCm = l3!.widthCm;
-        // The handle runs through the curled fingers: between the knuckles and the middle joints.
-        const ys = [5, 9, 13, 17, 6, 10, 14, 18].map((i) => hp[i].y);
+        // The bag hangs below the whole hand: its handle loops up into the fist, the body starts under it.
+        const fistBottom = Math.max(...hp.map((q) => q.y));
         const xs = [5, 9, 13, 17].map((i) => hp[i].x);
         const gx = xs.reduce((a, b) => a + b, 0) / xs.length;
-        const gy = ys.reduce((a, b) => a + b, 0) / ys.length;
-        next = { cx: gx, top: gy, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
+        const handlePx = l3!.handleCm * pxPerCm * sz;
+        next = { cx: gx, top: fistBottom - handlePx * 0.55, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
       }
       if (!next) {
         l3?.l.render(W, H, null);
@@ -323,10 +323,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         hmctx.filter = `blur(${Math.max(1, palmW * 0.025)}px)`;
         hmctx.fillStyle = hmctx.strokeStyle = '#fff';
         hmctx.lineCap = hmctx.lineJoin = 'round';
-        // Only the part of the hand that closes over the handle: fingers and the top of the palm (a third of the
-        // way from the knuckles to the wrist). The wrist and forearm hang behind the bag, not through it.
-        const towardWrist = (i: number) => ({ x: pts[i].x + (pts[0].x - pts[i].x) * 0.35, y: pts[i].y + (pts[0].y - pts[i].y) * 0.35 });
-        const palmTop = [pts[2], pts[5], pts[9], pts[13], pts[17], towardWrist(17), towardWrist(13), towardWrist(9), towardWrist(5), towardWrist(2)];
+        // The whole hand (palm and fingers) over the handle; the bag body hangs below it and the forearm stays behind.
+        const palmTop = [pts[0], pts[1], pts[2], pts[5], pts[9], pts[13], pts[17]];
         hmctx.beginPath();
         palmTop.forEach((q, n) => (n ? hmctx.lineTo(q.x, q.y) : hmctx.moveTo(q.x, q.y)));
         hmctx.closePath();
