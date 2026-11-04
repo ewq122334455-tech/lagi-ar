@@ -159,6 +159,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let handYaw = 0;
     // Where the hand holds the bag (knuckle line) when the hand model sees it, in video pixels.
     let grip: { x: number; y: number } | null = null;
+    // The 21 hand joints in display pixels, for drawing the whole hand (every finger) over the bag.
+    let handPts: { x: number; y: number }[] | null = null;
+    const handMask = document.createElement('canvas');
+    const hmctx = handMask.getContext('2d')!;
     let handMiss = 0;
     const handCrop = document.createElement('canvas');
     const handCtx = handCrop.getContext('2d', { willReadFrequently: true })!;
@@ -244,8 +248,15 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             const gx = crop ? crop.x + nx * crop.size : nx * W;
             const gy = crop ? crop.y + ny * crop.size : ny * H;
             grip = { x: mirrored ? W - gx : gx, y: gy };
+            handPts = hl.map((q) => {
+              const px = crop ? crop.x + q.x * crop.size : q.x * W;
+              return { x: mirrored ? W - px : px, y: crop ? crop.y + q.y * crop.size : q.y * H };
+            });
             handMiss = 0;
-          } else if (++handMiss > 8) grip = null;
+          } else if (++handMiss > 8) {
+            grip = null;
+            handPts = null;
+          }
           setHandSeen(handMiss < 8 && !!grip);
         }
         const m = res.segmentationMasks?.[0];
@@ -289,7 +300,49 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
 
       // The holding hand goes back on top of the handles: person pixels from the mask, around the wrist.
       const holding = HELD.has(kind === 'acc' ? `acc-${style}` : style);
-      if (holding && mask) {
+      // The hand model sees the hand: draw the camera's own hand, opaque, over the bag — palm filled and every
+      // finger as a thick stroke, edges softly feathered — so no finger is hidden or see-through.
+      if (holding && handPts && l3) {
+        if (handMask.width !== W || handMask.height !== H) {
+          handMask.width = W;
+          handMask.height = H;
+        }
+        const pts = handPts;
+        const palmW = Math.hypot(pts[5].x - pts[17].x, pts[5].y - pts[17].y);
+        hmctx.clearRect(0, 0, W, H);
+        hmctx.filter = `blur(${Math.max(1, palmW * 0.04)}px)`;
+        hmctx.fillStyle = hmctx.strokeStyle = '#fff';
+        hmctx.lineCap = hmctx.lineJoin = 'round';
+        hmctx.beginPath();
+        [0, 1, 2, 5, 9, 13, 17].forEach((i, n) => (n ? hmctx.lineTo(pts[i].x, pts[i].y) : hmctx.moveTo(pts[i].x, pts[i].y)));
+        hmctx.closePath();
+        hmctx.fill();
+        hmctx.lineWidth = palmW * 0.36;
+        hmctx.stroke();
+        for (const finger of [
+          [1, 2, 3, 4],
+          [5, 6, 7, 8],
+          [9, 10, 11, 12],
+          [13, 14, 15, 16],
+          [17, 18, 19, 20],
+        ]) {
+          hmctx.lineWidth = palmW * (finger[0] === 1 ? 0.34 : 0.3);
+          hmctx.beginPath();
+          finger.forEach((i, n) => (n ? hmctx.lineTo(pts[i].x, pts[i].y) : hmctx.moveTo(pts[i].x, pts[i].y)));
+          hmctx.stroke();
+        }
+        // The wrist too, so the arm does not end at a hard edge over the bag.
+        hmctx.lineWidth = palmW * 0.7;
+        hmctx.beginPath();
+        hmctx.moveTo(pts[0].x, pts[0].y);
+        hmctx.lineTo(pts[0].x + (pts[0].x - pts[9].x) * 0.6, pts[0].y + (pts[0].y - pts[9].y) * 0.6);
+        hmctx.stroke();
+        hmctx.filter = 'none';
+        hmctx.globalCompositeOperation = 'source-in';
+        hmctx.drawImage(raw, 0, 0);
+        hmctx.globalCompositeOperation = 'source-over';
+        out.drawImage(handMask, 0, 0);
+      } else if (holding && mask) {
         const useRight = (lm[16]?.visibility ?? 0) > 0.5 && ((lm[15]?.visibility ?? 0) <= 0.5 || lm[16].y >= lm[15].y);
         const wr = lm[useRight ? 16 : 15];
         const sh = Math.hypot(lm[11].x - lm[12].x, lm[11].y - lm[12].y);
