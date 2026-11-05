@@ -8,23 +8,16 @@ import { LiveTryOn } from '../LiveTryOn';
 import { MapTryOn } from '../MapTryOn';
 import { cleanImage } from '../ProductCard';
 
-/** Ways of wearing a product the AI is asked for — the same set the Worker prompt supports. */
+/** Ways of wearing a product — kept to the few that every mode (3D, photo AI) can show accurately. */
 const STYLES = {
+  // Only the ways the live 3D try-on shows exactly; the photo AI is asked for the same two.
   bag: [
-    { key: 'shoulder', label: '어깨에 메기', prompt: CARRY_PROMPTS.SHOULDER },
     { key: 'hand', label: '손에 들기', prompt: CARRY_PROMPTS.HAND },
-    { key: 'cross', label: '크로스로 메기', prompt: CARRY_PROMPTS.CROSSBODY },
-    { key: 'elbow', label: '팔에 걸기', prompt: 'hung over the forearm in the crook of a bent elbow' },
-    { key: 'hug', label: '가슴에 안기', prompt: 'held against the chest with both arms, as if hugging it' },
-    { key: 'back', label: '어깨 뒤로 넘기기', prompt: 'slung over one shoulder so the bag rests on the back' },
-    { key: 'front', label: '앞으로 들어 보이기', prompt: 'held up with both hands in front of the body, showing the bag to the camera' },
+    { key: 'shoulder', label: '어깨에 메기', prompt: CARRY_PROMPTS.SHOULDER },
   ],
   acc: [
     { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
     { key: 'show', label: '들어 보이기', prompt: 'held up near the face with one hand, showing it to the camera' },
-    { key: 'clip', label: '가방에 걸기', prompt: 'clipped or hanging from the bag or belt loop the person is carrying' },
-    { key: 'pocket', label: '주머니에 꽂기', prompt: 'tucked half-way into a front pocket of the outfit, clearly visible' },
-    { key: 'table', label: '테이블에 두기', prompt: 'placed on a small table right in front of the person, who looks at it' },
   ],
 };
 const stylesFor = (p: Product | undefined) => ((p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc);

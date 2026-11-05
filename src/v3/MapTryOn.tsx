@@ -161,6 +161,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let grip: { x: number; y: number } | null = null;
     // The 21 hand joints in display pixels, for drawing the whole hand (every finger) over the bag.
     let handPts: { x: number; y: number }[] | null = null;
+    // Pixels per cm of the hand, from its 3D joints, eased: does not change when the hand turns.
+    let handScale = 0;
     const handMask = document.createElement('canvas');
     const hmctx = handMask.getContext('2d')!;
     let handMiss = 0;
@@ -252,8 +254,31 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
               const px = crop ? crop.x + q.x * crop.size : q.x * W;
               return { x: mirrored ? W - px : px, y: crop ? crop.y + q.y * crop.size : q.y * H };
             });
+            // The hand's 3D joints are in metres; each bone's on-screen length divided by its length across the
+            // image plane gives pixels per metre whichever way the hand is turned (both shrink together).
+            let pix = 0;
+            let met = 0;
+            for (const [a, b] of [
+              [0, 5],
+              [0, 9],
+              [0, 13],
+              [0, 17],
+              [5, 9],
+              [9, 13],
+              [13, 17],
+              [5, 6],
+              [9, 10],
+            ]) {
+              pix += Math.hypot(handPts[a].x - handPts[b].x, handPts[a].y - handPts[b].y);
+              met += Math.hypot(hw[a].x - hw[b].x, hw[a].y - hw[b].y);
+            }
+            if (met > 0.01) {
+              const s = pix / met / 100;
+              handScale = handScale ? handScale + (s - handScale) * 0.25 : s;
+            }
             handMiss = 0;
           } else if (++handMiss > 8) {
+            handScale = 0;
             grip = null;
             handPts = null;
           }
@@ -287,8 +312,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       let next = lm ? placeFor(style, kind, lm, l3 ? l3.aspect : img!.width / img!.height, p.dimensions.widthCm ?? undefined, sz) : null;
       if (fromHand) {
         const hp = handPts!;
-        const palm = Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y);
-        const pxPerCm = palm / 7.5;
+        // Size from the hand's 3D scale (turn-proof); the knuckle line (~7.5 cm) only until that is known.
+        const pxPerCm = handScale || Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y) / 7.5;
         const widthCm = l3!.widthCm;
         // The bag hangs below the whole hand: its handle loops up into the fist, the body starts under it.
         const fistBottom = Math.max(...hp.map((q) => q.y));
