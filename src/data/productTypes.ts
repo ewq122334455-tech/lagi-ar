@@ -173,7 +173,26 @@ export interface Product {
   /** A simple textured 3D model built from the reference sheet's views (for the live try-on). */
   model3d?: {
     /** tote: soft open tote; box: a rigid box (photos on each face, piped edges, strap handles). */
-    type: 'tote' | 'box';
+    type: 'tote' | 'box' | 'pouch';
+    /** pouch only: outline corners (fractions of the height), binding colours, where it hangs from and its charm. */
+    pouch?: {
+      cornerTop?: number;
+      cornerBottom?: number;
+      bindingFront?: string;
+      bindingBack?: string;
+      /** The corner the cord is tied to: x as a fraction of the width (-0.5…0.5), y of the height (0 bottom … 1 top). */
+      attachX?: number;
+      attachY?: number;
+      charm?: {
+        carabinerShape: 'triangle' | 'oval';
+        carabinerColor: string;
+        carabinerCm: number;
+        cordColor: string;
+        cordCm: number;
+        cordWidthCm?: number;
+        tassel?: { color: string; lenCm: number; cap?: string }[];
+      };
+    };
     /** box only: faces from the product photos (missing ones are plain `bodyColor`). */
     faces?: { front?: string; back?: string; left?: string; right?: string; top?: string; bottom?: string };
     openTop?: boolean;
@@ -186,8 +205,8 @@ export interface Product {
     heightCm: number;
     depthCm: number;
     handleCm: number;
-    handleColor: string;
-    rimColor: string;
+    handleColor?: string;
+    rimColor?: string;
     textures?: { front: string; back: string; side: string; bottom: string };
     source?: string;
   };

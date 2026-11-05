@@ -175,5 +175,36 @@
       "label": "소재",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "box",
+    "widthCm": 60,
+    "heightCm": 33,
+    "depthCm": 14,
+    "handleCm": 12,
+    "openTop": true,
+    "faces": {
+      "front": "products/origami-picnic-bag/model/front.jpg"
+    },
+    "bodyColor": "#8c9295",
+    "edgeColor": "#9a9fa2",
+    "liningColor": "#d8352b",
+    "handles": [
+      {
+        "x0": -0.12,
+        "x1": 0.12,
+        "z": 0.5,
+        "color": "#a7abae",
+        "widthCm": 3
+      },
+      {
+        "x0": -0.12,
+        "x1": 0.12,
+        "z": -0.5,
+        "color": "#a7abae",
+        "widthCm": 3
+      }
+    ],
+    "source": "고객 제공 실물 사진으로 만든 단순화 3D (근사치)"
+  }
 }
