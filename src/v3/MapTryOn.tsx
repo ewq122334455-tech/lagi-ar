@@ -10,6 +10,17 @@ type Phase = 'idle' | 'loading' | 'live' | 'ended';
 /** Ways of wearing where the hand holds the product, so the hand is drawn back over it. */
 const HELD = new Set(['hand', 'elbow', 'acc-hand', 'acc-show']);
 
+const thumbCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+/** A 48×27 colour thumbnail, for matching the late AI frame to the moment it was made from. */
+function thumb(src: CanvasImageSource): Uint8ClampedArray {
+  const c = thumbCanvas!;
+  c.width = 48;
+  c.height = 27;
+  const x = c.getContext('2d', { willReadFrequently: true })!;
+  x.drawImage(src, 0, 0, 48, 27);
+  return x.getImageData(0, 0, 48, 27).data;
+}
+
 function productUrl(p: Product) {
   const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
   return new URL(p.images[0], base).toString();
@@ -424,24 +435,81 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     if (top.current) x.drawImage(top.current, 0, 0, W, H);
     return sc;
   }
-  /** AI frame back, with the real 3D design laid over it (the AI only contributes light and texture). */
+  /**
+   * AI frame back, with the real design locked onto it. The AI video arrives a few hundred ms late, so
+   * the overlay (3D bag + hand) of that same moment is looked up in a short history: the latency is
+   * measured by matching the AI frame against recent scenes. Inside the bag our own colours are kept
+   * and only the AI's light and shadow (its brightness relative to ours) is applied, so the print,
+   * shape and colours are exactly the product's; outside the bag the AI frame is shown as it is.
+   */
+  const aiHist = useRef<{ t: number; overlay: HTMLCanvasElement; scene: Uint8ClampedArray }[]>([]);
+  const aiLag = useRef(0);
+  const aiTick = useRef(0);
+  const aiLock = useRef<HTMLCanvasElement | null>(null);
   function composeAi(W: number, H: number) {
-    composeScene(W, H);
+    const sc = composeScene(W, H);
     const v = aiVideo.current;
     const o = aiOut.current;
+    const now = performance.now();
+    // History: the overlay at half size (for compositing) and a tiny scene thumbnail (for matching).
+    const hw = W >> 1;
+    const hh = H >> 1;
+    const hist = aiHist.current;
+    const slot = hist.length >= 24 ? hist.shift()! : { t: 0, overlay: document.createElement('canvas'), scene: new Uint8ClampedArray(0) };
+    slot.t = now;
+    slot.overlay.width = hw;
+    slot.overlay.height = hh;
+    const ox = slot.overlay.getContext('2d', { willReadFrequently: true })!;
+    ox.clearRect(0, 0, hw, hh);
+    if (gl.current) ox.drawImage(gl.current, 0, 0, hw, hh);
+    if (top.current) ox.drawImage(top.current, 0, 0, hw, hh);
+    slot.scene = thumb(sc);
+    hist.push(slot);
     if (!v || !o || v.readyState < 2 || !v.videoWidth) return;
     if (o.width !== W || o.height !== H) {
       o.width = W;
       o.height = H;
     }
-    const x = o.getContext('2d')!;
-    x.globalAlpha = 1;
+    const x = o.getContext('2d', { willReadFrequently: true })!;
     x.drawImage(v, 0, 0, W, H);
-    // Design stays ours: the 3D bag on top at high opacity, so the AI's shading shows through a little.
-    x.globalAlpha = 0.82;
-    if (gl.current) x.drawImage(gl.current, 0, 0, W, H);
-    x.globalAlpha = 1;
-    if (top.current) x.drawImage(top.current, 0, 0, W, H);
+    // Re-measure the delay about twice a second.
+    if (++aiTick.current % 15 === 1 && hist.length > 2) {
+      const ai = thumb(o);
+      let best = 0;
+      let bestErr = Infinity;
+      for (const h of hist) {
+        let e = 0;
+        for (let i = 0; i < ai.length; i += 4) e += Math.abs(ai[i] - h.scene[i]) + Math.abs(ai[i + 1] - h.scene[i + 1]) + Math.abs(ai[i + 2] - h.scene[i + 2]);
+        if (e < bestErr) {
+          bestErr = e;
+          best = now - h.t;
+        }
+      }
+      aiLag.current = aiLag.current ? aiLag.current * 0.6 + best * 0.4 : best;
+    }
+    const want = now - aiLag.current;
+    let match = hist[hist.length - 1];
+    for (const h of hist) if (Math.abs(h.t - want) < Math.abs(match.t - want)) match = h;
+    // Lock the design: our colours × the AI's relative brightness, only where the overlay is.
+    const ov = (aiLock.current ??= document.createElement('canvas'));
+    ov.width = W;
+    ov.height = H;
+    const ovx = ov.getContext('2d', { willReadFrequently: true })!;
+    ovx.drawImage(match.overlay, 0, 0, W, H);
+    const od = ovx.getImageData(0, 0, W, H).data;
+    const frame = x.getImageData(0, 0, W, H);
+    const fd = frame.data;
+    for (let i = 0; i < fd.length; i += 4) {
+      const a = od[i + 3] / 255;
+      if (a < 0.02) continue;
+      const lo = 0.299 * od[i] + 0.587 * od[i + 1] + 0.114 * od[i + 2];
+      const la = 0.299 * fd[i] + 0.587 * fd[i + 1] + 0.114 * fd[i + 2];
+      const shade = Math.max(0.65, Math.min(1.35, (la + 12) / (lo + 12)));
+      fd[i] = fd[i] * (1 - a) + Math.min(255, od[i] * shade) * a;
+      fd[i + 1] = fd[i + 1] * (1 - a) + Math.min(255, od[i + 1] * shade) * a;
+      fd[i + 2] = fd[i + 2] * (1 - a) + Math.min(255, od[i + 2] * shade) * a;
+    }
+    x.putImageData(frame, 0, 0);
   }
 
   async function startAi() {
@@ -488,6 +556,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         conn.disconnect();
         input.getTracks().forEach((t) => t.stop());
         if (aiVideo.current) aiVideo.current.srcObject = null;
+        aiHist.current = [];
+        aiLag.current = 0;
         aiConn.current = null;
         setAiOn(false);
         setAiState({ busy: false });
@@ -681,7 +751,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             <h2 id="m26" className="t-h3 kr">
               <span className="t-mark text-[var(--c-mute)]">04</span> AI 실사 보정 · 20초
             </h2>
-            <p className="t-caption kr mt-2 text-[var(--c-mute)]">3D 가방은 그대로 두고, AI가 조명·그림자·천의 질감을 실제처럼 보정합니다. 디자인과 형태는 바뀌지 않아요.</p>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">내 손을 따라가는 3D 가방을 AI가 실사 영상처럼 다시 그립니다. 가방 부분은 실제 제품 디자인으로 고정하고 AI의 조명·그림자만 입혀서, 무늬·글자·형태가 바뀌지 않아요.</p>
             <button type="button" className="btn btn-blue mt-3 w-full" disabled={!live || aiOn || aiState.busy} onClick={startAi} data-testid="ai-refine">
               {aiState.busy ? 'AI 연결 중…' : aiOn ? `AI 보정 중 · ${aiState.left ?? 20}초` : 'AI 실사 보정 켜기'}
             </button>
