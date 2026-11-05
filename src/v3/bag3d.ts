@@ -16,7 +16,168 @@ export interface Bag3D {
 }
 
 export async function buildBag(model: Model, base: string): Promise<Bag3D> {
+  if (model.type === 'pouch') return buildPouch(model, base);
   return model.type === 'box' ? buildBox(model, base) : buildTote(model, base);
+}
+
+/** A rounded-rectangle outline (metres), bottom edge at y=0, centred on x. */
+function outline(w: number, h: number, rTop: number, rBot: number) {
+  const s = new THREE.Shape();
+  const x0 = -w / 2;
+  const x1 = w / 2;
+  rTop = Math.min(rTop, w / 2, h - rBot);
+  s.moveTo(x0 + rBot, 0);
+  s.lineTo(x1 - rBot, 0);
+  s.quadraticCurveTo(x1, 0, x1, rBot);
+  s.lineTo(x1, h - rTop);
+  s.quadraticCurveTo(x1, h, x1 - rTop, h);
+  s.lineTo(x0 + rTop, h);
+  s.quadraticCurveTo(x0, h, x0, h - rTop);
+  s.lineTo(x0, rBot);
+  s.quadraticCurveTo(x0, 0, x0 + rBot, 0);
+  return s;
+}
+
+/**
+ * A soft zip pouch from product photos: a rounded slab whose front and back carry their photos,
+ * coloured binding around each face, a white gusset, and the charm it hangs from (cord + carabiner,
+ * optional tassel of cords and caps). It hangs from the carabiner by the attach corner, tilted the way
+ * gravity would hang it.
+ */
+async function buildPouch(model: Model, base: string): Promise<Bag3D> {
+  const w = model.widthCm / 100;
+  const h = model.heightCm / 100;
+  const d = model.depthCm / 100;
+  const disposables: { dispose: () => void }[] = [];
+  const loader = new THREE.TextureLoader();
+  const load = (u?: string) =>
+    u
+      ? new Promise<THREE.Texture | null>((ok) =>
+          loader.load(
+            new URL(u, base).toString(),
+            (t) => {
+              t.colorSpace = THREE.SRGBColorSpace;
+              t.anisotropy = 8;
+              disposables.push(t);
+              ok(t);
+            },
+            undefined,
+            () => ok(null),
+          ),
+        )
+      : Promise.resolve(null);
+  const [front, back] = await Promise.all([load(model.faces?.front), load(model.faces?.back ?? model.faces?.front)]);
+  const std = (o: THREE.MeshStandardMaterialParameters) => {
+    const m = new THREE.MeshStandardMaterial({ roughness: 0.75, metalness: 0, ...o });
+    disposables.push(m);
+    return m;
+  };
+  const geo = <T extends THREE.BufferGeometry>(g: T) => (disposables.push(g), g);
+  const body = model.bodyColor ?? '#f4f4f2';
+  const pz = model.pouch ?? {};
+  const b = Math.min(w, h) * 0.03; // bevel: how far the rounded edge reaches in (the binding covers it)
+  const bt = d * 0.25;
+  const iw = w - 2 * b;
+  const ih = h - 2 * b;
+  const rTop = (pz.cornerTop ?? 0.3) * ih;
+  const rBot = (pz.cornerBottom ?? 0.08) * ih;
+  const core = Math.max(0.002, d - 2 * bt);
+  const g = geo(new THREE.ExtrudeGeometry(outline(iw, ih, rTop, rBot), { depth: core, bevelEnabled: true, bevelThickness: bt, bevelSize: b, bevelSegments: 6, curveSegments: 24 }));
+  g.translate(0, b, -core / 2);
+  // Planar UVs over the flat face; the back is seen from behind, so its u runs the other way.
+  const pos = g.attributes.position;
+  const uv = g.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const u = (pos.getX(i) + iw / 2) / iw;
+    uv.setXY(i, pos.getZ(i) < 0 ? 1 - u : u, (pos.getY(i) - b) / ih);
+  }
+  uv.needsUpdate = true;
+  // Split the caps group into back (z<0) and front (z>0).
+  const caps = g.groups[0];
+  const rest = g.groups.slice(1);
+  g.clearGroups();
+  for (let t = caps.start; t < caps.start + caps.count; t += 3) g.addGroup(t, 3, pos.getZ(t) > 0 ? 0 : 1);
+  for (const r of rest) g.addGroup(r.start, r.count, 2);
+  const face = (map: THREE.Texture | null) => std({ map: map ?? undefined, color: map ? '#ffffff' : body });
+  const pouch = new THREE.Group();
+  pouch.add(new THREE.Mesh(g, [face(front), face(back), std({ color: body, roughness: 0.85 })]));
+  // Binding: a round tube around each face, in that face's colour.
+  const ring = outline(iw + b, ih + b, rTop + b * 0.5, rBot + b * 0.5).getSpacedPoints(160);
+  const bindR = b * 0.8;
+  for (const [sz, color] of [
+    [1, pz.bindingFront],
+    [-1, pz.bindingBack ?? pz.bindingFront],
+  ] as const) {
+    if (!color) continue;
+    const z = sz * (core / 2 + bt * 0.75);
+    const pts = ring.map((p) => new THREE.Vector3(p.x, p.y + b * 0.5, z));
+    pouch.add(new THREE.Mesh(geo(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 240, bindR, 8, true)), std({ color, roughness: 0.6 })));
+  }
+
+  // Charm: carabiner on top (the hand holds it), a cord down to the attach corner.
+  const ch = pz.charm;
+  const root = new THREE.Group();
+  const carCm = (ch?.carabinerCm ?? 0) / 100;
+  const cordM = (ch?.cordCm ?? 0) / 100;
+  const attach = new THREE.Vector3((pz.attachX ?? 0) * w, (pz.attachY ?? 1) * h, 0);
+  if (ch) {
+    const cr = carCm * 0.06;
+    const cw = carCm * (ch.carabinerShape === 'triangle' ? 0.8 : 0.5);
+    const loop =
+      ch.carabinerShape === 'triangle'
+        ? [
+            [0, 0],
+            [cw / 2, -carCm * 0.9],
+            [0, -carCm],
+            [-cw / 2, -carCm * 0.9],
+          ]
+        : Array.from({ length: 14 }, (_, i) => {
+            const a = (i / 14) * Math.PI * 2;
+            return [Math.sin(a) * cw * 0.5, -carCm / 2 + Math.cos(a) * carCm * 0.5];
+          });
+    const carCurve = new THREE.CatmullRomCurve3(
+      loop.map(([x, y]) => new THREE.Vector3(x, y - cr, 0)),
+      true,
+      'centripetal',
+    );
+    root.add(new THREE.Mesh(geo(new THREE.TubeGeometry(carCurve, 96, cr, 10, true)), std({ color: ch.carabinerColor, roughness: 0.3, metalness: 0.55 })));
+    const top = -carCm - cr;
+    const cordCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, top, 0), new THREE.Vector3(0.002, top - cordM * 0.5, 0.002), new THREE.Vector3(0, top - cordM, 0)]);
+    root.add(new THREE.Mesh(geo(new THREE.TubeGeometry(cordCurve, 24, ch.cordWidthCm ? ch.cordWidthCm / 200 : 0.0035, 8, false)), std({ color: ch.cordColor, roughness: 0.9 })));
+    // Tassel: cords fanning down from the carabiner, a bottle cap on some.
+    (ch.tassel ?? []).forEach((t, i, all) => {
+      const n = all.length;
+      const spread = (i / Math.max(1, n - 1) - 0.5) * 2;
+      const len = t.lenCm / 100;
+      const sx = carCm * 0.15 + 0.012 + spread * 0.012;
+      const pts = [
+        new THREE.Vector3(0, top, 0),
+        new THREE.Vector3(sx * 0.6, top - len * 0.3, 0.004 * spread),
+        new THREE.Vector3(sx + spread * len * 0.25, top - len * 0.75, 0.008 * spread),
+        new THREE.Vector3(sx + spread * len * 0.3, top - len, 0.01 * spread),
+      ];
+      root.add(new THREE.Mesh(geo(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.0022, 6, false)), std({ color: t.color, roughness: 0.9 })));
+      if (t.cap) {
+        const cap = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.014, 0.014, 0.008, 24)), std({ color: t.cap, roughness: 0.4 }));
+        cap.rotation.x = Math.PI / 2;
+        cap.position.copy(pts[3]).add(new THREE.Vector3(0, -0.01, 0.006));
+        root.add(cap);
+      }
+    });
+  }
+  // Hang by the attach corner: turn the pouch so its middle sits straight below that corner.
+  const mid = new THREE.Vector2(0, h * 0.45);
+  const v = mid.clone().sub(new THREE.Vector2(attach.x, attach.y));
+  const theta = v.lengthSq() > 1e-8 ? -Math.PI / 2 - Math.atan2(v.y, v.x) : 0;
+  pouch.position.set(-attach.x, -attach.y, 0);
+  const pivot = new THREE.Group();
+  pivot.add(pouch);
+  pivot.rotation.z = theta;
+  pivot.position.y = -carCm - cordM;
+  root.add(pivot);
+  const group = new THREE.Group();
+  group.add(root);
+  return { group, widthM: w, dispose: () => disposables.forEach((x) => x.dispose()) };
 }
 
 /**
@@ -148,8 +309,8 @@ async function buildTote(model: Model, base: string): Promise<Bag3D> {
   };
   const inside = new THREE.MeshStandardMaterial({ color: '#cfcac0', roughness: 0.95, side: THREE.BackSide });
   const none = new THREE.MeshBasicMaterial({ visible: false });
-  const rimMat = new THREE.MeshStandardMaterial({ color: model.rimColor, roughness: 0.8 });
-  const strapMat = new THREE.MeshStandardMaterial({ color: model.handleColor, roughness: 0.7 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: model.rimColor ?? '#222222', roughness: 0.8 });
+  const strapMat = new THREE.MeshStandardMaterial({ color: model.handleColor ?? '#222222', roughness: 0.7 });
   disposables.push(inside, none, rimMat, strapMat);
 
   const bag = new THREE.Group();

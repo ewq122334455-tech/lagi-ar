@@ -217,5 +217,34 @@
       "label": "소재",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "pouch",
+    "widthCm": 19,
+    "heightCm": 9,
+    "depthCm": 5,
+    "handleCm": 8,
+    "faces": {
+      "front": "products/glasses-case/model/front.jpg",
+      "back": "products/glasses-case/model/back.jpg"
+    },
+    "bodyColor": "#f3f3f1",
+    "pouch": {
+      "cornerTop": 0.55,
+      "cornerBottom": 0.06,
+      "bindingFront": "#1f48b8",
+      "bindingBack": "#c8203f",
+      "attachX": -0.5,
+      "attachY": 0.04,
+      "charm": {
+        "carabinerShape": "triangle",
+        "carabinerColor": "#c41e3a",
+        "carabinerCm": 4.2,
+        "cordColor": "#1d3f9e",
+        "cordCm": 3.8,
+        "cordWidthCm": 0.9
+      }
+    },
+    "source": "고객 제공 실물 사진으로 만든 단순화 3D (근사치)"
+  }
 }

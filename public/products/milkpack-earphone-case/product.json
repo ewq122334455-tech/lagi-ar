@@ -223,5 +223,63 @@
       "label": "소재",
       "group": "detail"
     }
-  ]
+  ],
+  "model3d": {
+    "type": "pouch",
+    "widthCm": 8,
+    "heightCm": 8,
+    "depthCm": 4,
+    "handleCm": 9,
+    "faces": {
+      "front": "products/milkpack-earphone-case/model/front.jpg",
+      "back": "products/milkpack-earphone-case/model/back.jpg"
+    },
+    "bodyColor": "#f3f3f1",
+    "pouch": {
+      "cornerTop": 0.3,
+      "cornerBottom": 0.12,
+      "bindingFront": "#1f48b8",
+      "bindingBack": "#c8203f",
+      "attachX": 0.5,
+      "attachY": 0.92,
+      "charm": {
+        "carabinerShape": "oval",
+        "carabinerColor": "#c41e3a",
+        "carabinerCm": 5,
+        "cordColor": "#1c2a6e",
+        "cordCm": 4,
+        "cordWidthCm": 0.9,
+        "tassel": [
+          {
+            "color": "#e8e2da",
+            "lenCm": 11,
+            "cap": "#f2c418"
+          },
+          {
+            "color": "#2f7fd1",
+            "lenCm": 14
+          },
+          {
+            "color": "#d9566a",
+            "lenCm": 12,
+            "cap": "#ffffff"
+          },
+          {
+            "color": "#22307a",
+            "lenCm": 9
+          },
+          {
+            "color": "#7cc66a",
+            "lenCm": 10,
+            "cap": "#2e9e4a"
+          },
+          {
+            "color": "#c9384a",
+            "lenCm": 13
+          }
+        ]
+      }
+    },
+    "source": "고객 제공 실물 사진으로 만든 단순화 3D (근사치)"
+  }
 }
