@@ -42,7 +42,9 @@ export default function Again() {
   type Mode = 'map' | 'photo' | 'live';
   // Products with a 3D model open in the 3D live try-on; others in the AI video.
   const m = params.get('m');
-  const mode: Mode = m === 'photo' || m === 'map' || m === 'live' ? m : products.find((x) => x.id === productId)?.model3d ? 'map' : 'live';
+  // Live 3D only for products that have a real 3D model; the others open in photo compositing.
+  const has3d = !!products.find((x) => x.id === productId)?.model3d;
+  const mode: Mode = m === 'photo' || m === 'live' || m === 'map' ? m : has3d ? 'map' : 'photo';
   const product = products.find((p) => p.id === productId);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
@@ -262,7 +264,18 @@ export default function Again() {
         )}
       </section>
 
-      {mode === 'map' && <MapTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+      {mode === 'map' && product && !product.model3d && (
+        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="no-3d">
+          <p className="t-value kr">이 제품은 3D 모델을 준비하고 있어요.</p>
+          <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 3D 착용은 데일리토트백 · 플라노백 · 모듈러백에서 먼저 해 볼 수 있어요. 이 제품은 사진 합성으로 착용 모습을 볼 수 있습니다.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <button type="button" className="btn btn-primary" onClick={() => setMode('photo')}>
+              사진 합성으로 보기
+            </button>
+          </div>
+        </div>
+      )}
+      {mode === 'map' && product?.model3d && <MapTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
       {mode === 'live' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
