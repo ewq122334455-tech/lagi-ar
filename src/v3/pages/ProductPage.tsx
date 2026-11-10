@@ -47,11 +47,23 @@ function MobileBuyBar({ children }: { children: React.ReactNode }) {
       t instanceof HTMLElement &&
       !bar.current?.contains(t) &&
       (t.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), textarea, select') || t.isContentEditable);
-    const onIn = (e: FocusEvent) => isField(e.target) && setTyping(true);
-    const onOut = (e: FocusEvent) => isField(e.target) && setTyping(false);
+    // Coming back is delayed: leaving a field by tapping a button (e.g. "구매평 등록") must not put the
+    // bar under that same tap, and the on-screen keyboard needs a moment to close.
+    let back = 0;
+    const onIn = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      window.clearTimeout(back);
+      setTyping(true);
+    };
+    const onOut = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      window.clearTimeout(back);
+      back = window.setTimeout(() => !isField(document.activeElement) && setTyping(false), 400);
+    };
     document.addEventListener('focusin', onIn);
     document.addEventListener('focusout', onOut);
     return () => {
+      window.clearTimeout(back);
       document.removeEventListener('focusin', onIn);
       document.removeEventListener('focusout', onOut);
     };
