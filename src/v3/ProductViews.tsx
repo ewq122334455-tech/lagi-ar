@@ -1,5 +1,5 @@
 import type { Product } from '@/data/productTypes';
-import { responsive } from './img';
+import { largeCopy, responsive } from './img';
 
 type Drawing = NonNullable<Product['drawings']>[number];
 
@@ -9,7 +9,7 @@ function PhotoDetail({ src, x, y, label, zoom = 2.4 }: { src: string; x: number;
     <figure data-testid="product-detail-crop">
       <div
         className="aspect-square w-full bg-[var(--c-gray)] bg-no-repeat"
-        style={{ backgroundImage: `url(${src})`, backgroundSize: `${zoom * 100}%`, backgroundPosition: `${x}% ${y}%` }}
+        style={{ backgroundImage: `url(${largeCopy(src)})`, backgroundSize: `${zoom * 100}%`, backgroundPosition: `${x}% ${y}%` }}
         role="img"
         aria-label={`확대 · ${label}`}
       />

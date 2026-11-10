@@ -18,3 +18,8 @@ export function responsive(src: string | null | undefined, sizes: string): { src
 export function smallCopy(src: string): string {
   return PROD && local(src) ? copy(src, 480) : src;
 }
+
+/** The largest copy (1600 px) — for close-up crops drawn as a CSS background, where srcset does not apply. */
+export function largeCopy(src: string): string {
+  return PROD && local(src) ? copy(src, 1600) : src;
+}
