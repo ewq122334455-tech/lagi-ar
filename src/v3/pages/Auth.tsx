@@ -56,6 +56,10 @@ export function LoginPage() {
     const stored = takeWithdrawn(); // always consume it, so it is shown once only
     return state?.withdrawn ?? stored;
   });
+  // Drop it from the history entry too, so a refresh does not show it again.
+  useEffect(() => {
+    if (state?.withdrawn) nav('/login', { replace: true, state: state.from ? { from: state.from } : null });
+  }, [state, nav]);
   const [f, setF] = useState({ email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
