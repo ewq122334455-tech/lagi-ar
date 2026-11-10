@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
+import { paymentsEnabled } from '@/commerce/payments';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import { isPublished } from '@/utils/contentStatus';
 import { ProductViews } from '../ProductViews';
@@ -192,6 +193,12 @@ export default function ProductPage() {
     ] as [string, string | null][]
   ).filter(([, v]) => v);
 
+  // Without online payment, "바로 구매" goes straight to the official store instead of an order form.
+  const online = paymentsEnabled();
+  const buyNow = online
+    ? { onClick: () => addToCart(true) }
+    : { href: storeUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': '스마트스토어에서 바로 구매 (새 창)' };
+
   function addToCart(go?: boolean) {
     add({ productId: p.id, variantId: null, size: null, color: null, quantity: qty, unitPrice: p.price.value, name: p.name.value, image: hero ?? null });
     setAdded(true);
@@ -210,17 +217,17 @@ export default function ProductPage() {
       <div className="grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <nav aria-label="현재 위치" className="t-caption kr mb-3 flex gap-2 text-[var(--c-mute)]">
-            <Link to="/" className="hover:text-[var(--c-ink)]">
+            <Link to="/" className="tap hover:text-[var(--c-ink)]">
               홈
             </Link>
             <span aria-hidden="true">/</span>
-            <Link to="/discover" className="hover:text-[var(--c-ink)]">
+            <Link to="/discover" className="tap hover:text-[var(--c-ink)]">
               제품
             </Link>
             {category && (
               <>
                 <span aria-hidden="true">/</span>
-                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hover:text-[var(--c-ink)]">
+                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="tap hover:text-[var(--c-ink)]">
                   {category}
                 </Link>
               </>
@@ -329,9 +336,15 @@ export default function ProductPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <button type="button" className="btn btn-primary" onClick={() => addToCart(true)}>
-                바로 구매
-              </button>
+              {online ? (
+                <button type="button" className="btn btn-primary" {...buyNow}>
+                  바로 구매
+                </button>
+              ) : (
+                <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
+                  바로 구매 ↗
+                </a>
+              )}
               <button type="button" className="btn btn-line" onClick={() => addToCart()}>
                 {added ? '담았습니다 ✓' : '장바구니'}
               </button>
@@ -346,7 +359,7 @@ export default function ProductPage() {
               )}
             </div>
             <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
-              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-[var(--c-blue)]">
+              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-4 hover:text-[var(--c-blue)]">
                 스마트스토어에서 구매 ↗
               </a>
               {added && (
@@ -503,7 +516,7 @@ export default function ProductPage() {
               {usesCopy && (
                 <p className="t-caption kr mt-4 text-[var(--c-mute)]">
                   제품 소개 문구는 라기가 제품 기본 정보와 사진을 바탕으로 작성했습니다. 소재와 제작의 세부 사항은 제작사 기준을 따르며, 정확한 정보는{' '}
-                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-2">
                     스마트스토어
                   </a>
                   에서 확인할 수 있습니다.
@@ -544,7 +557,7 @@ export default function ProductPage() {
             <h2 id="more-title" className="t-h3 kr">
               함께 보면 좋은 제품
             </h2>
-            <Link to="/discover" className="t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
+            <Link to="/discover" className="tap t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
               전체 보기
             </Link>
           </div>
@@ -582,9 +595,15 @@ export default function ProductPage() {
         <button type="button" className="btn btn-line !min-h-[44px] !px-4" onClick={() => addToCart()} aria-label="장바구니 담기">
           {added ? '✓' : '담기'}
         </button>
-        <button type="button" className="btn btn-primary !min-h-[44px]" onClick={() => addToCart(true)}>
-          바로 구매
-        </button>
+        {online ? (
+          <button type="button" className="btn btn-primary !min-h-[44px]" {...buyNow}>
+            바로 구매
+          </button>
+        ) : (
+          <a className="btn btn-primary !min-h-[44px]" data-testid="bar-buy-now-store" {...buyNow}>
+            바로 구매 ↗
+          </a>
+        )}
       </MobileBuyBar>
     </article>
   );

@@ -64,9 +64,19 @@ export function CartPage() {
               상품 금액 <span className="tabular-nums">{price(subtotal.amount)}</span>
               <span className="t-caption ml-3 text-[var(--c-mute)]">{count}개</span>
             </p>
-            <Link to="/checkout" className="t-nav tag tag-ink kr px-5 py-3.5">
-              주문하기
-            </Link>
+            {paymentsEnabled() ? (
+              <Link to="/checkout" className="t-nav tag tag-ink kr px-5 py-3.5">
+                주문하기
+              </Link>
+            ) : (
+              // Online payment is not connected: send the order to the official store, no form to fill.
+              <span className="flex flex-col items-end gap-2">
+                <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="t-nav tag tag-ink kr px-5 py-3.5" data-testid="cart-store-order">
+                  스마트스토어에서 주문 ↗
+                </a>
+                <span className="t-caption kr text-[var(--c-mute)]">지금은 라기 공식 스마트스토어에서 결제할 수 있습니다.</span>
+              </span>
+            )}
           </div>
         </>
       )}
@@ -201,6 +211,27 @@ export function CheckoutPage() {
         <Link to="/discover" className="t-nav tag tag-ink kr mt-6 px-4 py-3">
           제품 보러 가기
         </Link>
+      </div>
+    );
+
+  // Online payment is not connected yet: say so before any personal details are asked for.
+  if (!enabled && !order)
+    return (
+      <div className="px-page pb-32 pt-page" data-testid="checkout-store-notice">
+        <p className="t-label t-mark text-[var(--c-mute)]">Checkout</p>
+        <h1 className="t-h1 kr mt-2 !font-bold">주문서</h1>
+        <div className="rule mt-12 max-w-xl pt-6">
+          <p className="t-body kr">온라인 결제 연결을 준비하고 있습니다. 지금은 라기 공식 스마트스토어에서 결제할 수 있습니다.</p>
+          <p className="t-caption kr mt-2 text-[var(--c-mute)]">장바구니에 담은 {count}개 제품은 그대로 남아 있습니다.</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="t-nav tag tag-ink kr px-4 py-3">
+              스마트스토어에서 결제 ↗
+            </a>
+            <Link to="/cart" className="btn btn-line">
+              장바구니로 돌아가기
+            </Link>
+          </div>
+        </div>
       </div>
     );
 

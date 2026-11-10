@@ -207,13 +207,17 @@ export default function Again() {
             role="tab"
             aria-selected={mode === m}
             onClick={() => setMode(m)}
-            className={`rounded-xl px-4 py-3 text-left transition-all ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+            className={`rounded-xl px-2 py-3 text-left transition-all sm:px-4 ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
           >
             <span className="t-value kr block">{label}</span>
-            <span className="t-caption kr block opacity-80">{sub}</span>
+            {/* Phones show only the chosen mode's line (below), so the three labels never break word by word. */}
+            <span className="t-caption kr hidden text-[var(--c-mute)] sm:block">{sub}</span>
           </button>
         ))}
       </div>
+      <p className="t-caption kr mt-2 px-1 text-[var(--c-mute)] sm:hidden" data-testid="mode-sub">
+        {mode === 'map' ? '내 손·몸을 따라가는 3D 제품 · 무료' : mode === 'photo' ? 'AI 실사 사진 · 10~40초' : 'AI가 다시 그리는 영상 · 20초'}
+      </p>
 
       {mode === 'photo' && (
       <ol className="t-caption kr mt-6 grid grid-cols-3 gap-2 md:grid-cols-6" aria-label="진행 단계">
@@ -267,7 +271,9 @@ export default function Again() {
       {mode === 'map' && product && !product.model3d && (
         <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="no-3d">
           <p className="t-value kr">이 제품은 3D 모델을 준비하고 있어요.</p>
-          <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 3D 착용은 데일리토트백 · 플라노백 · 모듈러백에서 먼저 해 볼 수 있어요. 이 제품은 사진 합성으로 착용 모습을 볼 수 있습니다.</p>
+          <p className="t-caption kr mt-2 text-[var(--c-mute)]">
+            실시간 3D 착용은 {products.filter((x) => x.model3d).map((x) => x.name.value).join(' · ')}에서 해 볼 수 있어요. 이 제품은 사진 합성으로 착용 모습을 볼 수 있습니다.
+          </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <button type="button" className="btn btn-primary" onClick={() => setMode('photo')}>
               사진 합성으로 보기

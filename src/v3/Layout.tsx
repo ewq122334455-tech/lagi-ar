@@ -108,6 +108,40 @@ function Header({ onSearch }: { onSearch: () => void }) {
       document.body.style.overflow = '';
     };
   }, [open]);
+  // Menu as a proper dialog: focus moves in, Tab stays inside, Esc closes, focus returns to the button.
+  const menuBtn = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      if (wasOpen.current) menuBtn.current?.focus();
+      wasOpen.current = false;
+      return;
+    }
+    wasOpen.current = true;
+    const el = menu.current;
+    el?.querySelector<HTMLElement>('button, a[href]')?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !el) return;
+      const items = [...el.querySelectorAll<HTMLElement>('button, a[href]')];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const utilities = (
     <div className="flex items-center gap-1">
@@ -118,9 +152,11 @@ function Header({ onSearch }: { onSearch: () => void }) {
       <Link to={user ? '/account' : '/login'} className="icon-btn hidden sm:inline-flex" aria-label={user ? `내 계정 (${user.name})` : '로그인'}>
         {Icon.user}
       </Link>
-      <Link to="/cart" className="icon-btn" aria-label={`장바구니, ${count}개`}>
+      <Link to="/cart" className="icon-btn">
         {Icon.bag}
+        <span className="sr-only">장바구니 </span>
         <span className="t-nav tabular-nums">{count}</span>
+        <span className="sr-only">개</span>
       </Link>
     </div>
   );
@@ -141,7 +177,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         {/* Row 2: menu in the middle, utilities on the right (on phones: menu · logo · utilities). */}
         <div className="relative flex h-16 items-center justify-between px-page lg:h-14">
           <div className="flex min-w-[96px] items-center">
-            <button type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
+            <button ref={menuBtn} type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
               {Icon.menu}
             </button>
             <Link to="/" aria-label="LAGI home" className={`header-mini hidden lg:inline-flex`}>
@@ -163,7 +199,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
       </header>
 
       {open && (
-        <div id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
+        <div ref={menu} id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" onClick={(e) => (e.target as HTMLElement).closest('a') && setOpen(false)} className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
           <div className="relative flex h-14 items-center justify-between">
             <button type="button" onClick={() => setOpen(false)} className="icon-btn" aria-label="메뉴 닫기">
               {Icon.close}
@@ -283,9 +319,30 @@ function HelpButton() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
+  // Phones: the button steps aside while the page is scrolling, so it never sits on what is being read.
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const on = () => {
+      if (window.innerWidth >= 768) return;
+      setMoving(true);
+      window.clearTimeout(t);
+      t = window.setTimeout(() => setMoving(false), 700);
+    };
+    window.addEventListener('scroll', on, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', on);
+      window.clearTimeout(t);
+    };
+  }, []);
+  const away = moving && !open;
   return (
     // On a product page on phones, lifted above the buy bar (--buybar-h is 0 elsewhere).
-    <div className="fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 md:bottom-6 md:right-6" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
+    <div
+      className={`fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 transition-opacity duration-200 md:bottom-6 md:right-6 ${away ? 'pointer-events-none opacity-0' : ''}`}
+      style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}
+      data-testid="help-float"
+    >
       {open && (
         <div className="t-caption kr w-52 overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_8px_28px_rgba(0,0,0,0.14)]" role="menu" aria-label="도움말">
           <a role="menuitem" href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="block px-4 py-3 hover:bg-[var(--c-gray)]">
@@ -351,10 +408,10 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
           <div className="t-caption kr mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-4 text-white/70">
             <p className="t-mark font-bold text-white">© LAGI</p>
             <p className="flex gap-4">
-              <Link to="/contact" className="hover:text-white">
+              <Link to="/contact" className="tap hover:text-white">
                 문의
               </Link>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
+              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-2 hover:text-white">
                 Instagram
               </a>
             </p>
