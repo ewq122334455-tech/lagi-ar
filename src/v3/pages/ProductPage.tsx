@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
@@ -12,6 +13,63 @@ import { fetchReviews } from '../reviews';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Phones: the buy bar fixed to the bottom of the screen.
+ *
+ * It is rendered at the page root (a portal): the page wrapper keeps a transform from its entry
+ * animation, and a `position: fixed` element inside a transformed parent is fixed to that parent
+ * (the far end of a long page) instead of the screen. Its height is published as `--buybar-h` so the
+ * floating help button and the footer stay clear of it. While a text field is focused (on-screen
+ * keyboard) it steps aside so it never covers what is being typed.
+ */
+function MobileBuyBar({ children }: { children: React.ReactNode }) {
+  const bar = useRef<HTMLDivElement>(null);
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--buybar-h', `${typing ? 0 : el.offsetHeight}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty('--buybar-h');
+    };
+  }, [typing]);
+  useEffect(() => {
+    const isField = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      !bar.current?.contains(t) &&
+      (t.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), textarea, select') || t.isContentEditable);
+    const onIn = (e: FocusEvent) => isField(e.target) && setTyping(true);
+    const onOut = (e: FocusEvent) => isField(e.target) && setTyping(false);
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+  // The wrapper carries the site's tokens and fonts (.v3) without drawing a box: `.v3` itself also
+  // paints the dark page background, which must not reach the bar.
+  return createPortal(
+    <div className="v3" style={{ display: 'contents' }}>
+      <div
+        ref={bar}
+        // Inline style: the `flex` utility would otherwise win over the `hidden` attribute.
+        style={typing ? { display: 'none' } : undefined}
+        data-testid="mobile-buy-bar"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-black/10 bg-[var(--c-white)] px-page py-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden"
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 /** True once, right after the home gallery zoomed into this product. */
 function useArrivedFromGallery(id: string | undefined) {
@@ -516,7 +574,7 @@ export default function ProductPage() {
       )}
 
       {/* Mobile buy bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-black/10 bg-[var(--c-white)] px-page py-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden">
+      <MobileBuyBar>
         <span className="min-w-0 flex-1">
           <span className="t-caption kr block truncate text-[var(--c-mute)]">{p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
@@ -527,7 +585,7 @@ export default function ProductPage() {
         <button type="button" className="btn btn-primary !min-h-[44px]" onClick={() => addToCart(true)}>
           바로 구매
         </button>
-      </div>
+      </MobileBuyBar>
     </article>
   );
 }

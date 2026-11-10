@@ -331,9 +331,25 @@ interface Order {
   customer: { name: string; phone: string; email: string };
   shipping: { recipient: string; phone: string; zonecode: string; address: string; addressDetail: string; memo: string };
   payment?: { paymentKey: string; method?: string; approvedAt?: string; receiptUrl?: string };
+  /** The member account that placed the order (from its login session, set by the server). Guest orders have none. */
+  memberEmail?: string;
 }
 
 const PENDING_TTL = 60 * 60 * 24; // unpaid orders vanish after a day
+
+/**
+ * Paid orders that belong to this member account. An order belongs to an account only if it was placed
+ * while logged in to it (memberEmail, set by the server) — never because the checkout form had the same
+ * email, which anyone can type or register without proving they own it.
+ */
+async function memberOrders(kv: KV, email: string, limit: number): Promise<Order[]> {
+  const listed = await kv.list({ prefix: `byemail:${email}:`, limit });
+  const raws = await Promise.all(listed.keys.map((k) => kv.get(`order:${k.name.split(':').pop()}`)));
+  return raws
+    .filter(Boolean)
+    .map((r) => JSON.parse(r!) as Order)
+    .filter((o) => o.status === 'PAID' && o.memberEmail === email);
+}
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 /** The figures a visitor may see about their own order. */
@@ -391,8 +407,7 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
   if (path === '/orders/mine' && request.method === 'GET') {
     const me = env.USERS ? await sessionUser(env.USERS, request) : null;
     if (!me) return json({ error: '로그인이 필요합니다.' }, 401, headers);
-    const listed = await kv.list({ prefix: `byemail:${me.user.email.toLowerCase()}:`, limit: 50 });
-    const orders = (await Promise.all(listed.keys.map((k) => kv.get(`order:${k.name.split(':').pop()}`)))).filter(Boolean).map((r) => orderSummary(JSON.parse(r!) as Order));
+    const orders = (await memberOrders(kv, me.user.email.toLowerCase(), 50)).map(orderSummary);
     orders.sort((a, b) => (a.orderId < b.orderId ? 1 : -1));
     return json({ orders }, 200, headers);
   }
@@ -455,6 +470,9 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
       customer,
       shipping,
     };
+    // Logged in: the order belongs to that account (the server decides, not the form's email field).
+    const member = env.USERS ? await sessionUser(env.USERS, request) : null;
+    if (member) order.memberEmail = member.user.email.toLowerCase();
     await kv.put(`order:${order.orderId}`, JSON.stringify(order), { expirationTtl: PENDING_TTL });
     return json(orderSummary(order), 201, headers);
   }
@@ -498,8 +516,9 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     order.status = 'PAID';
     order.payment = { paymentKey, method: toss.method, approvedAt: toss.approvedAt, receiptUrl: toss.receipt?.url };
     await kv.put(`order:${order.orderId}`, JSON.stringify(order)); // paid orders are kept
-    // Index by buyer email: members see their orders, and reviews of bought products are marked.
-    await kv.put(`byemail:${order.customer.email.toLowerCase()}:${order.orderId}`, order.lines.map((l) => l.productId).join(','));
+    // Index member orders by their account: members see their orders, and reviews of bought products are marked.
+    // Guest orders are not linked to any account; they are found with order number + phone (/orders/lookup).
+    if (order.memberEmail) await kv.put(`byemail:${order.memberEmail}:${order.orderId}`, order.lines.map((l) => l.productId).join(','));
     return json(orderSummary(order), 200, headers);
   }
 
@@ -511,7 +530,6 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     const order = raw ? (JSON.parse(raw) as Order) : null;
     if (!order || !phone || (order.customer.phone !== phone && order.shipping.phone !== phone))
       return json({ error: '주문 번호와 휴대폰 번호를 확인해 주세요.' }, 404, headers);
-    return json(orderSummary(order), 200, headers);
     return json(orderSummary(order), 200, headers);
   }
 
@@ -601,9 +619,7 @@ async function handleReviews(path: string, request: Request, env: Env, headers: 
     if (body.photo && !photo) return json({ error: '사진은 JPEG로 올려 주세요.' }, 400, headers);
     if (photo && photo.length > MAX_REVIEW_PHOTO) return json({ error: '사진 용량이 너무 큽니다.' }, 413, headers);
 
-    const bought = await kv.list({ prefix: `byemail:${email}:`, limit: 100 });
-    const lines = await Promise.all(bought.keys.map((k) => kv.get(k.name)));
-    const verified = lines.some((l) => (l ?? '').split(',').includes(productId));
+    const verified = (await memberOrders(kv, email, 100)).some((o) => o.lines.some((l) => l.productId === productId));
     const now = Date.now();
     const id = `${(9_999_999_999_999 - now).toString().padStart(13, '0')}-${randomHex(4)}`;
     const review: Review = {

@@ -284,7 +284,8 @@ function HelpButton() {
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
   return (
-    <div className="fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+    // On a product page on phones, lifted above the buy bar (--buybar-h is 0 elsewhere).
+    <div className="fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 md:bottom-6 md:right-6" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
       {open && (
         <div className="t-caption kr w-52 overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_8px_28px_rgba(0,0,0,0.14)]" role="menu" aria-label="도움말">
           <a role="menuitem" href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="block px-4 py-3 hover:bg-[var(--c-gray)]">
@@ -317,7 +318,7 @@ function HelpButton() {
 
 const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
   return (
-    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]">
+    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]" style={{ paddingBottom: 'var(--buybar-h, 0px)' }}>
       <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32">
         <div className="text-center">
           <p className="t-h1 t-mark">LAGI in AGAIN</p>

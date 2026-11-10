@@ -32,10 +32,24 @@ export interface OrderSummary {
   payment?: { method?: string; approvedAt?: string; receiptUrl?: string };
 }
 
+/** The member's login session, if any — the server links an order to the account that placed it. */
+function sessionToken(): string | null {
+  try {
+    return localStorage.getItem('lagi-session');
+  } catch {
+    return null;
+  }
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
+  const token = sessionToken();
   try {
-    res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
   } catch {
     throw new Error('결제 서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.');
   }
