@@ -251,7 +251,7 @@ export default function Again() {
                   className="group block w-full text-left"
                 >
                   <span className={`relative block aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
-                    <img src={cleanImage(p)} {...responsive(cleanImage(p), '160px')} alt="" className="h-full w-full object-contain p-2" />
+                    <img {...responsive(cleanImage(p), '160px')} src={cleanImage(p)} alt="" className="h-full w-full object-contain p-2" />
                     {p.id === productId && (
                       <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--c-ink)] text-[12px] text-white">
                         ✓
@@ -328,7 +328,7 @@ export default function Again() {
               {product && (
                 <span className="t-caption kr flex items-center gap-2 text-[var(--c-mute)]">
                   실제 제품 사진
-                  <img src={product.images[0]} {...responsive(product.images[0], '48px')} alt={`${product.name.value} 실제 사진`} className="h-12 w-12 rounded-[var(--radius-card)] object-cover" />
+                  <img {...responsive(product.images[0], '48px')} src={product.images[0]} alt={`${product.name.value} 실제 사진`} className="h-12 w-12 rounded-[var(--radius-card)] object-cover" />
                 </span>
               )}
             </div>

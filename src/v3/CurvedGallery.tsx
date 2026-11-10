@@ -322,8 +322,7 @@ export function CurvedGallery({
             style={{ width: g.frontW, visibility: 'hidden' }}
           >
             <img
-              src={p.images[0]}
-              {...responsive(p.images[0], '(max-width: 767px) 70vw, 40vw')}
+              {...responsive(p.images[0], '(max-width: 767px) 70vw, 40vw')} src={p.images[0]}
               alt=""
               draggable={false}
               className="block w-full bg-[var(--c-white)] object-cover"

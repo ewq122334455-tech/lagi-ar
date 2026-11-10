@@ -38,7 +38,7 @@ export function CartPage() {
           <ul className="rule mt-12">
             {lines.map((l) => (
               <li key={lineKey(l)} className="grid grid-cols-[88px_1fr_auto] items-center gap-4 border-b border-[var(--c-ink)]/15 py-5 lg:grid-cols-[120px_1fr_auto_auto]">
-                {l.image ? <img src={l.image} {...responsive(l.image, '120px')} alt="" className="aspect-square w-full rounded-[var(--radius-card)] object-cover" /> : <span />}
+                {l.image ? <img {...responsive(l.image, '120px')} src={l.image} alt="" className="aspect-square w-full rounded-[var(--radius-card)] object-cover" /> : <span />}
                 <div>
                   <Link to={`/product/${l.productId}`} className="t-value kr hover:text-[var(--c-blue)]">
                     {l.name}

@@ -91,8 +91,7 @@ export default function Home() {
             >
               {a.img && (
                 <img
-                  src={a.img}
-                  {...responsive(a.img, '(max-width: 767px) 100vw, 33vw')}
+                  {...responsive(a.img, '(max-width: 767px) 100vw, 33vw')} src={a.img}
                   alt=""
                   loading="lazy"
                   className={
@@ -121,7 +120,7 @@ export default function Home() {
         <div className="mt-10 flex snap-x scroll-px-[var(--page-x)] gap-3 overflow-x-auto px-[var(--page-x)] pb-2" data-testid="home-follow">
           {products.map((p) => (
             <a key={p.id} href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="group relative block aspect-square w-[58vw] shrink-0 snap-start overflow-hidden rounded-[var(--radius-card)] sm:w-[34vw] lg:w-[19vw]" aria-label={`${p.name.value} — 인스타그램에서 보기`}>
-              <img src={p.images[0]} {...responsive(p.images[0], '(max-width: 767px) 50vw, 25vw')} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <img {...responsive(p.images[0], '(max-width: 767px) 50vw, 25vw')} src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
             </a>
           ))}
         </div>

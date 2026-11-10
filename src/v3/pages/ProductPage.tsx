@@ -242,8 +242,8 @@ export default function ProductPage() {
               <div className={`relative aspect-square overflow-hidden rounded-[var(--radius-card)] ${current.fit === 'contain' ? 'bg-white ring-1 ring-black/5' : 'bg-[var(--c-gray)]'}`}>
                 <img
                   key={current.src}
-                  src={current.src}
                   {...responsive(current.src, '(max-width: 1023px) 100vw, 50vw')}
+                  src={current.src}
                   alt={`${p.name.value ?? ''} — ${current.label}`}
                   data-testid="product-hero"
                   className={`h-full w-full ${current.fit === 'contain' ? 'object-contain p-[6%]' : 'object-cover'} ${arrived && shot === 0 ? 'arrive' : 'rise'}`}
@@ -265,7 +265,7 @@ export default function ProductPage() {
                   onClick={() => setShot(i)}
                   className={`aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${i === shot ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 hover:ring-black/40'}`}
                 >
-                  <img src={s.src} {...responsive(s.src, '96px')} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
+                  <img {...responsive(s.src, '96px')} src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
                 </button>
               ))}
             </div>
@@ -421,7 +421,7 @@ export default function ProductPage() {
               <div className="mt-6 grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
                 {p.styledImages.map((src) => (
                   <figure key={src} className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]" data-testid="styled-image">
-                    <img src={src} {...responsive(src, '(max-width: 767px) 100vw, 50vw')} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
+                    <img {...responsive(src, '(max-width: 767px) 100vw, 50vw')} src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
                     <figcaption className="t-label kr absolute left-2 top-2 rounded-full bg-[var(--c-ink)] px-2.5 py-1 text-[var(--c-white)]">AI 연출 이미지 · 실제와 다를 수 있음</figcaption>
                   </figure>
                 ))}
@@ -585,7 +585,7 @@ export default function ProductPage() {
           </span>
           {next.images[0] && (
             <span className="block w-24 overflow-hidden rounded-[6px] sm:w-32" style={{ aspectRatio: 1 }}>
-              <img src={next.images[0]} {...responsive(next.images[0], '128px')} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
+              <img {...responsive(next.images[0], '128px')} src={next.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
             </span>
           )}
         </Link>

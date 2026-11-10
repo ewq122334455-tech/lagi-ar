@@ -305,7 +305,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             <li key={p.id}>
               <Link to={`/product/${p.id}`} className="group block">
                 <div className="aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white">
-                  <img src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} {...responsive(p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0], '(max-width: 639px) 50vw, 33vw')} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
+                  <img {...responsive(p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0], '(max-width: 639px) 50vw, 33vw')} src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
                 </div>
                 <p className="t-value kr mt-3">{p.name.value}</p>
                 <p className="t-caption kr tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</p>
