@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { LagiLogo } from '@/components/LagiLogo';
 import { lookupOrder, myOrders, type OrderSummary } from '../reviews';
 import { price } from '../data';
+import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 
 /** Login / sign-up / account / order lookup — same AuthContext and Worker endpoints, a centred card layout. */
 function Field(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
@@ -95,10 +96,10 @@ export function LoginPage() {
           {busy ? '확인 중…' : '로그인'}
         </button>
         <div className="t-caption kr mt-4 flex justify-between">
-          <Link to="/signup" className="tap underline-offset-4 hover:underline">
+          <Link to="/signup" className="hit underline-offset-4 hover:underline">
             회원가입
           </Link>
-          <a href="https://www.instagram.com/lagi.official/" target="_blank" rel="noopener noreferrer" className="tap text-[var(--c-mute)] underline-offset-4 hover:underline">
+          <a href="https://www.instagram.com/lagi.official/" target="_blank" rel="noopener noreferrer" className="hit text-[var(--c-mute)] underline-offset-4 hover:underline">
             비밀번호 찾기 문의 ↗
           </a>
         </div>
@@ -150,6 +151,21 @@ export function SignupPage() {
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5" />
             <span>
               [필수] 이용약관 및 개인정보 수집·이용에 동의합니다.{' '}
+              {(TERMS || PRIVACY_POLICY) && (
+                <span>
+                  {TERMS && (
+                    <Link to="/terms" target="_blank" className="hit underline underline-offset-2">
+                      이용약관 보기
+                    </Link>
+                  )}
+                  {TERMS && PRIVACY_POLICY && ' · '}
+                  {PRIVACY_POLICY && (
+                    <Link to="/privacy" target="_blank" className="hit underline underline-offset-2">
+                      개인정보처리방침 보기
+                    </Link>
+                  )}{' '}
+                </span>
+              )}
               <span className="text-[var(--c-mute)]">수집 항목: 이름, 이메일, 비밀번호(암호화) · 목적: 회원 식별 · 보관: 탈퇴 시까지</span>
             </span>
           </label>
@@ -168,7 +184,7 @@ export function SignupPage() {
         </button>
         <p className="t-caption kr text-center text-[var(--c-mute)]">
           이미 회원이신가요?{' '}
-          <Link to="/login" className="tap text-[var(--c-ink)] underline underline-offset-4">
+          <Link to="/login" className="hit text-[var(--c-ink)] underline underline-offset-4">
             로그인
           </Link>
         </p>

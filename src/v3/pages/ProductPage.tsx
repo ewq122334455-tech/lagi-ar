@@ -12,6 +12,8 @@ import { Point } from '../Point';
 import { Reviews } from '../Reviews';
 import { fetchReviews } from '../reviews';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
+import { responsive } from '../img';
+import { usePageMeta } from '../usePageMeta';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -124,6 +126,8 @@ export default function ProductPage() {
   const [tab, setTab] = useState<Tab>('detail');
   const [reviewCount, setReviewCount] = useState<number | null>(null);
   const arrived = useArrivedFromGallery(id);
+  const metaProduct = products.find((x) => x.id === id);
+  usePageMeta(metaProduct ? metaProduct.name.value : products.length ? '제품을 찾을 수 없습니다' : null, metaProduct?.shortDescription.value);
   useEffect(() => {
     setShot(0);
     setTab('detail');
@@ -217,17 +221,17 @@ export default function ProductPage() {
       <div className="grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <nav aria-label="현재 위치" className="t-caption kr mb-3 flex gap-2 text-[var(--c-mute)]">
-            <Link to="/" className="tap hover:text-[var(--c-ink)]">
+            <Link to="/" className="hit hover:text-[var(--c-ink)]">
               홈
             </Link>
             <span aria-hidden="true">/</span>
-            <Link to="/discover" className="tap hover:text-[var(--c-ink)]">
+            <Link to="/discover" className="hit hover:text-[var(--c-ink)]">
               제품
             </Link>
             {category && (
               <>
                 <span aria-hidden="true">/</span>
-                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="tap hover:text-[var(--c-ink)]">
+                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hit hover:text-[var(--c-ink)]">
                   {category}
                 </Link>
               </>
@@ -239,6 +243,7 @@ export default function ProductPage() {
                 <img
                   key={current.src}
                   src={current.src}
+                  {...responsive(current.src, '(max-width: 1023px) 100vw, 50vw')}
                   alt={`${p.name.value ?? ''} — ${current.label}`}
                   data-testid="product-hero"
                   className={`h-full w-full ${current.fit === 'contain' ? 'object-contain p-[6%]' : 'object-cover'} ${arrived && shot === 0 ? 'arrive' : 'rise'}`}
@@ -260,7 +265,7 @@ export default function ProductPage() {
                   onClick={() => setShot(i)}
                   className={`aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${i === shot ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 hover:ring-black/40'}`}
                 >
-                  <img src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
+                  <img src={s.src} {...responsive(s.src, '96px')} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
                 </button>
               ))}
             </div>
@@ -359,7 +364,7 @@ export default function ProductPage() {
               )}
             </div>
             <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
-              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-4 hover:text-[var(--c-blue)]">
+              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
                 스마트스토어에서 구매 ↗
               </a>
               {added && (
@@ -416,7 +421,7 @@ export default function ProductPage() {
               <div className="mt-6 grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
                 {p.styledImages.map((src) => (
                   <figure key={src} className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]" data-testid="styled-image">
-                    <img src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
+                    <img src={src} {...responsive(src, '(max-width: 767px) 100vw, 50vw')} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
                     <figcaption className="t-label kr absolute left-2 top-2 rounded-full bg-[var(--c-ink)] px-2.5 py-1 text-[var(--c-white)]">AI 연출 이미지 · 실제와 다를 수 있음</figcaption>
                   </figure>
                 ))}
@@ -516,7 +521,7 @@ export default function ProductPage() {
               {usesCopy && (
                 <p className="t-caption kr mt-4 text-[var(--c-mute)]">
                   제품 소개 문구는 라기가 제품 기본 정보와 사진을 바탕으로 작성했습니다. 소재와 제작의 세부 사항은 제작사 기준을 따르며, 정확한 정보는{' '}
-                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-2">
+                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2">
                     스마트스토어
                   </a>
                   에서 확인할 수 있습니다.
@@ -557,7 +562,7 @@ export default function ProductPage() {
             <h2 id="more-title" className="t-h3 kr">
               함께 보면 좋은 제품
             </h2>
-            <Link to="/discover" className="tap t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
+            <Link to="/discover" className="hit t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
               전체 보기
             </Link>
           </div>
@@ -580,7 +585,7 @@ export default function ProductPage() {
           </span>
           {next.images[0] && (
             <span className="block w-24 overflow-hidden rounded-[6px] sm:w-32" style={{ aspectRatio: 1 }}>
-              <img src={next.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
+              <img src={next.images[0]} {...responsive(next.images[0], '128px')} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
             </span>
           )}
         </Link>

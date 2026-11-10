@@ -5,6 +5,9 @@ import { useCart } from '@/commerce/CartContext';
 import { useAuth } from '@/auth/AuthContext';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, price, useRealProducts } from './data';
 import './tokens.css';
+import { responsive } from './img';
+import { useRouteMeta } from './usePageMeta';
+import { BUSINESS, PRIVACY_POLICY, TERMS } from '@/content/legal';
 
 export const NAV = [
   { to: '/discover', label: 'Shop', kr: '제품' },
@@ -22,6 +25,7 @@ export const NAV = [
 export function V3Layout() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
+  useRouteMeta(pathname);
   const footerRef = useRef<HTMLElement>(null);
   const [footerH, setFooterH] = useState(0);
   const [searching, setSearching] = useState(false);
@@ -301,7 +305,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             <li key={p.id}>
               <Link to={`/product/${p.id}`} className="group block">
                 <div className="aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white">
-                  <img src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
+                  <img src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} {...responsive(p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0], '(max-width: 639px) 50vw, 33vw')} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
                 </div>
                 <p className="t-value kr mt-3">{p.name.value}</p>
                 <p className="t-caption kr tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</p>
@@ -373,10 +377,51 @@ function HelpButton() {
   );
 }
 
+/**
+ * Business details and legal links (전자상거래법 제10조 표시사항, 개인정보처리방침). Renders nothing until the
+ * owner fills in src/content/legal.ts — no placeholder ever reaches the published site.
+ */
+function LegalFooter() {
+  if (!BUSINESS && !PRIVACY_POLICY && !TERMS) return null;
+  const b = BUSINESS;
+  return (
+    <div className="t-caption kr mt-4 space-y-2 text-white/70" data-testid="legal-footer">
+      {(TERMS || PRIVACY_POLICY) && (
+        <p className="flex flex-wrap gap-x-4 gap-y-1">
+          {TERMS && (
+            <Link to="/terms" className="hit hover:text-white">
+              이용약관
+            </Link>
+          )}
+          {PRIVACY_POLICY && (
+            <Link to="/privacy" className="hit font-bold text-white">
+              개인정보처리방침
+            </Link>
+          )}
+        </p>
+      )}
+      {b && (
+        <p className="leading-relaxed">
+          상호 {b.companyName} · 대표 {b.representative} · 사업자등록번호 {b.businessNumber}{' '}
+          <a href={`https://www.ftc.go.kr/bizCommPop.do?wrkr_no=${b.businessNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
+            사업자정보 확인
+          </a>
+          <br />
+          통신판매업 신고번호 {b.mailOrderNumber} · 주소 {b.address}
+          <br />
+          전화 {b.phone} · 이메일 {b.email} · 호스팅 제공 {b.hostingProvider}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
   return (
-    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]" style={{ paddingBottom: 'var(--buybar-h, 0px)' }}>
-      <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32">
+    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]">
+      {/* Lifted above the phone buy bar on product pages. A transform, not padding: it does not
+          re-lay out the page when the bar appears (no layout shift). */}
+      <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
         <div className="text-center">
           <p className="t-h1 t-mark">LAGI in AGAIN</p>
           <p className="t-caption kr mt-3 text-white/80">디자인과 완성도, 소재의 새로운 가능성을 발견하고 소개합니다.</p>
@@ -408,14 +453,15 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
           <div className="t-caption kr mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-4 text-white/70">
             <p className="t-mark font-bold text-white">© LAGI</p>
             <p className="flex gap-4">
-              <Link to="/contact" className="tap hover:text-white">
+              <Link to="/contact" className="hit hover:text-white">
                 문의
               </Link>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap underline underline-offset-2 hover:text-white">
+              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
                 Instagram
               </a>
             </p>
           </div>
+          <LegalFooter />
         </div>
       </div>
     </footer>

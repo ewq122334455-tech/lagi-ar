@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { price } from './data';
+import { responsive } from './img';
 
 /**
  * LAGI curved gallery. Products sit on one chain that runs from the bottom-left (near, large) to
@@ -322,6 +323,7 @@ export function CurvedGallery({
           >
             <img
               src={p.images[0]}
+              {...responsive(p.images[0], '(max-width: 767px) 70vw, 40vw')}
               alt=""
               draggable={false}
               className="block w-full bg-[var(--c-white)] object-cover"

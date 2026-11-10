@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CartDrawer } from '@/components/CartDrawer';
 import { CartProvider } from '@/commerce/CartContext';
 import { AuthProvider } from '@/auth/AuthContext';
+import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 
 // Internal tool: only bundled in development builds (the published site does not ship its code).
 const AssetWorkspace = import.meta.env.DEV ? lazy(() => import('@/pages/workspace/AssetWorkspace')) : () => null;
@@ -30,6 +31,7 @@ const V3NotFound = lazy(() => import('@/v3/pages/NotFound'));
 const V3Account = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.AccountPage })));
 const V3Order = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.OrderLookupPage })));
 const V3Review = lazy(() => import('@/v3/pages/ReviewPage'));
+const V3Legal = lazy(() => import('@/v3/pages/Legal'));
 
 function SiteLayout() {
   const { pathname } = useLocation();
@@ -76,6 +78,9 @@ export default function App() {
             <Route path="/account" element={<V3Account />} />
             <Route path="/order" element={<V3Order />} />
             <Route path="/review" element={<V3Review />} />
+            {/* Legal notices: only routed once the owner has filled them in (src/content/legal.ts). */}
+            {PRIVACY_POLICY && <Route path="/privacy" element={<V3Legal doc={PRIVACY_POLICY} />} />}
+            {TERMS && <Route path="/terms" element={<V3Legal doc={TERMS} />} />}
             <Route path="*" element={<V3NotFound />} />
           </Route>
           {/* Old addresses that were shared before the rebuild. */}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import type { Product } from '@/data/productTypes';
+import { smallCopy } from './img';
 
 /**
  * Products the new site may show: real items on sale whose name and price were checked against
@@ -24,7 +25,7 @@ export function useImageRatios(products: Product[]) {
     for (const p of products) {
       const img = new Image();
       img.onload = () => alive && setRatios((r) => ({ ...r, [p.id]: img.naturalWidth / img.naturalHeight }));
-      img.src = p.images[0];
+      img.src = smallCopy(p.images[0]); // same proportions, a fraction of the bytes
     }
     return () => {
       alive = false;

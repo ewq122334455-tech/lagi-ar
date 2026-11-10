@@ -5,14 +5,15 @@ import { BrandFilmOverlay } from '../BrandFilm';
 import { IntroMotion, introSeen } from '../IntroMotion';
 import { OFFICIAL_LINKS, useImageRatios, useRealProducts } from '../data';
 import { ProductCard, cleanImage } from '../ProductCard';
+import { responsive } from '../img';
 
 function SectionTitle({ en, kr, to, href }: { en: string; kr: string; to?: string; href?: string }) {
   const more = to ? (
-    <Link to={to} className="tap t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
+    <Link to={to} className="hit t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
       View
     </Link>
   ) : href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="tap t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="hit t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
       @lagi.official
     </a>
   ) : null;
@@ -91,6 +92,7 @@ export default function Home() {
               {a.img && (
                 <img
                   src={a.img}
+                  {...responsive(a.img, '(max-width: 767px) 100vw, 33vw')}
                   alt=""
                   loading="lazy"
                   className={
@@ -119,7 +121,7 @@ export default function Home() {
         <div className="mt-10 flex snap-x scroll-px-[var(--page-x)] gap-3 overflow-x-auto px-[var(--page-x)] pb-2" data-testid="home-follow">
           {products.map((p) => (
             <a key={p.id} href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="group relative block aspect-square w-[58vw] shrink-0 snap-start overflow-hidden rounded-[var(--radius-card)] sm:w-[34vw] lg:w-[19vw]" aria-label={`${p.name.value} — 인스타그램에서 보기`}>
-              <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <img src={p.images[0]} {...responsive(p.images[0], '(max-width: 767px) 50vw, 25vw')} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
             </a>
           ))}
         </div>

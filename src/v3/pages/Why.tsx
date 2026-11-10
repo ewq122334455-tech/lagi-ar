@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import { price, useRealProducts } from '../data';
+import { responsive } from '../img';
 
 /** The three questions the whole site answers. */
 const QUESTIONS = [
@@ -124,7 +125,7 @@ function Passed() {
           <li key={p.id}>
             <Link to={`/product/${p.id}`} className="group block">
               <span className="block overflow-hidden bg-[var(--c-gray)]" style={{ aspectRatio: 1 }}>
-                <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
+                <img src={p.images[0]} {...responsive(p.images[0], '(max-width: 767px) 100vw, 33vw')} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
               </span>
               <span className="t-caption kr mt-2 block font-semibold">{p.name.value}</span>
               <span className="t-caption kr block tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</span>
