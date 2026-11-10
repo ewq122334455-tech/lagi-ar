@@ -12,8 +12,13 @@ region = "gcp:us-central1"
 [vars]
 # Gemini image model. If Google renames it, change this and redeploy (see README).
 GEMINI_MODEL = "gemini-2.5-flash-image"
-# The LAGI site (and local dev). Only these origins may call the Worker or supply product images.
-ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io,http://localhost:5173,http://localhost:4173"
+# The LAGI site. Only these origins may call the Worker or supply product images.
+# Local development does not use the production Worker's list; run it with your own origin instead:
+#   npx wrangler dev --var ALLOWED_ORIGINS:http://localhost:5173
+ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io"
+# Account deletion (POST /auth/delete) stays off until the owner picks what happens to a member's
+# reviews: "keep-anonymous" (kept without name/email) or "delete". Uncomment one when decided.
+# WITHDRAW_REVIEW_POLICY = "keep-anonymous"
 # Published product data. The Worker re-reads prices from here for every order (never from the browser).
 PRODUCTS_BASE_URL = "https://ewq122334455-tech.github.io/lagi-ar/products/"
 # Realtime try-on: sessions per day for the whole site (each up to 20 s, about $0.40 at $0.02/s).
@@ -40,3 +45,10 @@ class_name = "GeminiRelay"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["GeminiRelay"]
+
+# Optional: Cloudflare Rate Limiting for log-ins (in addition to the per-email lock kept in KV).
+# Enable only after checking it is available on the account; without it the KV lock still applies.
+# [[ratelimits]]
+# name = "LOGIN_LIMIT"
+# namespace_id = "1001"
+# simple = { limit = 5, period = 60 }

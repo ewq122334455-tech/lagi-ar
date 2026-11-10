@@ -18,6 +18,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (input: { email: string; password: string; name: string; agree: boolean; marketing: boolean }) => Promise<void>;
   logout: () => Promise<void>;
+  /** Deletes the account (password + typed confirmation). Resolves with what was removed. */
+  withdraw: (password: string, confirm: string) => Promise<{ reviews: number; orderLinks: number; reviewPolicy: string }>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -92,7 +94,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, [token]);
 
-  return <AuthContext.Provider value={{ user, ready, login, signup, logout }}>{children}</AuthContext.Provider>;
+  const withdraw = useCallback<AuthState['withdraw']>(
+    async (password, confirm) => {
+      const r = await call<{ reviews: number; orderLinks: number; reviewPolicy: string }>('/auth/delete', { method: 'POST', body: JSON.stringify({ email: user?.email, password, confirm }) }, token);
+      writeToken(null);
+      setToken(null);
+      setUser(null);
+      return r;
+    },
+    [token, user]
+  );
+
+  return <AuthContext.Provider value={{ user, ready, login, signup, logout, withdraw }}>{children}</AuthContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

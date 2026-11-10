@@ -46,6 +46,14 @@ export interface Env {
   TOSS_SECRET_KEY?: string;
   /** Override for tests only. Defaults to https://api.tosspayments.com. */
   TOSS_API_BASE?: string;
+  /**
+   * What happens to a member's reviews when they delete their account: "keep-anonymous" (the review
+   * stays, without name or email) or "delete". Until the owner sets it, account deletion answers 503
+   * and points to the help channel — the policy is the owner's decision, not the code's.
+   */
+  WITHDRAW_REVIEW_POLICY?: string;
+  /** Optional Cloudflare Rate Limiting binding for log-in attempts ([[ratelimits]] in wrangler.toml). */
+  LOGIN_LIMIT?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   /** Token for reading orders (GET /admin/orders) — `npx wrangler secret put ADMIN_TOKEN`. */
   ADMIN_TOKEN?: string;
 }
@@ -239,6 +247,56 @@ async function newSession(kv: KV, email: string) {
   return token;
 }
 
+/**
+ * Removes a member: their reviews (deleted or kept without name/email, per the owner's policy), the
+ * links from their account to their orders (the order records themselves are kept, untouched — how long
+ * paid orders must be kept is a legal question for the owner), every login session, and the account.
+ */
+async function deleteMember(env: Env, user: StoredUser, policy: 'keep-anonymous' | 'delete') {
+  const users = env.USERS!;
+  const email = user.email.toLowerCase();
+  const orders = env.ORDERS;
+  let reviews = 0;
+  let orderLinks = 0;
+  if (orders) {
+    const mine = await orders.list({ prefix: `reviewby:${email}:`, limit: 1000 });
+    for (const k of mine.keys) {
+      const productId = k.name.split(':').pop()!;
+      const id = await orders.get(k.name);
+      const key = `review:${productId}:${id}`;
+      const raw = id ? await orders.get(key) : null;
+      if (raw) {
+        if (policy === 'delete') {
+          await Promise.all([orders.delete(key), orders.delete(`reviewall:${id}`), env.MEDIA?.delete(`review-img:${id}`)]);
+        } else {
+          const r = JSON.parse(raw) as Review;
+          await orders.put(key, JSON.stringify({ ...r, author: '탈퇴 회원', email: '' }));
+        }
+        reviews++;
+      }
+      await orders.delete(k.name);
+    }
+    const links = await orders.list({ prefix: `byemail:${email}:`, limit: 1000 });
+    for (const k of links.keys) await orders.delete(k.name);
+    orderLinks = links.keys.length;
+  }
+  // Sessions are keyed by token; drop every one that points at this account.
+  let cursor: string | undefined;
+  let scanned = 0;
+  do {
+    const page = await users.list({ prefix: 'session:', cursor, limit: 1000 });
+    for (const k of page.keys) if ((await users.get(k.name)) === email) await users.delete(k.name);
+    scanned += page.keys.length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && scanned < 20_000);
+  await Promise.all([users.delete(`user:${email}`), users.delete(`loginfail:${email}`)]);
+  return { reviews, orderLinks };
+}
+
+/** Failed log-ins per email: after LOGIN_MAX_FAILS the address is locked for LOGIN_LOCK_SECONDS. */
+const LOGIN_MAX_FAILS = 10;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+
 async function sessionUser(kv: KV, request: Request): Promise<{ token: string; user: StoredUser } | null> {
   const token = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('Authorization') ?? '')?.[1];
   if (!token) return null;
@@ -247,7 +305,8 @@ async function sessionUser(kv: KV, request: Request): Promise<{ token: string; u
   return raw ? { token, user: JSON.parse(raw) as StoredUser } : null;
 }
 
-async function handleAuth(path: string, request: Request, kv: KV, headers: Record<string, string>): Promise<Response> {
+async function handleAuth(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const kv = env.USERS!;
   if (path === '/auth/me' && request.method === 'GET') {
     const s = await sessionUser(kv, request);
     return s ? json({ user: publicUser(s.user) }, 200, headers) : json({ error: '로그인이 필요합니다.' }, 401, headers);
@@ -291,12 +350,41 @@ async function handleAuth(path: string, request: Request, kv: KV, headers: Recor
   }
 
   if (path === '/auth/login') {
+    const locked = { error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.', reason: 'locked' };
+    // Cloudflare's rate limiter (if bound) per address + IP; then the per-email lock kept in KV.
+    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+    if (env.LOGIN_LIMIT && !(await env.LOGIN_LIMIT.limit({ key: `${email}|${ip}` })).success) return json(locked, 429, headers);
+    const failKey = `loginfail:${email}`;
+    const failRaw = await kv.get(failKey);
+    const fail = failRaw ? (JSON.parse(failRaw) as { n: number; until?: number }) : { n: 0 };
+    if (fail.until && fail.until > Date.now()) return json(locked, 429, headers);
     const raw = await kv.get(`user:${email}`);
     const user = raw ? (JSON.parse(raw) as StoredUser) : null;
     // Hash even for unknown emails so response time does not reveal which emails exist.
     const hash = await hashPassword(password, user?.salt ?? '00'.repeat(16));
-    if (!user || !sameString(hash, user.hash)) return json({ error: '이메일 또는 비밀번호가 맞지 않습니다.' }, 401, headers);
+    if (!user || !sameString(hash, user.hash)) {
+      const n = (fail.until ? 0 : fail.n) + 1; // a lock that ran out starts a fresh count
+      const next = n >= LOGIN_MAX_FAILS ? { n, until: Date.now() + LOGIN_LOCK_SECONDS * 1000 } : { n };
+      await kv.put(failKey, JSON.stringify(next), { expirationTtl: LOGIN_LOCK_SECONDS });
+      return json(n >= LOGIN_MAX_FAILS ? locked : { error: '이메일 또는 비밀번호가 맞지 않습니다.' }, n >= LOGIN_MAX_FAILS ? 429 : 401, headers);
+    }
+    if (failRaw) await kv.delete(failKey);
     return json({ token: await newSession(kv, email), user: publicUser(user) }, 200, headers);
+  }
+
+  // Account deletion: the member proves it is them (session + password, typed confirmation).
+  if (path === '/auth/delete') {
+    const me = await sessionUser(kv, request);
+    if (!me) return json({ error: '로그인이 필요합니다.' }, 401, headers);
+    if (me.user.email.toLowerCase() !== email) return json({ error: '로그인한 계정의 이메일을 입력해 주세요.' }, 403, headers);
+    const check = await hashPassword(password, me.user.salt);
+    if (!sameString(check, me.user.hash)) return json({ error: '비밀번호가 맞지 않습니다.' }, 403, headers);
+    if ((body as { confirm?: string }).confirm !== '탈퇴') return json({ error: '확인 문구를 정확히 입력해 주세요.' }, 400, headers);
+    const policy = env.WITHDRAW_REVIEW_POLICY;
+    if (policy !== 'keep-anonymous' && policy !== 'delete')
+      return json({ error: '온라인 회원 탈퇴는 준비 중입니다. 인스타그램 DM으로 요청해 주시면 처리해 드립니다.', reason: 'not_configured' }, 503, headers);
+    const result = await deleteMember(env, me.user, policy);
+    return json({ ok: true, ...result, reviewPolicy: policy }, 200, headers);
   }
 
   return json({ error: 'not found' }, 404, headers);
@@ -772,7 +860,7 @@ export default {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
       if (throttled(`auth:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
-      return handleAuth(path, request, env.USERS, headers);
+      return handleAuth(path, request, env, headers);
     }
     return tryOn(request, env, headers);
   },

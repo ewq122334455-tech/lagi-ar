@@ -16,7 +16,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // No source maps in the published site (they exposed the full source). Debug builds can
+    // still make them: `npx vite build --sourcemap`.
+    sourcemap: false,
     chunkSizeWarningLimit: 1600,
   },
 });

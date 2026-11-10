@@ -8,7 +8,8 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { CartProvider } from '@/commerce/CartContext';
 import { AuthProvider } from '@/auth/AuthContext';
 
-const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
+// Internal tool: only bundled in development builds (the published site does not ship its code).
+const AssetWorkspace = import.meta.env.DEV ? lazy(() => import('@/pages/workspace/AssetWorkspace')) : () => null;
 
 // Site (v3). The previous site's code is kept in src/pages but no longer routed (its copy used the old concept).
 const V3Layout = lazy(() => import('@/v3/Layout').then((m) => ({ default: m.V3Layout })));
@@ -86,9 +87,12 @@ export default function App() {
 
           {/* The previous site used the old "Look closer" concept — its addresses now lead home. */}
           <Route path="/classic/*" element={<Navigate to="/" replace />} />
-          <Route element={<SiteLayout />}>
-            <Route path="/workspace" element={<AssetWorkspace />} />
-          </Route>
+          {/* Internal product-entry tool: local development only, never in the published site. */}
+          {import.meta.env.DEV && (
+            <Route element={<SiteLayout />}>
+              <Route path="/workspace" element={<AssetWorkspace />} />
+            </Route>
+          )}
           <Route path="/exhibition" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
