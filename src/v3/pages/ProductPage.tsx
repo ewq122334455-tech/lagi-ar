@@ -10,7 +10,7 @@ import { ProductViews } from '../ProductViews';
 import { ProductCard } from '../ProductCard';
 import { Point } from '../Point';
 import { Reviews } from '../Reviews';
-import { fetchReviews } from '../reviews';
+import { fetchReviews } from '../reviewsApi';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
 import { responsive } from '../img';
 import { usePageMeta } from '../usePageMeta';

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { deleteReview, fetchReviews, myReviewedProducts, photoForReview, postReview, reviewPhotoUrl, type ReviewItem, type ReviewPage } from './reviews';
+import { deleteReview, fetchReviews, myReviewedProducts, photoForReview, postReview, reviewPhotoUrl, type ReviewItem, type ReviewPage } from './reviewsApi';
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (

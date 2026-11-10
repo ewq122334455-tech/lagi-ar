@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { LagiLogo } from '@/components/LagiLogo';
-import { lookupOrder, myOrders, type OrderSummary } from '../reviews';
+import { lookupOrder, myOrders, type OrderSummary } from '../reviewsApi';
 import { price } from '../data';
 import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 
