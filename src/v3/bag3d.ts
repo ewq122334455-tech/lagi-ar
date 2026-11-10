@@ -393,9 +393,11 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D) {
       }
       renderer.render(scene, camera);
     },
-    dispose() {
+    /** `loseContext`: also release the WebGL context (when the canvas is going away for good). */
+    dispose(loseContext = false) {
       renderer.dispose();
       bag.dispose();
+      if (loseContext) renderer.forceContextLoss();
     },
   };
 }

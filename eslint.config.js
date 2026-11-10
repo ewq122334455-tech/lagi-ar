@@ -7,6 +7,11 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 export default [
   { ignores: ['dist', 'node_modules'] },
   js.configs.recommended,
+  // Node scripts run by GitHub Actions (e.g. the owner password reset).
+  {
+    files: ['.github/scripts/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', URL: 'readonly' } },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {

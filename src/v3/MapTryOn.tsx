@@ -86,6 +86,20 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     setPhase((p) => (p === 'idle' ? p : 'ended'));
   };
   useEffect(() => stop, []);
+  // Leaving the page: free the 3D layer (WebGL context, textures) and the body/hand models.
+  const gone = useRef(false);
+  useEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
+      layer.current?.l.dispose(true);
+      layer.current = null;
+      pose.current?.then((m) => m.close()).catch(() => undefined);
+      hands.current?.then((m) => m?.close()).catch(() => undefined);
+      pose.current = null;
+      hands.current = null;
+    };
+  }, []);
   useEffect(() => {
     const onHide = () => document.hidden && stop();
     document.addEventListener('visibilitychange', onHide);
@@ -134,6 +148,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         layer.current?.l.dispose();
         const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
         const bag = await buildBag(model, base);
+        if (gone.current) {
+          bag.dispose();
+          return;
+        }
         layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
       }
       setStatus(null);
