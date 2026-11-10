@@ -49,9 +49,13 @@ function Divider({ label = '또는' }: { label?: string }) {
 export function LoginPage() {
   const { user, login } = useAuth();
   const nav = useNavigate();
-  const state = useLocation().state as { from?: string; withdrawn?: { reviews: number; reviewPolicy: string } } | null;
+  const state = useLocation().state as { from?: string; withdrawn?: Withdrawn } | null;
   const back = state?.from ?? '/';
-  const withdrawn = state?.withdrawn;
+  // The result comes with the navigation, or (if the account page redirected first) from storage.
+  const [withdrawn] = useState<Withdrawn | undefined>(() => {
+    const stored = takeWithdrawn(); // always consume it, so it is shown once only
+    return state?.withdrawn ?? stored;
+  });
   const [f, setF] = useState({ email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -279,6 +283,19 @@ export function OrderLookupPage() {
   );
 }
 
+type Withdrawn = { reviews: number; reviewPolicy: string };
+const WITHDRAWN_KEY = 'lagi-withdrawn';
+/** The deletion result, read once by the login page. */
+function takeWithdrawn(): Withdrawn | undefined {
+  try {
+    const raw = sessionStorage.getItem(WITHDRAWN_KEY);
+    sessionStorage.removeItem(WITHDRAWN_KEY);
+    return raw ? (JSON.parse(raw) as Withdrawn) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Account deletion: password and a typed confirmation word, then the server removes the account. */
 function Withdraw() {
   const { withdraw } = useAuth();
@@ -306,7 +323,13 @@ function Withdraw() {
             setErr(null);
             try {
               const r = await withdraw(f.password, f.confirm);
-              nav('/login', { replace: true, state: { withdrawn: { reviews: r.reviews, reviewPolicy: r.reviewPolicy } } });
+              const result: Withdrawn = { reviews: r.reviews, reviewPolicy: r.reviewPolicy };
+              try {
+                sessionStorage.setItem(WITHDRAWN_KEY, JSON.stringify(result));
+              } catch {
+                // the navigation state below still carries it
+              }
+              nav('/login', { replace: true, state: { withdrawn: result } });
             } catch (x) {
               setErr((x as Error).message);
             } finally {
