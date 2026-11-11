@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'node_modules', 'docs/ai-fitting-upgrade/tools'] },
   js.configs.recommended,
   // Node scripts run by GitHub Actions (e.g. the owner password reset).
   {

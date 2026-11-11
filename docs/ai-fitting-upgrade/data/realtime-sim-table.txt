@@ -1,0 +1,27 @@
+
+== fist3             V1       V2      V2b
+stepMean        0.015    0.010
+accRms          0.031    0.016
+wAccRms         0.031    0.022
+yawAccRms       0.006    0.001
+lagMs            51.0     85.0
+followErr0      0.102    0.146
+
+== fist3-pan             V1       V2      V2b
+stepMean        5.602    5.641
+accRms          5.138    5.703
+wAccRms         0.432    0.330
+yawAccRms       0.008    0.002
+lagMs            51.0     51.0
+followErr0       21.0     21.1
+
+== fist3-drop             V1       V2      V2b
+stepMean        0.024    0.017
+accRms          0.071    0.031
+wAccRms         0.056    0.039
+yawAccRms       0.007    0.001
+lagMs            51.0     85.0
+followErr0      0.178    0.260
+visLongDrop     0.533    0.867
+maxGapMs        550.0    217.0
+snapPx          0.935    2.040
