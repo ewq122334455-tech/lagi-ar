@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
+import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
 import { CATEGORY_LABEL, price, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
 import { MapTryOn } from '../MapTryOn';
@@ -60,6 +61,9 @@ export default function Again() {
   const [before, setBefore] = useState(false);
   const [camera, setCamera] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  // Soft notes (never blocking): about the uploaded photo before the request, about the answer after it.
+  const [photoIssues, setPhotoIssues] = useState<PhotoIssue[]>([]);
+  const [resultIssues, setResultIssues] = useState<ResultIssue[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const albumRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLInputElement>(null);
@@ -81,6 +85,7 @@ export default function Again() {
   function choose(p: Product) {
     setParams({ p: p.id, m: mode }, { replace: true });
     setResult(null);
+    setResultIssues([]);
     setError(null);
     setErrorDetail(null);
   }
@@ -93,8 +98,18 @@ export default function Again() {
     if (f.size > MAX_INPUT_BYTES) return setError('15MB 이하의 사진을 사용해 주세요.');
     try {
       // Any format the browser can open (JPG, PNG, WEBP, HEIC on iPhone Safari …) is redrawn as JPEG.
-      setPhoto(await photoToDataUrl(f as File));
+      const url = await photoToDataUrl(f as File);
+      setPhoto(url);
       setResult(null);
+      setResultIssues([]);
+      // The size is checked on the original file, the light and sharpness on the downscaled copy that is sent.
+      loadGrey(url)
+        .then(async ({ grey }) => {
+          const big = await createImageBitmap(f).catch(() => null);
+          setPhotoIssues(checkPhoto(grey, big?.width ?? 9999, big?.height ?? 9999).issues);
+          big?.close();
+        })
+        .catch(() => setPhotoIssues([]));
     } catch {
       setError('이 사진 형식은 열 수 없습니다. JPG로 저장한 사진을 쓰거나 카메라로 촬영해 주세요.');
     }
@@ -132,6 +147,11 @@ export default function Again() {
         }
       }
       setResult(img);
+      setResultIssues([]);
+      if (img)
+        Promise.all([loadGrey(photo), loadGrey(img)])
+          .then(([a, b]) => setResultIssues(compareResult(a.grey, b.grey, { w: a.width, h: a.height }, { w: b.width, h: b.height }).issues))
+          .catch(() => undefined);
       requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } catch (e) {
       if (ctrl.signal.aborted) setError(ctrl.signal.reason === 'timeout' ? '시간이 너무 오래 걸려 중단했습니다. 다시 시도해 주세요.' : '합성을 취소했습니다.');
@@ -401,6 +421,13 @@ export default function Again() {
             </button>
             {!product && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 제품을 고르세요.</p>}
             {product && !photo && <p className="t-caption kr mt-2 text-[var(--c-mute)]">사진을 올리거나 촬영하세요.</p>}
+            {photo && photoIssues.length > 0 && !result && (
+              <ul className="t-caption kr mt-2 space-y-1 text-[var(--c-mute)]" data-testid="photo-issues">
+                {photoIssues.map((i) => (
+                  <li key={i}>{PHOTO_ISSUE_TEXT[i]}</li>
+                ))}
+              </ul>
+            )}
             {error && (
               <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert">
                 {error}
@@ -414,6 +441,13 @@ export default function Again() {
               <h2 id="s5" className="t-h3 kr">
                 <span className="t-mark text-[var(--c-mute)]">05</span> 저장 또는 다시
               </h2>
+              {resultIssues.length > 0 && (
+                <ul className="t-caption kr mt-3 space-y-1 text-[var(--c-blue)]" data-testid="result-issues">
+                  {resultIssues.map((i) => (
+                    <li key={i}>{RESULT_ISSUE_TEXT[i]}</li>
+                  ))}
+                </ul>
+              )}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button type="button" className="btn btn-primary col-span-2" onClick={save}>
                   이미지 저장

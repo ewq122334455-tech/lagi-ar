@@ -4,6 +4,7 @@ import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
+import { HAND_HOLD_MS, OneEuro, OneEuroAngle, isHandJump } from './fitFilter';
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
 
@@ -192,6 +193,19 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let handPts: { x: number; y: number }[] | null = null;
     // Pixels per cm of the hand, from its 3D joints, eased: does not change when the hand turns.
     let handScale = 0;
+    // Fitting engine: V2 (One Euro smoothing, jump rejection, short hold on loss) unless `?engine=v1`.
+    // V1 stays selectable for side-by-side comparison. `?fitdebug=1` records per-frame telemetry on window.__fit.
+    const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    const v2 = query.get('engine') !== 'v1';
+    const telemetry: Record<string, number | boolean>[] | null = query.get('fitdebug') ? ((window as unknown as { __fit: unknown[] }).__fit = []) as Record<string, number | boolean>[] : null;
+    const fx = new OneEuro(2.0, 0.008);
+    const fy = new OneEuro(2.0, 0.008);
+    const fw = new OneEuro(0.8, 0.002);
+    const fyaw = new OneEuroAngle(1.5, 0.8);
+    let lastFromHand: Placement | null = null;
+    let lastHandAt = -1e9;
+    let rawGrip: { x: number; y: number } | null = null;
+    let rejected = 0;
     const handMask = document.createElement('canvas');
     const hmctx = handMask.getContext('2d')!;
     let handMiss = 0;
@@ -272,13 +286,19 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           const hw = hr.worldLandmarks?.[0];
           const hl = hr.landmarks?.[0];
           const side = (hr.handedness?.[0]?.[0]?.categoryName ?? 'Right') as 'Left' | 'Right';
-          if (hw && hl) {
-            handYaw = easeAngle(handYaw, handYawOf(hw, side, mirrored), 0.45);
-            const nx = (hl[5].x + hl[17].x) / 2;
-            const ny = (hl[5].y + hl[17].y) / 2;
-            const gx = crop ? crop.x + nx * crop.size : nx * W;
-            const gy = crop ? crop.y + ny * crop.size : ny * H;
-            grip = { x: mirrored ? W - gx : gx, y: gy };
+          const nx0 = hl ? (hl[5].x + hl[17].x) / 2 : 0;
+          const ny0 = hl ? (hl[5].y + hl[17].y) / 2 : 0;
+          const gx0 = hl ? (crop ? crop.x + nx0 * crop.size : nx0 * W) : 0;
+          const gy0 = hl ? (crop ? crop.y + ny0 * crop.size : ny0 * H) : 0;
+          const cand = { x: mirrored ? W - gx0 : gx0, y: gy0 };
+          const palmNow = hl ? Math.hypot((hl[5].x - hl[17].x) * (crop ? crop.size : W), (hl[5].y - hl[17].y) * (crop ? crop.size : H)) : 0;
+          // V2: a detection that jumps further than a hand can move between two detections is a mis-detection.
+          const jumped = v2 && !!hw && !!hl && isHandJump(rawGrip, cand, palmNow);
+          if (jumped) rejected++;
+          if (hw && hl && !jumped) {
+            handYaw = v2 ? handYawOf(hw, side, mirrored) : easeAngle(handYaw, handYawOf(hw, side, mirrored), 0.45);
+            grip = cand;
+            rawGrip = cand;
             handPts = hl.map((q) => {
               const px = crop ? crop.x + q.x * crop.size : q.x * W;
               return { x: mirrored ? W - px : px, y: crop ? crop.y + q.y * crop.size : q.y * H };
@@ -303,13 +323,14 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             }
             if (met > 0.01) {
               const s = pix / met / 100;
-              handScale = handScale ? handScale + (s - handScale) * 0.25 : s;
+              handScale = v2 ? s : handScale ? handScale + (s - handScale) * 0.25 : s;
             }
             handMiss = 0;
           } else if (++handMiss > 8) {
             handScale = 0;
             grip = null;
             handPts = null;
+            rawGrip = null;
           }
           setHandSeen(handMiss < 8 && !!grip);
         }
@@ -333,6 +354,14 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       // Held in a hand the hand model sees: size and place from the hand itself. The knuckle line
       // (index to little finger) is about 7.5 cm, which holds even when the shoulders are off screen.
       const fromHand = !!(l3 && grip && handPts && HELD.has(style) && p);
+      // V2: a hand lost for a moment keeps the bag where it was for a short time instead of hiding it.
+      const holdHand = v2 && !fromHand && lastFromHand && now - lastHandAt < HAND_HOLD_MS && l3 && p && HELD.has(style);
+      if (holdHand && lastFromHand) {
+        const yawH = fyaw.filter(spin.current + handYaw, now);
+        if (telemetry) telemetry.push({ t: now, cx: placed.current?.cx ?? 0, top: placed.current?.top ?? 0, w: placed.current?.w ?? 0, yaw: yawH, rawCx: -1, rawTop: -1, rawW: -1, hand: false, held: true, rejected });
+        if (placed.current) l3!.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw: yawH, roll: placed.current.rot, brightness });
+        return;
+      }
       if (!p || (!img && !l3) || (!lm && !fromHand)) {
         l3?.l.render(W, H, null);
         return;
@@ -355,10 +384,20 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         l3?.l.render(W, H, null);
         return;
       }
-      placed.current = smooth(placed.current, next);
+      if (v2) {
+        // Time-based One Euro smoothing (steady when still, close when fast), no snap on source changes.
+        const prev = placed.current;
+        placed.current = { cx: fx.filter(next.cx, now), top: fy.filter(next.top, now), w: fw.filter(next.w, now), rot: prev ? prev.rot + (next.rot - prev.rot) * 0.3 : next.rot };
+        if (fromHand) {
+          lastFromHand = next;
+          lastHandAt = now;
+        }
+      } else placed.current = smooth(placed.current, next);
       const held = ['hand', 'elbow'].includes(style);
       // Held and the hand seen: the bag turns with the hand, all the way round. Otherwise it follows the body.
-      const yaw = spin.current + (held && grip ? handYaw : bodyYaw);
+      const yawRaw = spin.current + (held && grip ? handYaw : bodyYaw);
+      const yaw = v2 ? fyaw.filter(yawRaw, now) : yawRaw;
+      if (telemetry) telemetry.push({ t: now, cx: placed.current.cx, top: placed.current.top, w: placed.current.w, yaw, rawCx: next.cx, rawTop: next.top, rawW: next.w, hand: fromHand, rejected });
       if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
       else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
