@@ -52,13 +52,15 @@ export interface Env {
    * and points to the help channel — the policy is the owner's decision, not the code's.
    */
   WITHDRAW_REVIEW_POLICY?: string;
+  /** Which photo-fitting prompt to use: "v2" for the improved one. Unset = v1 (the prompt used so far). */
+  PROMPT_VERSION?: string;
   /** Optional Cloudflare Rate Limiting binding for log-in attempts ([[ratelimits]] in wrangler.toml). */
   LOGIN_LIMIT?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   /** Token for reading orders (GET /admin/orders) — `npx wrangler secret put ADMIN_TOKEN`. */
   ADMIN_TOKEN?: string;
 }
 
-interface TryOnRequest {
+export interface TryOnRequest {
   /** Visitor photo as a data URL (image/jpeg or image/png). */
   person: string;
   /** Absolute URL of the product image; must be on an allowed origin. */
@@ -69,6 +71,10 @@ interface TryOnRequest {
   size?: string;
   /** How to wear it: shoulder, hand, crossbody, … (free text, short). */
   style?: string;
+  /** Plain facts about the product from the site's own data (kind, handle drop …), short. Used by prompt v2. */
+  facts?: string;
+  /** "v2" asks for the improved prompt on this request (otherwise the PROMPT_VERSION setting decides; default v1). */
+  promptVersion?: string;
 }
 
 const MAX_PERSON_BYTES = 4 * 1024 * 1024;
@@ -112,7 +118,41 @@ function toBase64(buf: ArrayBuffer) {
   return btoa(bin);
 }
 
-function buildPrompt(r: TryOnRequest, cutout: boolean) {
+/**
+ * Prompt v2 — same job, stricter and more specific. Adds: the product's own facts, a list of what must
+ * not change in the product and in the person, exactly one product, the physical way each carry style
+ * hangs, and "keep the framing". It is only used when asked for (`promptVersion: "v2"` in the request or
+ * PROMPT_VERSION="v2"); whether it is better than v1 has to be judged on real generations
+ * (scripts/ai-fitting-ab.mjs) — it was not measured with paid calls.
+ */
+export function buildPromptV2(r: TryOnRequest, cutout: boolean) {
+  const style = (r.style ?? '').slice(0, 200);
+  const facts = (r.facts ?? '').slice(0, 300);
+  const name = [r.productName?.slice(0, 120), r.category?.slice(0, 40)].filter(Boolean).join(', ');
+  const carry = /shoulder/i.test(style)
+    ? 'The handles or strap rest on the shoulder and the bag hangs down the same side of the body at about hip height, the strap taut where it carries the weight.'
+    : /cross/i.test(style)
+      ? 'The strap runs diagonally across the chest from one shoulder to the opposite hip, and the bag sits against the hip.'
+      : /hand|hold/i.test(style)
+        ? "The person's own hand grips the handle at the top; the bag hangs straight down below the fist under gravity, fingers wrapped around the handle (never through the bag), the bag body in front of the leg and not floating."
+        : '';
+  return [
+    'You are a virtual fitting room for a bag brand. Image 1 is a photo of a person. Image 2 shows ONLY the product' + (name ? ` (${name})` : '') + (cutout ? ' on a plain background' : '') + ' — it is the exact design to reproduce.',
+    `Create one photorealistic photo of the SAME person from image 1 carrying exactly ONE of that product${style ? `, ${style}` : ''}.`,
+    facts ? `Product facts: ${facts}.` : '',
+    r.size ? `Real size ${r.size}: scale it to the person's body accordingly (do not make it larger or smaller than that).` : "Scale the product realistically to the person's body.",
+    carry,
+    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, clothing, pose and background as in image 1. Only the arm and hand that hold or wear the product may move, and only as far as needed. No extra people.',
+    'ANATOMY: exactly two arms and two hands with five fingers each, all belonging to this person; never add a hand, arm or finger, and take no hands, arms, bodies or background from image 2.',
+    'KEEP THE PRODUCT: the same shape, proportions, colours, materials, hardware (zippers, buckles, clips, rings), handles and straps, and the same prints and lettering — letters must keep their spelling, orientation and position; do not redraw, translate, simplify or add logos. Do not add other bags or accessories.',
+    'LIGHT AND CONTACT: match the light direction, colour and shadows of image 1; give the product a soft contact shadow and let the body or hand overlap it where it naturally would.',
+    'FRAMING: output the same framing and aspect ratio as image 1, without cropping or zooming. Return only the edited photo.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export function buildPrompt(r: TryOnRequest, cutout: boolean) {
   r = { ...r, style: r.style?.slice(0, 200), productName: r.productName?.slice(0, 120) };
   const what = [r.productName, r.category].filter(Boolean).join(', ');
   return [
@@ -895,7 +935,7 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
   const ref = cutout ?? product;
   const out = await geminiImage(env, [
-    { text: buildPrompt(body, !!cutout) },
+    { text: body.promptVersion === 'v2' || env.PROMPT_VERSION === 'v2' ? buildPromptV2(body, !!cutout) : buildPrompt(body, !!cutout) },
     { inline_data: { mime_type: person.mime, data: person.data } },
     { inline_data: { mime_type: ref.mime, data: ref.data } },
   ]);

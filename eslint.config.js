@@ -10,7 +10,7 @@ export default [
   // Node scripts run by GitHub Actions (e.g. the owner password reset).
   {
     files: ['.github/scripts/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}'],
-    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', URL: 'readonly' } },
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', URL: 'readonly', fetch: 'readonly', setTimeout: 'readonly' } },
   },
   {
     files: ['**/*.{ts,tsx}'],
