@@ -12,6 +12,9 @@ import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 // Internal tool: only bundled in development builds (the published site does not ship its code).
 const AssetWorkspace = import.meta.env.DEV ? lazy(() => import('@/pages/workspace/AssetWorkspace')) : () => null;
 
+// Fitting comparison lab: only in builds made with VITE_LAB=1 (the published site contains none of its code).
+const Lab = import.meta.env.VITE_LAB === '1' ? lazy(() => import('@/v3/pages/Lab')) : () => null;
+
 // Site (v3). The previous site's code is kept in src/pages but no longer routed (its copy used the old concept).
 const V3Layout = lazy(() => import('@/v3/Layout').then((m) => ({ default: m.V3Layout })));
 const V3Home = lazy(() => import('@/v3/pages/Home'));
@@ -98,6 +101,7 @@ export default function App() {
               <Route path="/workspace" element={<AssetWorkspace />} />
             </Route>
           )}
+          {import.meta.env.VITE_LAB === '1' && <Route path="/lab" element={<Lab />} />}
           <Route path="/exhibition" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

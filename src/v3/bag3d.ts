@@ -412,7 +412,12 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { re
     catcher.receiveShadow = true;
     scene.add(catcher);
   }
+  let shadowVisible = true;
   return {
+    /** Shows or hides the soft shadow behind the bag (the lab's ON/OFF switch). */
+    setShadowVisible(v: boolean) {
+      shadowVisible = v;
+    },
     /** Put the handle top at (x, y) video pixels, the bag `widthPx` wide, turned `yaw` and tilted `roll` (radians). */
     render(W: number, H: number, p: LayerPlacement | null) {
       if (canvas.width !== W || canvas.height !== H) {
@@ -422,7 +427,7 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { re
         camera.updateProjectionMatrix();
       }
       bag.group.visible = !!p;
-      if (catcher) catcher.visible = !!p;
+      if (catcher) catcher.visible = !!p && shadowVisible;
       if (p) {
         const s = p.widthPx / bag.widthM;
         bag.group.scale.setScalar(s);
