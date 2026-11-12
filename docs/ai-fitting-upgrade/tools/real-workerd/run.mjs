@@ -41,5 +41,8 @@ try {
     }
     await stop();
   }
+  // one request = several attempts: new products cost 2 units each (cut-out + fitting), so a cap of 5 serves exactly 2 requests, then the 3rd gets the 5th unit for its cut-out and is refused at the fitting
+  { const state = `/tmp/wr/state-seq-${Date.now()}`; await start(state); hits = 0; const seq = []; for (let i = 0; i < 4; i++) seq.push((await post('10.99.0.1', `plano-bag/images/main.jpg?seq=${i}`)).status);
+    ok('sequential new-product requests, cap 5 units: statuses 200,200,429,429 and exactly 5 Gemini attempts', JSON.stringify(seq) === '[200,200,429,429]' && hits === 5, `statuses ${JSON.stringify(seq)}, ${hits} attempts`); await stop(); }
   for (const r of results) ok(`burst ${r.rep}: 48 simultaneous requests, cap 5 units → Gemini attempts ≤ 5`, r.attempts <= 5, `${r.attempts} attempts; ${r.served} fully served, ${r.refused429} refused (429), other ${JSON.stringify(r.other)}`);
 } finally { await stop(); mock.close(); }
