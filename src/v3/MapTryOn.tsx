@@ -4,13 +4,16 @@ import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
-import { FitBench } from './fitBench';
+import type { FitBench } from './fitBench';
 import { HAND_HOLD_MS, HoldPolicy, OneEuro, OneEuroAngle, Swing, isHandJump } from './fitFilter';
 
+/** Diagnostic switches for finding out WHICH V3/V4 part feels wrong on a real phone: `?off=swing,grip,mask,shadow` (any of them). */
+const offOf = (): Set<string> => new Set((new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('off') ?? '').split(',').filter(Boolean));
+
 /** Fitting engine from the page address: `?engine=v1` (original), `v2` (default), `v3` (contact shadow, swing, loss policy). */
-const engineOf = (): 'v1' | 'v2' | 'v3' => {
+const engineOf = (): 'v1' | 'v2' | 'v3' | 'v4' => {
   const e = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('engine');
-  return e === 'v1' || e === 'v3' ? e : 'v2';
+  return e === 'v1' || e === 'v3' || e === 'v4' ? e : 'v2';
 };
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
@@ -160,7 +163,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           bag.dispose();
           return;
         }
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: engineOf() === 'v3' }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: ['v3', 'v4'].includes(engineOf()), shadow: !offOf().has('shadow') }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
       }
       setStatus(null);
       setPhase('live');
@@ -205,7 +208,13 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
     const eng = engineOf();
     const v2 = eng !== 'v1';
-    const v3 = eng === 'v3';
+    const off = offOf();
+    const v3 = eng === 'v3' || eng === 'v4';
+    // V4 (experimental): V3 plus a lead — the pose is pushed forward along the hand's velocity by the time since the
+    // last detection, so the bag is not drawn where the hand was one detection ago (docs/ai-fitting-upgrade/V4-NATURALNESS.md).
+    const v4 = eng === 'v4';
+    let prevDet: { cx: number; top: number; at: number } | null = null;
+    let detVel = { x: 0, y: 0 };
     const policy = new HoldPolicy();
     const swing = new Swing();
     let freshAt = -1e9; // time of the last real hand detection
@@ -240,9 +249,16 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lastT = -1;
     let misses = 0;
 
-    const bench = query.get('bench')
-      ? new FitBench(`${engineOf()} ${product?.id ?? ''}`, { durSec: Number(query.get('dur')) || 0, device: query.get('dev') ?? undefined, post: !!query.get('post') })
-      : null;
+    // The on-device benchmark is an admin tool: it is only compiled into builds made with VITE_BENCH=1
+    // (the public build has no bench code at all — `grep lagi-bench dist` finds nothing).
+    let bench: FitBench | null = null;
+    if (import.meta.env.VITE_BENCH === '1' && query.get('bench')) {
+      const label = `${engineOf()} ${product?.id ?? ''}`;
+      const opts = { durSec: Number(query.get('dur')) || 0, device: query.get('dev') ?? undefined, post: !!query.get('post') };
+      void import('./fitBench').then((m) => {
+        bench = new m.FitBench(label, opts);
+      });
+    }
     const benchWrapped = new WeakSet<object>();
     let benchFreshSeen = -1;
     let benchInterval = 60;
@@ -258,7 +274,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         const l = layer.current.l;
         const orig = l.render.bind(l);
         l.render = (W, H, p) => {
-          bench.draw(performance.now(), p ? { x: p.x, y: p.y, alpha: p.alpha ?? 1 } : null);
+          bench?.draw(performance.now(), p ? { x: p.x, y: p.y, alpha: p.alpha ?? 1 } : null);
           return orig(W, H, p);
         };
       }
@@ -467,7 +483,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         // V3: the handle's apex goes where the fingers curl round it — about 3 cm above the bottom of the fist
         // whatever the handle's length. (V1/V2 put it 55 % of the handle length up: right for a 5 cm handle, but a
         // 13 cm tote handle ended up with its apex above the fist, the hand floating inside the loop.)
-        const apexUp = v3 ? Math.min(handlePx * 0.55, (l3!.gripCm ?? 3) * pxPerCm * sz) : handlePx * 0.55;
+        const apexUp = v3 && !off.has('grip') ? Math.min(handlePx * 0.55, (l3!.gripCm ?? 3) * pxPerCm * sz) : handlePx * 0.55;
         next = { cx: gx, top: fistBottom - apexUp, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
       }
       if (!next) {
@@ -496,6 +512,13 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           if (freshAt !== freshSeen) {
             freshSeen = freshAt;
             policy.fresh(now, placed.current, Math.hypot(handPts![5].x - handPts![17].x, handPts![5].y - handPts![17].y));
+            if (v4) {
+              if (prevDet && freshAt - prevDet.at < 400 && freshAt > prevDet.at) {
+                const dt = (freshAt - prevDet.at) / 1000;
+                detVel = { x: detVel.x * 0.5 + ((next.cx - prevDet.cx) / dt) * 0.5, y: detVel.y * 0.5 + ((next.top - prevDet.top) / dt) * 0.5 };
+              } else detVel = { x: 0, y: 0 };
+              prevDet = { cx: next.cx, top: next.top, at: freshAt };
+            }
           }
           const sh = policy.show(now, placed.current);
           if (!sh) {
@@ -504,10 +527,23 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           }
           pose = { ...placed.current, ...sh.pose };
           alpha = sh.alpha;
+          if (v4 && now - freshAt < 250) {
+            const palm = Math.hypot(handPts![5].x - handPts![17].x, handPts![5].y - handPts![17].y);
+            const age = (now - freshAt) / 1000;
+            const gate = Math.min(1, Math.max(0, (Math.hypot(detVel.x, detVel.y) / Math.max(1, palm) - 0.3) / 0.7)); // none for a nearly still hand
+            let dx = detVel.x * age * gate;
+            let dy = detVel.y * age * gate;
+            const mag = Math.hypot(dx, dy);
+            if (mag > palm * 0.6) {
+              dx *= (palm * 0.6) / mag;
+              dy *= (palm * 0.6) / mag;
+            }
+            pose = { ...pose, cx: pose.cx + dx, top: pose.top + dy };
+          }
           if (telemetry) telemetry.push({ t: now, v3: true, alpha, age: now - freshAt });
         }
         let roll = pose.rot;
-        if (held && fromHand) {
+        if (held && fromHand && !off.has('swing')) {
           swing.setLength(((l3.widthCm / l3.aspect) / 100) * 0.66);
           roll += swing.step(now, pose.cx, pose.w / (l3.widthCm / 100));
         } else swing.reset();
@@ -554,7 +590,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         hmctx.filter = 'none';
         hmctx.globalCompositeOperation = 'source-in';
         hmctx.drawImage(raw, 0, 0);
-        if (v3 && mask) {
+        if (v3 && mask && !off.has('mask')) {
           // Keep only what the person segmentation also calls person (generously: only clear background goes),
           // so the stroke-widened hand shape does not paint wall pixels over the handles.
           if (personDrawn !== personVer) {

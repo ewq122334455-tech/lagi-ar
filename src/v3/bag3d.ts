@@ -383,8 +383,9 @@ export interface LayerPlacement {
   alpha?: number;
 }
 
-export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { realism?: boolean } = {}) {
+export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { realism?: boolean; shadow?: boolean } = {}) {
   const real = !!opts.realism;
+  const shadowOn = real && opts.shadow !== false;
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
@@ -396,7 +397,7 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { re
   const camera = new THREE.OrthographicCamera(0, 1, 0, -1, -5000, 5000);
   let catcher: THREE.Mesh | null = null;
   const lightDir = new THREE.Vector3(0.22, 0.5, 1.5).normalize();
-  if (real) {
+  if (shadowOn) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     key.castShadow = true;
@@ -445,8 +446,8 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { re
           const hang = bag.hangM ?? bag.widthM * 1.5;
           const cx = p.x;
           const cy = -p.y - hang * s * 0.5;
-          catcher!.position.set(cx, cy, -(depth * 0.5 + 0.012) * s);
-          catcher!.scale.set(Math.max(bag.widthM, hang) * s * 2.6, hang * s * 1.9, 1);
+          if (catcher) catcher.position.set(cx, cy, -(depth * 0.5 + 0.012) * s);
+          if (catcher) catcher.scale.set(Math.max(bag.widthM, hang) * s * 2.6, hang * s * 1.9, 1);
           key.target.position.set(cx, cy, 0);
           key.position.set(cx + lightDir.x * 4 * s, cy + lightDir.y * 4 * s, lightDir.z * 4 * s);
           const R = Math.max(bag.widthM, hang) * s * 1.1;

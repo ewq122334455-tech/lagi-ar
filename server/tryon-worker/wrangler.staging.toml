@@ -1,0 +1,43 @@
+# STAGING copy of the Worker — a separate deployment next to production, with its own storage, a low spending
+# ceiling and its own allowed origin. NOTHING here is deployed by itself; see docs/ai-fitting-upgrade/V4-PUBLIC-ACCESS-ARCHITECTURE.md.
+#
+#   cd server/tryon-worker
+#   npx wrangler deploy --config wrangler.staging.toml          # only after the owner approves
+#   npx wrangler secret put GEMINI_API_KEY --config wrangler.staging.toml   # a separate, low-quota key — never the production key
+#
+# Production's file (wrangler.toml) is untouched: a different `name` means a different Worker, URL, KV and Durable Object.
+name = "lagi-tryon-staging"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[placement]
+mode = "targeted"
+region = "gcp:us-central1"
+
+[vars]
+GEMINI_MODEL = "gemini-2.5-flash-image"
+# ONLY the staging site's origin — replace with the real staging origin once it exists (no wildcard, no localhost).
+ALLOWED_ORIGINS = "https://STAGING-ORIGIN.example"
+PRODUCTS_BASE_URL = "https://STAGING-ORIGIN.example/products/"
+# Low ceilings for a limited tester group. Raise only deliberately.
+TRYON_DAILY_SITE = "30"
+TRYON_DAILY_PER_IP = "5"
+REALTIME_DAILY_SESSIONS = "10"
+
+# Separate, empty namespaces (created on first deploy): no production members, orders or cut-outs are shared.
+[[kv_namespaces]]
+binding = "USERS"
+
+[[kv_namespaces]]
+binding = "ORDERS"
+
+[[kv_namespaces]]
+binding = "MEDIA"
+
+[[durable_objects.bindings]]
+name = "RELAY"
+class_name = "GeminiRelay"
+
+[[migrations]]
+tag = "staging-v1"
+new_sqlite_classes = ["GeminiRelay"]

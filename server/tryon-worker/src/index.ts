@@ -32,6 +32,10 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   /** Decart API key (dct_…) for the realtime try-on — `wrangler secret put DECART_API_KEY`. Never sent to browsers. */
   DECART_API_KEY?: string;
+  /** AI photo fittings allowed per day across the whole site (cost cap; each is 1–2 Gemini calls). Default 300. */
+  TRYON_DAILY_SITE?: string;
+  /** AI photo fittings per visitor address per day. Default 12. */
+  TRYON_DAILY_PER_IP?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
@@ -915,6 +919,28 @@ export default {
   },
 };
 
+const TRYON_SITE_DEFAULT = 300;
+const TRYON_PER_IP_DEFAULT = 12;
+
+/** Returns a refusal when today's AI-photo budget is used up; otherwise counts this fitting and returns null. */
+async function tryOnQuota(env: Env, ip: string): Promise<{ reason: string; message: string } | null> {
+  const kv = env.MEDIA;
+  if (!kv) return null; // no storage bound (local tests): no cap
+  const day = new Date().toISOString().slice(0, 10);
+  const siteKey = `tryon:${day}:all`;
+  const ipKey = `tryon:${day}:${ip}`;
+  const site = Number((await kv.get(siteKey)) ?? 0);
+  const mine = Number((await kv.get(ipKey)) ?? 0);
+  const siteCap = Number(env.TRYON_DAILY_SITE ?? TRYON_SITE_DEFAULT);
+  const ipCap = Number(env.TRYON_DAILY_PER_IP ?? TRYON_PER_IP_DEFAULT);
+  if (mine >= ipCap) return { reason: 'daily_limit', message: `AI 사진 합성은 하루 ${ipCap}번까지 이용할 수 있습니다. 내일 다시 이용해 주세요.` };
+  if (site >= siteCap) return { reason: 'site_limit', message: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.' };
+  const ttl = { expirationTtl: 60 * 60 * 26 };
+  await kv.put(ipKey, String(mine + 1), ttl);
+  await kv.put(siteKey, String(site + 1), ttl);
+  return null;
+}
+
 /** POST / — compose the visitor photo with the product via Gemini. */
 async function tryOn(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405, headers);
@@ -939,6 +965,11 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if ('error' in product) return json({ error: product.error }, product.status, headers);
 
   // Falls back to the original photo if the cut-out could not be made this time.
+  // Daily cost caps (site-wide and per visitor address). Counted before the paid call, so a failed call still counts
+  // (Google may bill it too). KV is not atomic: a burst can overshoot by about the per-minute throttle, never unbounded.
+  const quota = await tryOnQuota(env, ip);
+  if (quota) return json({ error: quota.message, reason: quota.reason }, 429, headers);
+
   const { cut: cutout, busy } = await productCutout(env, body.productImage, product);
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
