@@ -32,10 +32,21 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   /** Decart API key (dct_…) for the realtime try-on — `wrangler secret put DECART_API_KEY`. Never sent to browsers. */
   DECART_API_KEY?: string;
-  /** AI photo fittings allowed per day across the whole site (cost cap; each is 1–2 Gemini calls). Default 300. */
-  TRYON_DAILY_SITE?: string;
-  /** AI photo fittings per visitor address per day. Default 12. */
-  TRYON_DAILY_PER_IP?: string;
+  /**
+   * Gemini cost budget, in UNITS. One unit = one paid image-generation ATTEMPT to Gemini (every HTTP call, retries and
+   * product cut-outs included; a text call costs TRYON_TEXT_UNIT). Per day, whole site. Default 400 (about USD 16 at 0.04).
+   */
+  TRYON_DAILY_UNITS_SITE?: string;
+  /** Units per visitor address per day. Default 24. */
+  TRYON_DAILY_UNITS_PER_IP?: string;
+  /** Units a text-model call counts as. Default 0.1. */
+  TRYON_TEXT_UNIT?: string;
+  /** Price of one unit in USD — only used to report the estimated spend. Default 0.04 (check the current price). */
+  TRYON_USD_PER_UNIT?: string;
+  /** "unmetered" turns the meter off (local tests ONLY). Anything else: a missing/broken counter BLOCKS paid calls. */
+  TRYON_QUOTA?: string;
+  /** Overrides the Gemini host (local mock server in tests only). */
+  GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
@@ -196,11 +207,12 @@ const CUTOUT_PROMPT = [
  * the AI tends to copy that person's hand into the result (the "third hand"). So the product is
  * first isolated on white — once per photo, kept in KV — and the fitting uses that cut-out.
  */
-async function productCutout(env: Env, url: string, product: { mime: string; data: string }): Promise<{ cut?: { mime: string; data: string }; busy?: boolean }> {
+async function productCutout(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ cut?: { mime: string; data: string }; busy?: boolean; quota?: QuotaFail }> {
   const key = `cutout:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return { cut: JSON.parse(cached) as { mime: string; data: string } };
-  const out = await geminiImage(env, [{ text: CUTOUT_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  const out = await geminiImage(env, [{ text: CUTOUT_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }], budget);
+  if (out.quota) return { quota: out.quota };
   if (!out.image) return { busy: out.reason === 'busy' };
   const m = /^data:([^;]+);base64,(.+)$/.exec(out.image);
   if (!m) return {};
@@ -215,7 +227,7 @@ const DESCRIBE_PROMPT =
   'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
 
 /** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
-async function productDescription(env: Env, url: string, product: { mime: string; data: string }): Promise<{ text?: string; note?: string }> {
+async function productDescription(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ text?: string; note?: string }> {
   const key = `desc:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return { text: cached };
@@ -228,6 +240,8 @@ async function productDescription(env: Env, url: string, product: { mime: string
         generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
       env.GEMINI_TEXT_MODEL ?? 'gemini-3.8-flash',
+      budget,
+      Number(env.TRYON_TEXT_UNIT ?? 0.1),
     );
     if (!res.ok) return { note: `HTTP ${res.status} ${(await res.text()).replace(/\s+/g, ' ').slice(0, 200)}` };
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[] };
@@ -249,11 +263,11 @@ const MATTE_PROMPT = [
 ].join(' ');
 
 /** The product on pure green, for the browser to key out and lay over the live video. Cached per product. */
-async function productMatte(env: Env, url: string, product: { mime: string; data: string }): Promise<{ mime: string; data: string } | undefined> {
+async function productMatte(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ mime: string; data: string } | undefined> {
   const key = `matte:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return JSON.parse(cached) as { mime: string; data: string };
-  const out = await geminiImage(env, [{ text: MATTE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  const out = await geminiImage(env, [{ text: MATTE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }], budget);
   const m = out.image && /^data:([^;]+);base64,(.+)$/.exec(out.image);
   if (!m) return undefined;
   const matte = { mime: m[1], data: m[2] };
@@ -831,12 +845,12 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     const product = await fetchProductImage(body.productImage ?? '', allowed);
     if ('error' in product) return json({ error: product.error }, product.status, headers);
     if (body.matte) {
-      const matte = env.GEMINI_API_KEY ? await productMatte(env, body.productImage!, product) : undefined;
+      const matte = env.GEMINI_API_KEY ? await productMatte(env, body.productImage!, product, { ip }) : undefined;
       if (!matte) return json({ error: '제품 이미지를 준비하지 못했습니다.' }, 502, headers);
       return json({ matte: `data:${matte.mime};base64,${matte.data}` }, 200, headers);
     }
     const [{ cut }, desc] = env.GEMINI_API_KEY
-      ? await Promise.all([productCutout(env, body.productImage!, product), productDescription(env, body.productImage!, product)])
+      ? await Promise.all([productCutout(env, body.productImage!, product, { ip }), productDescription(env, body.productImage!, product, { ip })])
       : [{}, {}];
     const img = cut ?? product;
     // descriptionNote: why there is no description (shown only in the response, for diagnosis).
@@ -921,61 +935,93 @@ export default {
   },
 };
 
-const TRYON_SITE_DEFAULT = 300;
-const TRYON_PER_IP_DEFAULT = 12;
+const UNITS_SITE_DEFAULT = 400;
+const UNITS_PER_IP_DEFAULT = 24;
+
+/** Who is being charged for a Gemini call. */
+interface Budget {
+  ip: string;
+}
+
+type QuotaFail = 'site_limit' | 'daily_limit' | 'quota_unavailable';
+
+/** Thrown instead of making a paid call when the budget is used up or the meter cannot be trusted. */
+class QuotaError extends Error {
+  constructor(readonly reason: QuotaFail) {
+    super(reason);
+  }
+}
+
+const QUOTA_MESSAGE: Record<QuotaFail, string> = {
+  daily_limit: 'AI 사진 합성 이용 한도(하루)에 도달했습니다. 내일 다시 이용해 주세요.',
+  site_limit: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.',
+  quota_unavailable: 'AI 사진 합성을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+};
+
+const centi = (units: number) => Math.round(units * 100);
 
 /**
- * Returns a refusal when today's AI-photo budget is used up; otherwise counts this fitting and returns null.
+ * The cost meter. Called before EVERY paid Gemini HTTP attempt (see callGemini) — not once per visitor request, because
+ * one request can make several attempts: a first-time product cut-out, the fitting, and up to 3 tries of each.
  *
- * With the QUOTA Durable Object bound, the check-and-count is ATOMIC: one object per day handles requests one at a
- * time, so N simultaneous requests can never get past the cap. Without it (local tests, or before the binding is
- * deployed) it falls back to KV, which is read-then-write and therefore only an approximate cap under bursts.
+ * Reserve-before-call: the units are taken first (atomically, in the QuotaCounter Durable Object); a refusal means no call.
+ * FAIL CLOSED: if the counter is missing, errors, times out or answers nonsense, the call is refused (`quota_unavailable`)
+ * — never "allowed because the meter is broken". The only way around is TRYON_QUOTA="unmetered", for local tests.
  */
-async function tryOnQuota(env: Env, ip: string): Promise<{ reason: string; message: string } | null> {
+async function takeUnits(env: Env, budget: Budget, units: number): Promise<void> {
+  if (env.TRYON_QUOTA === 'unmetered') return;
+  if (!env.QUOTA) throw new QuotaError('quota_unavailable');
   const day = new Date().toISOString().slice(0, 10);
-  const siteCap = Number(env.TRYON_DAILY_SITE ?? TRYON_SITE_DEFAULT);
-  const ipCap = Number(env.TRYON_DAILY_PER_IP ?? TRYON_PER_IP_DEFAULT);
-  const refuse = (reason: string | undefined) =>
-    reason === 'daily_limit'
-      ? { reason, message: `AI 사진 합성은 하루 ${ipCap}번까지 이용할 수 있습니다. 내일 다시 이용해 주세요.` }
-      : { reason: 'site_limit', message: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.' };
-  if (env.QUOTA) {
+  const siteCap = centi(Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT));
+  const ipCap = centi(Number(env.TRYON_DAILY_UNITS_PER_IP ?? UNITS_PER_IP_DEFAULT));
+  if (!Number.isFinite(siteCap) || !Number.isFinite(ipCap)) throw new QuotaError('quota_unavailable');
+  let out: { ok?: unknown; reason?: unknown };
+  try {
     const stub = env.QUOTA.get(env.QUOTA.idFromName(`tryon:${day}`));
-    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip, siteCap, ipCap }) });
-    const out = (await res.json()) as { ok: boolean; reason?: string };
-    return out.ok ? null : refuse(out.reason);
+    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip: budget.ip, cost: centi(units), siteCap, ipCap }) });
+    if (!res.ok) throw new Error(`counter ${res.status}`);
+    out = (await res.json()) as typeof out;
+  } catch {
+    throw new QuotaError('quota_unavailable');
   }
-  const kv = env.MEDIA;
-  if (!kv) return null; // no storage bound (local tests): no cap
-  const siteKey = `tryon:${day}:all`;
-  const ipKey = `tryon:${day}:${ip}`;
-  const site = Number((await kv.get(siteKey)) ?? 0);
-  const mine = Number((await kv.get(ipKey)) ?? 0);
-  if (mine >= ipCap) return refuse('daily_limit');
-  if (site >= siteCap) return refuse('site_limit');
-  const ttl = { expirationTtl: 60 * 60 * 26 };
-  await kv.put(ipKey, String(mine + 1), ttl);
-  await kv.put(siteKey, String(site + 1), ttl);
-  return null;
+  if (out.ok === true) return;
+  if (out.ok === false && (out.reason === 'daily_limit' || out.reason === 'site_limit')) throw new QuotaError(out.reason);
+  throw new QuotaError('quota_unavailable');
+}
+
+/** Gives units back — only when the call provably never reached Google (the request itself threw before any answer). */
+async function refundUnits(env: Env, budget: Budget, units: number): Promise<void> {
+  if (env.TRYON_QUOTA === 'unmetered' || !env.QUOTA) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.QUOTA.get(env.QUOTA.idFromName(`tryon:${day}`)).fetch('https://quota/refund', { method: 'POST', body: JSON.stringify({ ip: budget.ip, cost: centi(units) }) });
+  } catch {
+    /* a failed refund only costs the visitor a unit; never the owner money */
+  }
 }
 
 /**
- * Durable Object: the day's AI-photo counters. A Durable Object runs one request at a time between its storage
- * operations (input gates), so read-check-write here cannot interleave — which is what makes the cap hold under bursts.
- * One instance per day (`tryon:<date>`); old days simply stop being used.
+ * Durable Object: the day's cost counters, in centi-units (integers, no float drift). It handles one request at a time
+ * between storage operations (input gates), and writes both counters in ONE put, so check-and-take cannot interleave
+ * or half-apply: N simultaneous requests can never get past the cap. One instance per day (`tryon:<date>`).
  */
 export class QuotaCounter {
-  constructor(private state: { storage: { get(k: string): Promise<unknown>; put(k: string, v: unknown): Promise<void> } }) {}
+  constructor(private state: { storage: { get(k: string): Promise<unknown>; put(entries: Record<string, unknown>): Promise<void> } }) {}
 
   async fetch(request: Request): Promise<Response> {
-    const { ip, siteCap, ipCap } = (await request.json()) as { ip: string; siteCap: number; ipCap: number };
+    const path = new URL(request.url).pathname;
+    const body = (await request.json()) as { ip: string; cost: number; siteCap?: number; ipCap?: number };
     const site = Number((await this.state.storage.get('all')) ?? 0);
-    const mine = Number((await this.state.storage.get(`ip:${ip}`)) ?? 0);
-    if (mine >= ipCap) return Response.json({ ok: false, reason: 'daily_limit' });
-    if (site >= siteCap) return Response.json({ ok: false, reason: 'site_limit' });
-    await this.state.storage.put('all', site + 1);
-    await this.state.storage.put(`ip:${ip}`, mine + 1);
-    return Response.json({ ok: true });
+    const mine = Number((await this.state.storage.get(`ip:${body.ip}`)) ?? 0);
+    if (path === '/refund') {
+      await this.state.storage.put({ all: Math.max(0, site - body.cost), [`ip:${body.ip}`]: Math.max(0, mine - body.cost) });
+      return Response.json({ ok: true });
+    }
+    if (!Number.isFinite(body.cost) || body.cost <= 0) return Response.json({ ok: false, reason: 'bad_request' }, { status: 400 });
+    if (mine + body.cost > (body.ipCap ?? 0)) return Response.json({ ok: false, reason: 'daily_limit' });
+    if (site + body.cost > (body.siteCap ?? 0)) return Response.json({ ok: false, reason: 'site_limit' });
+    await this.state.storage.put({ all: site + body.cost, [`ip:${body.ip}`]: mine + body.cost });
+    return Response.json({ ok: true, spentCenti: site + body.cost });
   }
 }
 
@@ -1003,12 +1049,9 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if ('error' in product) return json({ error: product.error }, product.status, headers);
 
   // Falls back to the original photo if the cut-out could not be made this time.
-  // Daily cost caps (site-wide and per visitor address). Counted before the paid call, so a failed call still counts
-  // (Google may bill it too). KV is not atomic: a burst can overshoot by about the per-minute throttle, never unbounded.
-  const quota = await tryOnQuota(env, ip);
-  if (quota) return json({ error: quota.message, reason: quota.reason }, 429, headers);
-
-  const { cut: cutout, busy } = await productCutout(env, body.productImage, product);
+  const budget: Budget = { ip };
+  const { cut: cutout, busy, quota } = await productCutout(env, body.productImage, product, budget);
+  if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
   const ref = cutout ?? product;
@@ -1020,12 +1063,17 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
       const f = typeof u === 'string' ? await fetchProductImage(u, allowed) : null;
       if (f && !('error' in f)) faces.push(f);
     }
-  const out = await geminiImage(env, [
-    { text: v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
-    { inline_data: { mime_type: person.mime, data: person.data } },
-    { inline_data: { mime_type: ref.mime, data: ref.data } },
-    ...faces.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
-  ]);
+  const out = await geminiImage(
+    env,
+    [
+      { text: v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
+      { inline_data: { mime_type: person.mime, data: person.data } },
+      { inline_data: { mime_type: ref.mime, data: ref.data } },
+      ...faces.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
+    ],
+    budget,
+  );
+  if (out.quota) return json({ error: QUOTA_MESSAGE[out.quota], reason: out.quota }, out.quota === 'quota_unavailable' ? 503 : 429, headers);
   if (!out.image) {
     const message =
       out.reason === 'busy'
@@ -1073,16 +1121,26 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * US: wherever the visitor is, the request to Google leaves from there. Without the binding (e.g.
  * local tests) the call is made directly.
  */
-async function callGemini(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
+async function callGemini(env: Env, body: string, model: string, budget: Budget, units = 1): Promise<Response> {
+  await takeUnits(env, budget, units); // throws QuotaError: no unit, no call
+  try {
+    return await callGeminiUnmetered(env, body, model);
+  } catch (e) {
+    await refundUnits(env, budget, units); // the request itself failed before any answer: it cannot have been billed
+    throw e;
+  }
+}
+
+async function callGeminiUnmetered(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
   if (env.RELAY) {
     const stub = env.RELAY.get(env.RELAY.idFromName('gemini-us-west'), { locationHint: 'wnam' });
     return stub.fetch('https://relay/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-model': model }, body });
   }
-  return geminiFetch(env.GEMINI_API_KEY, model, body);
+  return geminiFetch(env.GEMINI_API_KEY, model, body, env.GEMINI_BASE_URL);
 }
 
-function geminiFetch(key: string, model: string, body: string) {
-  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+function geminiFetch(key: string, model: string, body: string, base = 'https://generativelanguage.googleapis.com') {
+  return fetch(`${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body,
@@ -1107,7 +1165,7 @@ export class GeminiRelay {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
-    const res = await geminiFetch(this.env.GEMINI_API_KEY, request.headers.get('x-model') || this.env.GEMINI_MODEL, await request.text());
+    const res = await geminiFetch(this.env.GEMINI_API_KEY, request.headers.get('x-model') || this.env.GEMINI_MODEL, await request.text(), this.env.GEMINI_BASE_URL);
     const headers = new Headers(res.headers);
     // On a refusal, say where the call left from — the visible clue when location is the problem.
     if (!res.ok) headers.set('x-lagi-egress', `relay ${await egress()}`);
@@ -1115,7 +1173,7 @@ export class GeminiRelay {
   }
 }
 
-type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string };
+type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string; quota?: QuotaFail };
 
 // People photos trip the general filters more often than they should; only clearly harmful content is blocked.
 const SAFETY = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'].map((category) => ({
@@ -1123,7 +1181,7 @@ const SAFETY = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_C
   threshold: 'BLOCK_ONLY_HIGH',
 }));
 
-async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult> {
+async function geminiImage(env: Env, parts: GeminiPart[], budget: Budget): Promise<GeminiResult> {
   let reason: GeminiResult['reason'] = 'no_image';
   let detail = '';
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1133,14 +1191,24 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult>
       attempt > 0 && reason === 'no_image'
         ? [...parts, { text: 'Respond with the edited image only. Do not reply with text; always return an image.' }]
         : parts;
-    const res = await callGemini(
-      env,
-      JSON.stringify({
-        contents: [{ role: 'user', parts: askParts }],
-        generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
-        safetySettings: SAFETY,
-      }),
-    );
+    let res: Response;
+    try {
+      res = await callGemini(
+        env,
+        JSON.stringify({
+          contents: [{ role: 'user', parts: askParts }],
+          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+          safetySettings: SAFETY,
+        }),
+        env.GEMINI_MODEL,
+        budget,
+      );
+    } catch (e) {
+      if (e instanceof QuotaError) return { quota: e.reason };
+      reason = 'error';
+      detail = (e as Error).message.slice(0, 120);
+      continue;
+    }
     if (!res.ok) {
       const text = (await res.text()).slice(0, 300);
       console.log('gemini error', attempt, res.status, text);

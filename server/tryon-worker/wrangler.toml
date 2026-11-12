@@ -21,9 +21,10 @@ ALLOWED_ORIGINS = "https://ewq122334455-tech.github.io"
 # WITHDRAW_REVIEW_POLICY = "keep-anonymous"
 # Published product data. The Worker re-reads prices from here for every order (never from the browser).
 PRODUCTS_BASE_URL = "https://ewq122334455-tech.github.io/lagi-ar/products/"
-# AI photo fitting cost caps (each fitting = 1–2 Gemini calls, ~USD 0.04 each — check current price). Defaults: 300/day site-wide, 12/day per visitor address.
-# TRYON_DAILY_SITE = "300"
-# TRYON_DAILY_PER_IP = "12"
+# Gemini cost budget in UNITS (1 unit = one paid image-generation attempt, retries and cut-outs included, ~USD 0.04 — check the current price).
+# Defaults: 400/day for the whole site, 24/day per visitor address. A missing or broken counter BLOCKS paid calls (fail closed).
+# TRYON_DAILY_UNITS_SITE = "400"
+# TRYON_DAILY_UNITS_PER_IP = "24"
 # Realtime try-on: sessions per day for the whole site (each up to 20 s, about $0.40 at $0.02/s).
 REALTIME_DAILY_SESSIONS = "100"
 
@@ -45,7 +46,7 @@ binding = "MEDIA"
 name = "RELAY"
 class_name = "GeminiRelay"
 
-# Atomic daily counters for the AI-photo cost caps (see tryOnQuota). Needs the migration below on first deploy.
+# Atomic daily counters for the AI-photo cost caps (see takeUnits). Needs the migration below on first deploy.
 [[durable_objects.bindings]]
 name = "QUOTA"
 class_name = "QuotaCounter"

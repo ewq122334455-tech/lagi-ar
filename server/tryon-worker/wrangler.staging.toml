@@ -20,8 +20,8 @@ GEMINI_MODEL = "gemini-2.5-flash-image"
 ALLOWED_ORIGINS = "https://STAGING-ORIGIN.example"
 PRODUCTS_BASE_URL = "https://STAGING-ORIGIN.example/products/"
 # Low ceilings for a limited tester group. Raise only deliberately.
-TRYON_DAILY_SITE = "30"
-TRYON_DAILY_PER_IP = "5"
+TRYON_DAILY_UNITS_SITE = "40"
+TRYON_DAILY_UNITS_PER_IP = "8"
 REALTIME_DAILY_SESSIONS = "10"
 
 # Separate, empty namespaces (created on first deploy): no production members, orders or cut-outs are shared.
@@ -38,7 +38,7 @@ binding = "MEDIA"
 name = "RELAY"
 class_name = "GeminiRelay"
 
-# Atomic daily counters for the AI-photo cost caps (see tryOnQuota). Needs the migration below on first deploy.
+# Atomic daily counters for the AI-photo cost caps (see takeUnits). Needs the migration below on first deploy.
 [[durable_objects.bindings]]
 name = "QUOTA"
 class_name = "QuotaCounter"
