@@ -38,6 +38,15 @@ binding = "MEDIA"
 name = "RELAY"
 class_name = "GeminiRelay"
 
+# Atomic daily counters for the AI-photo cost caps (see tryOnQuota). Needs the migration below on first deploy.
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "QuotaCounter"
+
 [[migrations]]
 tag = "staging-v1"
 new_sqlite_classes = ["GeminiRelay"]
+
+[[migrations]]
+tag = "staging-v2"
+new_sqlite_classes = ["QuotaCounter"]

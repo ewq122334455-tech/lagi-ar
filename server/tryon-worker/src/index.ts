@@ -39,6 +39,8 @@ export interface Env {
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
+  /** Atomic daily counters for the AI-photo cost caps (Durable Object `QuotaCounter`). Without it the caps fall back to KV, which is NOT atomic. */
+  QUOTA?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   RELAY?: { idFromName(name: string): unknown; get(id: unknown, opts?: { locationHint?: string }): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   /** Product cut-outs (product alone on white), made once per product photo. Optional. */
   MEDIA?: KV;
@@ -922,23 +924,59 @@ export default {
 const TRYON_SITE_DEFAULT = 300;
 const TRYON_PER_IP_DEFAULT = 12;
 
-/** Returns a refusal when today's AI-photo budget is used up; otherwise counts this fitting and returns null. */
+/**
+ * Returns a refusal when today's AI-photo budget is used up; otherwise counts this fitting and returns null.
+ *
+ * With the QUOTA Durable Object bound, the check-and-count is ATOMIC: one object per day handles requests one at a
+ * time, so N simultaneous requests can never get past the cap. Without it (local tests, or before the binding is
+ * deployed) it falls back to KV, which is read-then-write and therefore only an approximate cap under bursts.
+ */
 async function tryOnQuota(env: Env, ip: string): Promise<{ reason: string; message: string } | null> {
+  const day = new Date().toISOString().slice(0, 10);
+  const siteCap = Number(env.TRYON_DAILY_SITE ?? TRYON_SITE_DEFAULT);
+  const ipCap = Number(env.TRYON_DAILY_PER_IP ?? TRYON_PER_IP_DEFAULT);
+  const refuse = (reason: string | undefined) =>
+    reason === 'daily_limit'
+      ? { reason, message: `AI 사진 합성은 하루 ${ipCap}번까지 이용할 수 있습니다. 내일 다시 이용해 주세요.` }
+      : { reason: 'site_limit', message: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.' };
+  if (env.QUOTA) {
+    const stub = env.QUOTA.get(env.QUOTA.idFromName(`tryon:${day}`));
+    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip, siteCap, ipCap }) });
+    const out = (await res.json()) as { ok: boolean; reason?: string };
+    return out.ok ? null : refuse(out.reason);
+  }
   const kv = env.MEDIA;
   if (!kv) return null; // no storage bound (local tests): no cap
-  const day = new Date().toISOString().slice(0, 10);
   const siteKey = `tryon:${day}:all`;
   const ipKey = `tryon:${day}:${ip}`;
   const site = Number((await kv.get(siteKey)) ?? 0);
   const mine = Number((await kv.get(ipKey)) ?? 0);
-  const siteCap = Number(env.TRYON_DAILY_SITE ?? TRYON_SITE_DEFAULT);
-  const ipCap = Number(env.TRYON_DAILY_PER_IP ?? TRYON_PER_IP_DEFAULT);
-  if (mine >= ipCap) return { reason: 'daily_limit', message: `AI 사진 합성은 하루 ${ipCap}번까지 이용할 수 있습니다. 내일 다시 이용해 주세요.` };
-  if (site >= siteCap) return { reason: 'site_limit', message: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.' };
+  if (mine >= ipCap) return refuse('daily_limit');
+  if (site >= siteCap) return refuse('site_limit');
   const ttl = { expirationTtl: 60 * 60 * 26 };
   await kv.put(ipKey, String(mine + 1), ttl);
   await kv.put(siteKey, String(site + 1), ttl);
   return null;
+}
+
+/**
+ * Durable Object: the day's AI-photo counters. A Durable Object runs one request at a time between its storage
+ * operations (input gates), so read-check-write here cannot interleave — which is what makes the cap hold under bursts.
+ * One instance per day (`tryon:<date>`); old days simply stop being used.
+ */
+export class QuotaCounter {
+  constructor(private state: { storage: { get(k: string): Promise<unknown>; put(k: string, v: unknown): Promise<void> } }) {}
+
+  async fetch(request: Request): Promise<Response> {
+    const { ip, siteCap, ipCap } = (await request.json()) as { ip: string; siteCap: number; ipCap: number };
+    const site = Number((await this.state.storage.get('all')) ?? 0);
+    const mine = Number((await this.state.storage.get(`ip:${ip}`)) ?? 0);
+    if (mine >= ipCap) return Response.json({ ok: false, reason: 'daily_limit' });
+    if (site >= siteCap) return Response.json({ ok: false, reason: 'site_limit' });
+    await this.state.storage.put('all', site + 1);
+    await this.state.storage.put(`ip:${ip}`, mine + 1);
+    return Response.json({ ok: true });
+  }
 }
 
 /** POST / — compose the visitor photo with the product via Gemini. */

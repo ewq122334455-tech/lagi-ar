@@ -45,9 +45,18 @@ binding = "MEDIA"
 name = "RELAY"
 class_name = "GeminiRelay"
 
+# Atomic daily counters for the AI-photo cost caps (see tryOnQuota). Needs the migration below on first deploy.
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "QuotaCounter"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["GeminiRelay"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["QuotaCounter"]
 
 # Optional: Cloudflare Rate Limiting for log-ins (in addition to the per-email lock kept in KV).
 # Enable only after checking it is available on the account; without it the KV lock still applies.

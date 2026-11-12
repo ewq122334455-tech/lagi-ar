@@ -36,3 +36,23 @@ env = { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm', ALLOWED_ORIGINS: O };
 r = await call(env, '4.4.4.4'); ok('no KV bound (local tests): no cap, still works', r.status === 200);
 const bad = await w.fetch(new Request('https://w/', { method: 'POST', headers: { Origin: 'https://evil.example', 'Content-Type': 'application/json' }, body: '{}' }), env);
 ok('browser origin not on the list: 403 (unchanged)', bad.status === 403);
+
+// ---- whole Worker with the QUOTA Durable Object (mock namespace around the real QuotaCounter class), 40 simultaneous requests ----
+{
+  const { QuotaCounter } = await import(D + '/worker.mjs');
+  const instances = new Map();
+  const mkStub = (name) => {
+    if (!instances.has(name)) { const m = new Map(); let chain = Promise.resolve(); const inst = new QuotaCounter({ storage: { get: async (k) => { await new Promise((r) => setTimeout(r, 3)); return m.get(k); }, put: async (k, v) => { await new Promise((r) => setTimeout(r, 3)); m.set(k, v); } } }); instances.set(name, { inst, run: (fn) => (chain = chain.then(fn)) }); }
+    const o = instances.get(name);
+    return { fetch: (u, init) => o.run(() => o.inst.fetch(new Request(u, init))) }; // one request at a time, like a Durable Object
+  };
+  const QUOTA = { idFromName: (n) => n, get: (id) => mkStub(id) };
+  const before = geminiCalls;
+  const env2 = { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm', ALLOWED_ORIGINS: O, MEDIA: kv(), QUOTA, TRYON_DAILY_SITE: '5', TRYON_DAILY_PER_IP: '99' };
+  const res = await Promise.all(Array.from({ length: 40 }, (_, i) => call(env2, `10.3.${i}.1`)));
+  const served = res.filter((r) => r.status === 200).length;
+  ok('QUOTA bound: 40 simultaneous requests, site cap 5 → exactly 5 served', served === 5, `${served} served`);
+  ok('QUOTA bound: Gemini called only for the 5 served (first-time cut-out cached once → ≤ 6 calls)', geminiCalls - before <= 10 && geminiCalls - before >= 5, `${geminiCalls - before} calls`);
+  const refused = await Promise.all(res.filter((r) => r.status !== 200).slice(0, 3).map((r) => r.json()));
+  ok('QUOTA bound: refused requests answer 429 site_limit', res.filter((r) => r.status === 429).length === 35 && refused.every((b) => b.reason === 'site_limit'));
+}

@@ -20,7 +20,7 @@ function run(series, engine, P) {
   const W = series[0].W, H = series[0].H, out = [];
   let di = -1, handYaw = 0, handScale = 0, grip = null, last = null, miss = 0, rawGrip = null, rejected = 0, placed = null, lastHandAt = -1e9;
   const fx = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fy = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fw = new OneEuro(0.8, 0.002), fyaw = new OneEuroAngle(1.5, 0.8);
-  const tx = null, ty = null, tw = null; const pol = engine === 'v3' ? new HoldPolicy(P.maxHold, P.minHold, P.fast, P.glide) : null; let lastFreshT = -1e9;
+  const tx = null, ty = null, tw = null; let prevDet = null, detVel = { x: 0, y: 0 }, freshT = -1e9; const pol = (engine === 'v3' || engine === 'v4') ? new HoldPolicy(P.maxHold, P.minHold, P.fast, P.glide) : null; let lastFreshT = -1e9;
   const rawTrace = []; let truth = [];
   const T = series[series.length - 1].t;
   for (let t = 0; t <= T; t += 1000 / 60) {
@@ -45,12 +45,25 @@ function run(series, engine, P) {
     let vis = false, p = null, yaw = handYaw; let alphaOut = 1;
     if (fromHand) {
       const next = last.place(handScale || last.palm / 7.5);
-      if (engine === 'v2' || engine === 'v3') { p = { cx: fx.filter(next.cx, t), top: fy.filter(next.top, t), w: fw.filter(next.w, t) }; yaw = fyaw.filter(handYaw, t); }
+      if (engine === 'v2' || engine === 'v3' || engine === 'v4') { p = { cx: fx.filter(next.cx, t), top: fy.filter(next.top, t), w: fw.filter(next.w, t) }; yaw = fyaw.filter(handYaw, t); }
       
       else p = smoothV1(placed, next);
       if (engine === 'v2') lastHandAt = t;
       placed = p; vis = true;
-      if (pol) { if (detected) pol.fresh(t, p, last.palm); const s = pol.show(t, p); if (s) { p = { ...s.pose }; alphaOut = s.alpha; } else { vis = false; p = null; } }
+      if (pol) {
+        if (detected) {
+          pol.fresh(t, p, last.palm);
+          if (engine === 'v4') { // same maths as src/v3/MapTryOn.tsx (V4 lead)
+            if (prevDet && t - prevDet.t < 400 && t > prevDet.t) { const dt = (t - prevDet.t) / 1000; detVel = { x: detVel.x * 0.5 + ((next.cx - prevDet.cx) / dt) * 0.5, y: detVel.y * 0.5 + ((next.top - prevDet.top) / dt) * 0.5 }; } else detVel = { x: 0, y: 0 };
+            prevDet = { cx: next.cx, top: next.top, t }; freshT = t;
+          }
+        }
+        const s = pol.show(t, p);
+        if (s) {
+          p = { ...s.pose }; alphaOut = s.alpha;
+          if (engine === 'v4' && t - freshT < 250) { const palm = last.palm; const age = (t - freshT) / 1000; const gate = Math.min(1, Math.max(0, (Math.hypot(detVel.x, detVel.y) / Math.max(1, palm) - 0.3) / 0.7)); let dx = detVel.x * age * gate, dy = detVel.y * age * gate; const mag = Math.hypot(dx, dy); if (mag > palm * 0.6) { dx *= palm * 0.6 / mag; dy *= palm * 0.6 / mag; } p = { ...p, cx: p.cx + dx, top: p.top + dy }; }
+        } else { vis = false; p = null; }
+      }
     } else if (pol) { const s = pol.show(t, null); if (s) { p = s.pose; vis = true; alphaOut = s.alpha; } }
     else if (engine !== 'v1' && placed && t - lastHandAt < HAND_HOLD_MS) { p = placed; yaw = fyaw.filter(handYaw, t); vis = true; }
     out.push({ t, vis: vis && alphaOut > 0.5, ...(p ?? {}), yaw });
@@ -84,7 +97,7 @@ const truthAt = (series, t) => { // placement the hand really has at time t (fro
 const blank = (series, a, b) => series.map((d) => (d.t >= a && d.t < b ? { ...d, ok: false } : d));
 function study(name, speed, gapMs, starts) {
   const clean = base(name, speed); const rows = [];
-  for (const engine of ['v1', 'v2', 'v3']) {
+  for (const engine of ['v1', 'v2', 'v3', 'v4']) {
     let shown = 0, total = 0, errSum = 0, errMax = 0, snapMax = 0, staleShown = 0, wrongShown = 0, n = 0;
     for (const a of starts) {
       const b = a + gapMs; const { out } = run(blank(clean, a, b), engine, P0);
@@ -114,7 +127,7 @@ fs.writeFileSync(`${R}/aiq/loss-study.json`, JSON.stringify(all, null, 1));
 // Trace of one scenario for the plot: pan clip, 600 ms blanked at 40 % of the clip.
 {
   const clean = base('fist3-pan', 1); const a = Math.round(0.4 * 11900), b = a + 600; const tr = { gap: [a, b], truth: [], engines: {} };
-  for (const engine of ['v1', 'v2', 'v3']) { const { out } = run(blank(clean, a, b), engine, P0); tr.engines[engine] = out.filter((o) => o.t >= a - 600 && o.t <= b + 900).map((o) => ({ t: Math.round(o.t), cx: o.vis ? +o.cx.toFixed(1) : null })); }
+  for (const engine of ['v1', 'v2', 'v3', 'v4']) { const { out } = run(blank(clean, a, b), engine, P0); tr.engines[engine] = out.filter((o) => o.t >= a - 600 && o.t <= b + 900).map((o) => ({ t: Math.round(o.t), cx: o.vis ? +o.cx.toFixed(1) : null })); }
   for (let t = a - 600; t <= b + 900; t += 1000 / 60) tr.truth.push({ t: Math.round(t), cx: +truthAt(clean, t).cx.toFixed(1) });
   fs.writeFileSync(`${R}/aiq/loss-trace.json`, JSON.stringify(tr));
 }
