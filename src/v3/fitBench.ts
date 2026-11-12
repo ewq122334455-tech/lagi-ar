@@ -40,9 +40,29 @@ export class FitBench {
   private panel: HTMLDivElement;
   private line: HTMLDivElement;
   private timer: number;
+  private post: boolean;
   private meta: Record<string, unknown>;
+  // Tracking: a "loss" is the stretch where the hand tracker had no fresh detection. What the page can see of
+  // it is how long it lasted, whether a bag was still drawn, and how far the drawn bag moved per frame after.
+  private tracked = true;
+  private lossStart = 0;
+  private lossDrawnMs = 0;
+  private lossHiddenMs = 0;
+  private lastDrawn: { x: number; y: number; at: number } | null = null;
+  private lastDrawTime = 0;
+  private recoverUntil = 0;
+  private recoverSteps: number[] = [];
+  private currentRecoverMax = 0;
+  readonly losses: { lostMs: number; drawnMs: number; hiddenMs: number; recoverStepPx: number }[] = [];
+  private framesTracked = 0;
+  private framesDrawn = 0;
+  private framesAll = 0;
+  private ended = false;
+  private durSec: number;
 
-  constructor(label: string) {
+  constructor(label: string, opts: { durSec?: number; device?: string; post?: boolean } = {}) {
+    this.durSec = opts.durSec ?? 0;
+    this.post = !!opts.post;
     const nav = navigator as Navigator & { deviceMemory?: number; getBattery?: () => Promise<{ level: number }> };
     this.meta = {
       label,
@@ -51,6 +71,8 @@ export class FitBench {
       memoryGB: nav.deviceMemory ?? null,
       screen: `${screen.width}x${screen.height}@${devicePixelRatio}`,
       startedAt: new Date().toISOString(),
+      device: opts.device ?? null,
+      durSecRequested: opts.durSec ?? null,
     };
     nav.getBattery?.().then((b) => (this.battery = b)).catch(() => undefined);
     (window as unknown as { __bench: unknown }).__bench = { meta: this.meta, windows: this.windows, summary: () => this.summary() };
@@ -68,6 +90,9 @@ export class FitBench {
     this.panel.append(
       this.line,
       btn('결과 복사', () => void navigator.clipboard?.writeText(JSON.stringify(this.summary(), null, 1)).then(() => (this.line.textContent = '복사됨'))),
+      btn('파일로 저장', () => this.download()),
+      btn('저장된 전체 복사', () => void navigator.clipboard?.writeText(JSON.stringify(FitBench.saved(), null, 1)).then(() => (this.line.textContent = `전체 ${FitBench.saved().length}건 복사됨`))),
+      ...(this.post ? [btn('서버로 저장', () => void this.upload())] : []),
       btn('끄기', () => this.stop()),
     );
     document.body.append(this.panel);
@@ -76,6 +101,12 @@ export class FitBench {
 
   /** Call once per rendered frame with the rAF timestamp and the JS time this frame took. */
   frame(now: number, jsMs: number) {
+    if (this.ended) return;
+    this.framesAll++;
+    if (this.durSec && (performance.now() - this.start) / 1000 >= this.durSec) {
+      this.finish();
+      return;
+    }
     if (this.last) this.frames.push(now - this.last);
     this.last = now;
     this.js.push(jsMs);
@@ -83,6 +114,46 @@ export class FitBench {
       const f = this.frames.slice(-60);
       this.line.textContent = `fps ${(1000 / Math.max(1, avg(f))).toFixed(0)} · js ${avg(this.js.slice(-60)).toFixed(1)}ms · pose ${avg(this.pose.slice(-20)).toFixed(0)}ms · hand ${avg(this.hand.slice(-20)).toFixed(0)}ms · ${Math.round((performance.now() - this.start) / 1000)}s`;
     }
+  }
+
+  /** Per frame: does the tracker currently have the hand (a fresh detection)? */
+  track(now: number, tracked: boolean) {
+    if (this.ended) return;
+    if (tracked) this.framesTracked++;
+    if (this.tracked && !tracked) {
+      this.tracked = false;
+      this.lossStart = now;
+      this.lossDrawnMs = 0;
+      this.lossHiddenMs = 0;
+    } else if (!this.tracked && tracked) {
+      this.tracked = true;
+      this.currentRecoverMax = 0;
+      this.recoverUntil = now + 400;
+      this.pendingLoss = { lostMs: now - this.lossStart, drawnMs: this.lossDrawnMs, hiddenMs: this.lossHiddenMs };
+    }
+    if (this.pendingLoss && now >= this.recoverUntil) {
+      this.losses.push({ ...this.pendingLoss, recoverStepPx: +this.currentRecoverMax.toFixed(1) });
+      this.recoverSteps.push(this.currentRecoverMax);
+      this.pendingLoss = null;
+    }
+  }
+  private pendingLoss: { lostMs: number; drawnMs: number; hiddenMs: number } | null = null;
+
+  /** Per frame: where the bag was drawn (null = not drawn). Fed from the 3D layer's render calls. */
+  draw(now: number, pose: { x: number; y: number; alpha: number } | null) {
+    if (this.ended) return;
+    const dt = this.lastDrawTime ? now - this.lastDrawTime : 0;
+    this.lastDrawTime = now;
+    const shown = !!pose && pose.alpha > 0.5;
+    if (shown) this.framesDrawn++;
+    if (!this.tracked) {
+      if (shown) this.lossDrawnMs += dt;
+      else this.lossHiddenMs += dt;
+    }
+    if (shown && this.lastDrawn && now - this.lastDrawn.at < 100 && this.pendingLoss) {
+      this.currentRecoverMax = Math.max(this.currentRecoverMax, Math.hypot(pose!.x - this.lastDrawn.x, pose!.y - this.lastDrawn.y));
+    }
+    this.lastDrawn = shown ? { x: pose!.x, y: pose!.y, at: now } : null;
   }
 
   det(kind: 'pose' | 'hand', ms: number) {
@@ -133,9 +204,62 @@ export class FitBench {
       detectMsLastThird: +(m(tail, 'poseMs') + m(tail, 'handMs')).toFixed(1),
       worstFps1pctLow: w.length ? Math.min(...w.map((x) => x.fps1pctLow)) : null,
       longFramesTotal: w.reduce((a, x) => a + x.longFrames, 0),
+      framesDrawnPct: this.framesAll ? +((this.framesDrawn / this.framesAll) * 100).toFixed(1) : null,
+      framesTrackedPct: this.framesAll ? +((this.framesTracked / this.framesAll) * 100).toFixed(1) : null,
+      lossEvents: this.losses.length,
+      lossMeanMs: this.losses.length ? Math.round(avg(this.losses.map((l) => l.lostMs))) : null,
+      lossDrawnMsMean: this.losses.length ? Math.round(avg(this.losses.map((l) => l.drawnMs))) : null,
+      recoverStepPxMax: this.losses.length ? +Math.max(...this.losses.map((l) => l.recoverStepPx)).toFixed(1) : null,
+      recoverStepPxMean: this.losses.length ? +avg(this.losses.map((l) => l.recoverStepPx)).toFixed(1) : null,
+      losses: this.losses,
       batteryPctPerMin: b0 !== null && b1 !== null && dur > 0 ? +(((b0 - b1) * 100) / (dur / 60)).toFixed(2) : null,
       windows: w,
     };
+  }
+
+  /** Ends the run, saves its summary in this browser (localStorage) and shows it. */
+  finish() {
+    if (this.ended) return;
+    this.flush();
+    const sum = this.summary();
+    this.ended = true;
+    window.clearInterval(this.timer);
+    try {
+      const all = FitBench.saved();
+      all.push(sum);
+      localStorage.setItem('lagi-bench-runs', JSON.stringify(all));
+    } catch {
+      /* private mode: copy/download still work */
+    }
+    this.line.textContent = `완료 ${sum.seconds}s · fps ${sum.fpsFirstThird}→${sum.fpsLastThird} · 유실 ${sum.lossEvents}회 · 저장됨(${FitBench.saved().length}건)`;
+  }
+
+  static saved(): ReturnType<FitBench['summary']>[] {
+    try {
+      return JSON.parse(localStorage.getItem('lagi-bench-runs') ?? '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  private download() {
+    const sum = this.summary();
+    const blob = new Blob([JSON.stringify(sum, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `lagi-bench-${String(this.meta.label).replace(/\W+/g, '-')}-${Date.now()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  /** Posts the summary to the host that serves this page (scripts/device-test-server.mjs). Same origin only. */
+  private async upload() {
+    try {
+      const r = await fetch('/__bench-upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.summary()) });
+      this.line.textContent = r.ok ? '서버에 저장됨' : `서버 저장 실패 (${r.status})`;
+    } catch {
+      this.line.textContent = '서버 저장 실패';
+    }
   }
 
   stop() {

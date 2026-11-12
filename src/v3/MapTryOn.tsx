@@ -240,13 +240,27 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lastT = -1;
     let misses = 0;
 
-    const bench = query.get('bench') ? new FitBench(`${engineOf()} ${product?.id ?? ''}`) : null;
+    const bench = query.get('bench')
+      ? new FitBench(`${engineOf()} ${product?.id ?? ''}`, { durSec: Number(query.get('dur')) || 0, device: query.get('dev') ?? undefined, post: !!query.get('post') })
+      : null;
+    const benchWrapped = new WeakSet<object>();
     const frame = (now: number) => {
       if (!stream.current) {
         bench?.stop();
         return;
       }
       const t0 = performance.now();
+      if (bench && layer.current && !benchWrapped.has(layer.current)) {
+        // Feed the bench with where the bag is actually drawn each frame.
+        benchWrapped.add(layer.current);
+        const l = layer.current.l;
+        const orig = l.render.bind(l);
+        l.render = (W, H, p) => {
+          bench.draw(performance.now(), p ? { x: p.x, y: p.y, alpha: p.alpha ?? 1 } : null);
+          return orig(W, H, p);
+        };
+      }
+      bench?.track(now, !!grip && now - freshAt < 250);
       frameBody(now);
       bench?.frame(now, performance.now() - t0);
     };
