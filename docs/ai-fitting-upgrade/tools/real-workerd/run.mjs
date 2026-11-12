@@ -1,6 +1,6 @@
 // Real workerd + real Durable Object + LOCAL mock Gemini (a node http server). No call leaves this machine.
 // node run.mjs <wrangler binary> <fake-gemini.png>
-import http from 'node:http'; import fs from 'node:fs'; import { spawn } from 'node:child_process'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+import http from 'node:http'; import fs from 'node:fs'; import { spawn, spawnSync } from 'node:child_process'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const [WR, PNG] = process.argv.slice(2);
 const png = fs.readFileSync(PNG).toString('base64');
@@ -8,7 +8,11 @@ const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images
 let hits = 0;
 const mock = http.createServer((req, res) => {
   if (req.url.includes(':generateContent')) { hits++; setTimeout(() => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: png } }] } }] })); }, 30); req.resume(); return; }
-  if (req.url.startsWith('/lagi-ar/products/')) { res.writeHead(200, { 'Content-Type': 'image/jpeg' }); return res.end(jpg); }
+  if (req.url.startsWith('/lagi-ar/products/')) {
+    const f = '/home/user/lagi-ar/public/' + decodeURIComponent(req.url.split('?')[0].replace('/lagi-ar/', ''));
+    if (fs.existsSync(f) && fs.statSync(f).isFile()) { res.writeHead(200, { 'Content-Type': f.endsWith('.json') ? 'application/json' : f.endsWith('.png') ? 'image/png' : 'image/jpeg' }); return res.end(fs.readFileSync(f)); }
+    res.writeHead(200, { 'Content-Type': 'image/jpeg' }); return res.end(jpg);
+  }
   res.writeHead(404); res.end();
 });
 await new Promise((r) => mock.listen(9911, '127.0.0.1', r));
@@ -44,5 +48,13 @@ try {
   // one request = several attempts: new products cost 2 units each (cut-out + fitting), so a cap of 5 serves exactly 2 requests, then the 3rd gets the 5th unit for its cut-out and is refused at the fitting
   { const state = `/tmp/wr/state-seq-${Date.now()}`; await start(state); hits = 0; const seq = []; for (let i = 0; i < 4; i++) seq.push((await post('10.99.0.1', `plano-bag/images/main.jpg?seq=${i}`)).status);
     ok('sequential new-product requests, cap 5 units: statuses 200,200,429,429 and exactly 5 Gemini attempts', JSON.stringify(seq) === '[200,200,429,429]' && hits === 5, `statuses ${JSON.stringify(seq)}, ${hits} attempts`); await stop(); }
+  // pre-generation: first run makes the cut-outs (paid in production, mock here), the second run is all cache hits
+  { const state = `/tmp/wr/state-pre-${Date.now()}`; await start(state);
+    const run = () => spawnSync('node', ['/home/user/lagi-ar/scripts/pregenerate-cutouts.mjs', '--worker', `http://127.0.0.1:${PORT}`, '--site', 'http://127.0.0.1:9911/lagi-ar/', '--products', 'plano-bag,daily-tote', '--yes', '--max-usd', '5', '--out', '/tmp/wr/pre-out.json'], { env: { ...process.env, LAGI_AB_CONFIRM_PAID: 'yes' }, encoding: 'utf8' });
+    hits = 0; const r1 = run(); const first = hits;
+    hits = 0; const r2 = run(); const second = hits;
+    ok('pre-generation, 1st run: both products get a cut-out (2 cut-out attempts + 2 text calls)', /2\/2 cut-outs ready/.test(r1.stdout) && first === 4, `${first} Gemini calls; ${(r1.stdout.match(/\d\/\d cut-outs ready/) || [''])[0]}`);
+    ok('pre-generation, 2nd run: everything is a cache hit — 0 Gemini calls', /2\/2 cut-outs ready/.test(r2.stdout) && second === 0, `${second} Gemini calls`);
+    await stop(); }
   for (const r of results) ok(`burst ${r.rep}: 48 simultaneous requests, cap 5 units → Gemini attempts ≤ 5`, r.attempts <= 5, `${r.attempts} attempts; ${r.served} fully served, ${r.refused429} refused (429), other ${JSON.stringify(r.other)}`);
 } finally { await stop(); mock.close(); }

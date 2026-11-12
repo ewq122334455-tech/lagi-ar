@@ -849,9 +849,10 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
       if (!matte) return json({ error: '제품 이미지를 준비하지 못했습니다.' }, 502, headers);
       return json({ matte: `data:${matte.mime};base64,${matte.data}` }, 200, headers);
     }
-    const [{ cut }, desc] = env.GEMINI_API_KEY
+    const [{ cut, quota }, desc] = env.GEMINI_API_KEY
       ? await Promise.all([productCutout(env, body.productImage!, product, { ip }), productDescription(env, body.productImage!, product, { ip })])
-      : [{}, {}];
+      : [{} as { cut?: { mime: string; data: string }; quota?: QuotaFail }, {} as { text?: string; note?: string }];
+    if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
     const img = cut ?? product;
     // descriptionNote: why there is no description (shown only in the response, for diagnosis).
     return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description: desc.text, descriptionNote: desc.note }, 200, headers);
@@ -860,19 +861,23 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
   if (throttled(`rt:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
 
-  // Daily caps: per visitor, and for the whole site (the bill is per second).
-  const day = new Date().toISOString().slice(0, 10);
-  const kv = env.MEDIA;
-  const ipKey = `rt:${day}:${ip}`;
-  const allKey = `rt:${day}:all`;
-  const used = Number((await kv?.get(ipKey)) ?? 0);
-  const usedAll = Number((await kv?.get(allKey)) ?? 0);
+  // Daily caps: per visitor, and for the whole site (the bill is per second). Reserved atomically BEFORE the paid token is
+  // minted (same meter as the photo fitting; a missing or broken counter blocks: no token). No refunds, as for photos.
   const dailyAll = Number(env.REALTIME_DAILY_SESSIONS ?? 100);
   const unlimited = (env.REALTIME_UNLIMITED ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   const member = unlimited.length && env.USERS ? await sessionUser(env.USERS, request) : null;
   const vip = !!member && unlimited.includes(member.user.email.toLowerCase());
-  if (!vip && used >= REALTIME_PER_IP) return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
-  if (!vip && usedAll >= dailyAll) return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+  let usedToday = 0;
+  if (!vip) {
+    try {
+      usedToday = (await meter(env, 'rt', ip, 1, dailyAll, REALTIME_PER_IP)).ipSpent;
+    } catch (e) {
+      if (!(e instanceof QuotaError)) throw e;
+      if (e.reason === 'daily_limit') return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
+      if (e.reason === 'site_limit') return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+      return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
+    }
+  }
 
   const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
   const res = await fetch('https://api.decart.ai/v1/client/tokens', {
@@ -892,9 +897,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
   if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
   if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: null }, 200, headers);
-  await kv?.put(ipKey, String(used + 1), { expirationTtl: 60 * 60 * 26 });
-  await kv?.put(allKey, String(usedAll + 1), { expirationTtl: 60 * 60 * 26 });
-  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: REALTIME_PER_IP - used - 1 }, 200, headers);
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
 }
 
 // ---- Router ----------------------------------------------------------------------------------
@@ -969,22 +972,47 @@ const centi = (units: number) => Math.round(units * 100);
  * — never "allowed because the meter is broken". The only way around is TRYON_QUOTA="unmetered", for local tests.
  */
 async function takeUnits(env: Env, budget: Budget, units: number): Promise<void> {
-  if (env.TRYON_QUOTA === 'unmetered') return;
+  const siteCap = Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT);
+  const ipCap = Number(env.TRYON_DAILY_UNITS_PER_IP ?? UNITS_PER_IP_DEFAULT);
+  await meter(env, 'tryon', budget.ip, units, siteCap, ipCap);
+}
+
+/** Only localhost origins may run unmetered: a production origin with the meter switched off is a misconfiguration, so it blocks. */
+function localOnly(env: Env): boolean {
+  return env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean).every((o) => {
+    try {
+      return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(o).hostname);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * The shared meter (also used for the realtime/Decart sessions): reserve `units` for this visitor address and for the
+ * whole site, atomically, in the day's counter object for `scope`. Throws QuotaError when over a cap or when the meter
+ * cannot be trusted. Returns how many units this address has used so far today (for "N left" messages).
+ */
+async function meter(env: Env, scope: 'tryon' | 'rt', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
+  if (env.TRYON_QUOTA === 'unmetered') {
+    if (localOnly(env)) return { ipSpent: 0 };
+    throw new QuotaError('quota_unavailable'); // "unmetered" next to a real origin is never allowed
+  }
   if (!env.QUOTA) throw new QuotaError('quota_unavailable');
   const day = new Date().toISOString().slice(0, 10);
-  const siteCap = centi(Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT));
-  const ipCap = centi(Number(env.TRYON_DAILY_UNITS_PER_IP ?? UNITS_PER_IP_DEFAULT));
-  if (!Number.isFinite(siteCap) || !Number.isFinite(ipCap)) throw new QuotaError('quota_unavailable');
-  let out: { ok?: unknown; reason?: unknown };
+  const siteCap = centi(siteCapUnits);
+  const ipCap = centi(ipCapUnits);
+  if (!Number.isFinite(siteCap) || !Number.isFinite(ipCap) || !Number.isFinite(units) || units <= 0) throw new QuotaError('quota_unavailable');
+  let out: { ok?: unknown; reason?: unknown; ipSpentCenti?: unknown };
   try {
-    const stub = env.QUOTA.get(env.QUOTA.idFromName(`tryon:${day}`));
-    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip: budget.ip, cost: centi(units), siteCap, ipCap }) });
+    const stub = env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`));
+    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip, cost: centi(units), siteCap, ipCap }) });
     if (!res.ok) throw new Error(`counter ${res.status}`);
     out = (await res.json()) as typeof out;
   } catch {
     throw new QuotaError('quota_unavailable');
   }
-  if (out.ok === true) return;
+  if (out.ok === true && typeof out.ipSpentCenti === 'number') return { ipSpent: out.ipSpentCenti / 100 };
   if (out.ok === false && (out.reason === 'daily_limit' || out.reason === 'site_limit')) throw new QuotaError(out.reason);
   throw new QuotaError('quota_unavailable');
 }
@@ -1012,7 +1040,7 @@ export class QuotaCounter {
     if (mine + body.cost > (body.ipCap ?? 0)) return Response.json({ ok: false, reason: 'daily_limit' });
     if (site + body.cost > (body.siteCap ?? 0)) return Response.json({ ok: false, reason: 'site_limit' });
     await this.state.storage.put({ all: site + body.cost, [`ip:${body.ip}`]: mine + body.cost });
-    return Response.json({ ok: true, spentCenti: site + body.cost });
+    return Response.json({ ok: true, spentCenti: site + body.cost, ipSpentCenti: mine + body.cost });
   }
 }
 

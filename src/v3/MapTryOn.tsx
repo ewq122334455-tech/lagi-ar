@@ -11,9 +11,9 @@ import { HAND_HOLD_MS, HoldPolicy, OneEuro, OneEuroAngle, Swing, isHandJump } fr
 const offOf = (): Set<string> => new Set((new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('off') ?? '').split(',').filter(Boolean));
 
 /** Fitting engine from the page address: `?engine=v1` (original), `v2` (default), `v3` (contact shadow, swing, loss policy). */
-const engineOf = (): 'v1' | 'v2' | 'v3' | 'v4' => {
+const engineOf = (): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' => {
   const e = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('engine');
-  return e === 'v1' || e === 'v3' || e === 'v4' ? e : 'v2';
+  return e === 'v1' || e === 'v3' || e === 'v4' || e === 'v5' ? e : 'v2';
 };
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
@@ -163,7 +163,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           bag.dispose();
           return;
         }
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: ['v3', 'v4'].includes(engineOf()), shadow: !offOf().has('shadow') }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: ['v3', 'v4', 'v5'].includes(engineOf()), shadow: !offOf().has('shadow') }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
       }
       setStatus(null);
       setPhase('live');
@@ -209,7 +209,14 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     const eng = engineOf();
     const v2 = eng !== 'v1';
     const off = offOf();
-    const v3 = eng === 'v3' || eng === 'v4';
+    const v3 = eng === 'v3' || eng === 'v4' || eng === 'v5';
+    // V5 (experimental): V3 with a faster-following position filter (beta 0.02 instead of 0.008 — measured to beat V4's lead on
+    // every metric, docs/ai-fitting-upgrade/V5-MOTION-COMPARISON.md) and the hand scale taken from the knuckle row (the depth
+    // the handle hangs from) instead of all nine bones. Neither is validated against a real ruler: V5-PHYSICAL-ACCURACY.md.
+    const v5 = eng === 'v5';
+    // Hand-scale estimator: `?scale=all|mcp|knuckle` (default: all, V5: mcp); `?gain=0.9` multiplies the size (calibration by hand).
+    const scaleMode = query.get('scale') ?? (v5 ? 'mcp' : 'all');
+    const sizeGain = Math.min(2, Math.max(0.5, Number(query.get('gain')) || 1));
     // V4 (experimental): V3 plus a lead — the pose is pushed forward along the hand's velocity by the time since the
     // last detection, so the bag is not drawn where the hand was one detection ago (docs/ai-fitting-upgrade/V4-NATURALNESS.md).
     const v4 = eng === 'v4';
@@ -221,8 +228,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let freshSeen = -1e9;
     let tint: [number, number, number] = [1, 1, 1];
     const telemetry: Record<string, number | boolean>[] | null = query.get('fitdebug') ? ((window as unknown as { __fit: unknown[] }).__fit = []) as Record<string, number | boolean>[] : null;
-    const fx = new OneEuro(2.0, 0.008);
-    const fy = new OneEuro(2.0, 0.008);
+    const fx = new OneEuro(2.0, eng === 'v5' ? 0.02 : 0.008);
+    const fy = new OneEuro(2.0, eng === 'v5' ? 0.02 : 0.008);
     const fw = new OneEuro(0.8, 0.002);
     const fyaw = new OneEuroAngle(1.5, 0.8);
     let lastFromHand: Placement | null = null;
@@ -379,6 +386,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             // image plane gives pixels per metre whichever way the hand is turned (both shrink together).
             let pix = 0;
             let met = 0;
+            let pixM = 0; // the knuckle row (5-9, 9-13, 13-17): the same depth as the handle the bag hangs from
+            let metM = 0;
             for (const [a, b] of [
               [0, 5],
               [0, 9],
@@ -390,13 +399,19 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
               [5, 6],
               [9, 10],
             ]) {
-              pix += Math.hypot(handPts[a].x - handPts[b].x, handPts[a].y - handPts[b].y);
-              met += Math.hypot(hw[a].x - hw[b].x, hw[a].y - hw[b].y);
+              const pl = Math.hypot(handPts[a].x - handPts[b].x, handPts[a].y - handPts[b].y);
+              const ml = Math.hypot(hw[a].x - hw[b].x, hw[a].y - hw[b].y);
+              pix += pl;
+              met += ml;
+              if ((a === 5 && b === 9) || (a === 9 && b === 13) || (a === 13 && b === 17)) {
+                pixM += pl;
+                metM += ml;
+              }
             }
-            if (met > 0.01) {
-              const s = pix / met / 100;
-              handScale = v2 ? s : handScale ? handScale + (s - handScale) * 0.25 : s;
-            }
+            let s = met > 0.01 ? pix / met / 100 : 0;
+            if (scaleMode === 'mcp' && metM > 0.012) s = pixM / metM / 100;
+            if (scaleMode === 'knuckle') s = Math.hypot(handPts[5].x - handPts[17].x, handPts[5].y - handPts[17].y) / 7.5;
+            if (s > 0) handScale = v2 ? s : handScale ? handScale + (s - handScale) * 0.25 : s;
             handMiss = 0;
             freshAt = now;
           } else if (++handMiss > 8) {
@@ -473,7 +488,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       if (fromHand) {
         const hp = handPts!;
         // Size from the hand's 3D scale (turn-proof); the knuckle line (~7.5 cm) only until that is known.
-        const pxPerCm = handScale || Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y) / 7.5;
+        const pxPerCm = (handScale || Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y) / 7.5) * sizeGain;
         const widthCm = l3!.widthCm;
         // The bag hangs below the whole hand: its handle loops up into the fist, the body starts under it.
         const fistBottom = Math.max(...hp.map((q) => q.y));

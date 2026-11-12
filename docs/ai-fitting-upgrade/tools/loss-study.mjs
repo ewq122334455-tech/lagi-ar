@@ -19,8 +19,8 @@ const smoothV1 = (prev, n, k = 0.4) => (prev ? { cx: prev.cx + (n.cx - prev.cx) 
 function run(series, engine, P) {
   const W = series[0].W, H = series[0].H, out = [];
   let di = -1, handYaw = 0, handScale = 0, grip = null, last = null, miss = 0, rawGrip = null, rejected = 0, placed = null, lastHandAt = -1e9;
-  const fx = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fy = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fw = new OneEuro(0.8, 0.002), fyaw = new OneEuroAngle(1.5, 0.8);
-  const tx = null, ty = null, tw = null; let prevDet = null, detVel = { x: 0, y: 0 }, freshT = -1e9; const pol = (engine === 'v3' || engine === 'v4') ? new HoldPolicy(P.maxHold, P.minHold, P.fast, P.glide) : null; let lastFreshT = -1e9;
+  const fx = new OneEuro(P.v2c ?? 2.0, engine === 'v5' ? 0.02 : (P.v2b ?? 0.008)), fy = new OneEuro(P.v2c ?? 2.0, engine === 'v5' ? 0.02 : (P.v2b ?? 0.008)), fw = new OneEuro(0.8, 0.002), fyaw = new OneEuroAngle(1.5, 0.8);
+  const tx = null, ty = null, tw = null; let prevDet = null, detVel = { x: 0, y: 0 }, freshT = -1e9; const pol = (engine === 'v3' || engine === 'v4' || engine === 'v5') ? new HoldPolicy(P.maxHold, P.minHold, P.fast, P.glide) : null; let lastFreshT = -1e9;
   const rawTrace = []; let truth = [];
   const T = series[series.length - 1].t;
   for (let t = 0; t <= T; t += 1000 / 60) {
@@ -45,7 +45,7 @@ function run(series, engine, P) {
     let vis = false, p = null, yaw = handYaw; let alphaOut = 1;
     if (fromHand) {
       const next = last.place(handScale || last.palm / 7.5);
-      if (engine === 'v2' || engine === 'v3' || engine === 'v4') { p = { cx: fx.filter(next.cx, t), top: fy.filter(next.top, t), w: fw.filter(next.w, t) }; yaw = fyaw.filter(handYaw, t); }
+      if (engine === 'v2' || engine === 'v3' || engine === 'v4' || engine === 'v5') { p = { cx: fx.filter(next.cx, t), top: fy.filter(next.top, t), w: fw.filter(next.w, t) }; yaw = fyaw.filter(handYaw, t); }
       
       else p = smoothV1(placed, next);
       if (engine === 'v2') lastHandAt = t;
@@ -97,7 +97,7 @@ const truthAt = (series, t) => { // placement the hand really has at time t (fro
 const blank = (series, a, b) => series.map((d) => (d.t >= a && d.t < b ? { ...d, ok: false } : d));
 function study(name, speed, gapMs, starts) {
   const clean = base(name, speed); const rows = [];
-  for (const engine of ['v1', 'v2', 'v3', 'v4']) {
+  for (const engine of ['v1', 'v2', 'v3', 'v4', 'v5']) {
     let shown = 0, total = 0, errSum = 0, errMax = 0, snapMax = 0, staleShown = 0, wrongShown = 0, n = 0;
     for (const a of starts) {
       const b = a + gapMs; const { out } = run(blank(clean, a, b), engine, P0);

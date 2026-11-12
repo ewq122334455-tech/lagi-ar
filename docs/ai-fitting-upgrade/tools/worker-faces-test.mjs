@@ -15,10 +15,11 @@ globalThis.fetch = async (url, init) => {
   if (url.includes('/products/')) return new Response(jpg, { headers: { 'Content-Type': 'image/jpeg' } });
   throw new Error('unexpected fetch ' + url);
 };
-const { default: w } = await import(D + '/worker.mjs');
+const { default: w, QuotaCounter } = await import(D + '/worker.mjs');
+const { makeQuotaNs } = await import('./quota-mock.mjs');
 const kv = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, put: async (k, v) => { m.set(k, v); }, delete: async (k) => m.delete(k), list: async () => ({ keys: [], list_complete: true }) }; };
 const O = 'https://ewq122334455-tech.github.io';
-const env = () => ({ TRYON_QUOTA: 'unmetered', GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-2.5-flash-image', ALLOWED_ORIGINS: O, MEDIA: kv() });
+const env = () => ({ QUOTA: makeQuotaNs(QuotaCounter), GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-2.5-flash-image', ALLOWED_ORIGINS: O, MEDIA: kv() });
 const person = 'data:image/jpeg;base64,' + jpg.toString('base64');
 const F = (n) => `${O}/lagi-ar/products/plano-bag/model/${n}.jpg`;
 const req = (extra) => new Request('https://w/', { method: 'POST', headers: { Origin: O, 'Content-Type': 'application/json' }, body: JSON.stringify({ person, productImage: F('front').replace('model/front', 'images/main'), productName: 'Plano', category: 'Bag', style: 'held in one hand', ...extra }) });
