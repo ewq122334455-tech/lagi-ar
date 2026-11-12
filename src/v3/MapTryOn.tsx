@@ -171,7 +171,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
       setStatus(null);
       setPhase('live');
       // Never wait long for the hand model: the bag follows the wrist until it is ready.
-      const handReady = product.model3d && hands.current ? await Promise.race([hands.current, new Promise<null>((ok) => window.setTimeout(() => ok(null), 8000))]) : null;
+      const handReady = product.model3d && hands.current ? await Promise.race([hands.current, new Promise<null>((ok) => window.setTimeout(() => ok(null), labRef.current ? 90000 : 8000))]) : null;
       run(marker, handReady);
     } catch (e) {
       stop();
@@ -348,7 +348,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
       }
       if ((bench || labOn) && freshAt !== benchFreshSeen) {
         // Typical time between hand detections: a gap is a "loss" only if it is clearly longer than that.
-        if (benchFreshSeen > 0 && freshAt - benchFreshSeen < 3000) benchInterval += (freshAt - benchFreshSeen - benchInterval) * 0.3;
+        if (benchFreshSeen > 0 && freshAt - benchFreshSeen < 10000) benchInterval += (freshAt - benchFreshSeen - benchInterval) * 0.3;
         benchFreshSeen = freshAt;
       }
       const trackedNow = !!grip && now - freshAt < Math.max(250, benchInterval * 2.5);

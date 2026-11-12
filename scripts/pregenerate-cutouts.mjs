@@ -20,6 +20,7 @@ const perUnit = Number(arg('usd-per-unit', '0.04'));
 const cap = Number(arg('max-usd', '0'));
 const local = arg('local-products', ''); // read product data from disk instead of the site (tests)
 const only = arg('products', '').split(',').filter(Boolean);
+const saveDir = arg('save', ''); // keep the returned cut-out pictures here (for scripts/ai-eval-kit.mjs --cutouts)
 
 const read = async (rel) => (local ? JSON.parse(fs.readFileSync(`${local}/${rel}`, 'utf8')) : await (await fetch(new URL(rel, site))).json());
 const manifest = await read('products/manifest.json');
@@ -45,6 +46,11 @@ for (const it of items) {
   const res = await fetch(new URL(worker.replace(/\/$/, '') + '/cutout'), { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: arg('origin', origin) }, body: JSON.stringify({ productImage: it.image }) });
   const b = await res.json().catch(() => ({}));
   out.push({ id: it.id, status: res.status, cutout: !!b.cutout, reason: b.reason });
+  if (saveDir && b.cutout && typeof b.image === 'string') {
+    fs.mkdirSync(saveDir, { recursive: true });
+    const m = /^data:image\/(\w+);base64,(.+)$/.exec(b.image);
+    if (m) fs.writeFileSync(`${saveDir}/${it.id}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`, Buffer.from(m[2], 'base64'));
+  }
   console.log(`${it.id.padEnd(24)} ${res.status} cutout=${!!b.cutout}${b.reason ? ' ' + b.reason : ''}`);
   await new Promise((r) => setTimeout(r, 1200));
 }

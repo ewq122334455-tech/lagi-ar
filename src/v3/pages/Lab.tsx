@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapTryOn } from '../MapTryOn';
 import { useRealProducts } from '../data';
-import type { LabApi, LabEngine, LabOptions, LabStats } from '../labTypes';
+import type { LabApi, LabControl, LabEngine, LabOptions, LabStats } from '../labTypes';
 
 /**
  * Fitting comparison lab — DEVELOPMENT ONLY (built with VITE_LAB=1; the public site has no code of this page).
@@ -45,19 +45,25 @@ function download(blob: Blob, name: string) {
 export default function Lab() {
   const { products } = useRealProducts();
   const withModel = useMemo(() => products.filter((p) => p.model3d), [products]);
-  const [productId, setProductId] = useState('plano-bag');
+  // Optional start-up choices in the address: #/lab?product=plano-bag&engines=v2,v3
+  const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  const [productId, setProductId] = useState(q.get('product') ?? 'plano-bag');
   const product = withModel.find((p) => p.id === productId) ?? withModel[0];
-  const [engines, setEngines] = useState<LabEngine[]>(['v2', 'v3', 'v5']);
+  const [engines, setEngines] = useState<LabEngine[]>(() => {
+    const e = (q.get('engines') ?? '').split(',').filter((x): x is LabEngine => ['v1', 'v2', 'v3', 'v4', 'v5'].includes(x));
+    return e.length ? e : ['v2', 'v3', 'v5'];
+  });
   const [opts, setOpts] = useState<LabOptions>(DEFAULT_OPTIONS);
   const [source, setSource] = useState<'none' | 'camera' | 'file'>('none');
   const [mirror, setMirror] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [stats, setStats] = useState<Partial<Record<LabEngine, LabStats>>>({});
+  // Live numbers live in a ref and are read by small polling views, so the panes are not re-rendered 4 times a second.
+  const statsRef = useRef<Partial<Record<LabEngine, LabStats>>>({});
   const apis = useRef<Partial<Record<LabEngine, LabApi | null>>>({});
   const clip = useRef<HTMLVideoElement | null>(null);
   const [recording, setRecording] = useState(false);
-  const rec = useRef<{ mr: MediaRecorder; chunks: Blob[]; timer: number } | null>(null);
+  const rec = useRef<{ mr: MediaRecorder; chunks: Blob[]; timer: number; cx: CanvasRenderingContext2D } | null>(null);
   const set = <K extends keyof LabOptions>(k: K, v: LabOptions[K]) => setOpts((o) => ({ ...o, [k]: v }));
 
   useEffect(() => () => stream?.getTracks().forEach((t) => t.stop()), [stream]);
@@ -94,7 +100,9 @@ export default function Lab() {
     }
   }
 
-  const onStats = useCallback((s: LabStats) => setStats((o) => ({ ...o, [s.engine]: s })), []);
+  const onStats = useCallback((s: LabStats) => {
+    statsRef.current[s.engine] = s;
+  }, []);
 
   // ---- saving ----
   function grid(): HTMLCanvasElement | null {
@@ -103,7 +111,7 @@ export default function Lab() {
     if (rawSrc) cells.push({ label: '원본 카메라', c: rawSrc });
     for (const e of engines) {
       const c = apis.current[e]?.compose();
-      if (c) cells.push({ label: `${e.toUpperCase()}${stats[e] ? ` · ${f1(stats[e]!.fps, 0)}fps · ${stats[e]!.tracked ? '손 추적' : '손 없음'}` : ''}`, c });
+      if (c) cells.push({ label: `${e.toUpperCase()}${statsRef.current[e] ? ` · ${f1(statsRef.current[e]!.fps, 1)}fps · ${statsRef.current[e]!.tracked ? '손 추적' : '손 없음'}` : ''}`, c });
     }
     if (!cells.length) return null;
     const cols = cells.length > 2 ? 2 : cells.length;
@@ -137,6 +145,10 @@ export default function Lab() {
 
   function toggleRecord() {
     if (rec.current) {
+      const g = grid();
+      const ctx = rec.current.cx;
+      if (g && ctx) ctx.drawImage(g, 0, 0, ctx.canvas.width, ctx.canvas.height); // one last frame, so even a very short clip holds a picture
+      rec.current.mr.requestData();
       rec.current.mr.stop();
       return;
     }
@@ -146,6 +158,7 @@ export default function Lab() {
     cv.width = first.width;
     cv.height = first.height;
     const cx = cv.getContext('2d')!;
+    cx.drawImage(first, 0, 0, cv.width, cv.height); // a first frame at once: a canvas stream records nothing until something is drawn
     const mr = new MediaRecorder(cv.captureStream(15), { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm' });
     const chunks: Blob[] = [];
     mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
@@ -160,7 +173,7 @@ export default function Lab() {
       setRecording(false);
     };
     mr.start(500);
-    rec.current = { mr, chunks, timer };
+    rec.current = { mr, chunks, timer, cx };
     setRecording(true);
   }
 
@@ -170,7 +183,7 @@ export default function Lab() {
   const [pts, setPts] = useState<{ x: number; y: number }[]>([]);
   const [refCm, setRefCm] = useState('30');
   function freeze() {
-    const first = engines.map((e) => ({ e, s: stats[e], a: apis.current[e] })).find((x) => x.a && x.s?.scales);
+    const first = engines.map((e) => ({ e, s: statsRef.current[e], a: apis.current[e] })).find((x) => x.a && x.s?.scales);
     const snap = first?.a?.raw();
     if (!first || !snap || !first.s?.scales) return setMsg('손이 인식된 상태에서 눌러 주세요(손 추적 중 화면이 필요합니다).');
     setPts([]);
@@ -211,7 +224,16 @@ export default function Lab() {
   const abUnits = abCalls + abCut;
   const abWorst = abCalls * 3 + abCut * 3;
 
-  const first = engines.map((e) => stats[e]).find(Boolean);
+  // One stable control object per pane: it only changes when the input or an option really changes.
+  const controls = useRef<Partial<Record<LabEngine, { key: string; v: LabControl }>>>({});
+  const labFor = (e: LabEngine): LabControl => {
+    const key = JSON.stringify([stream?.id, mirror, opts]);
+    const cur = controls.current[e];
+    if (cur && cur.key === key) return cur.v;
+    const v: LabControl = { engine: e, stream, mirror, options: opts, onStats, onApi: (a) => (apis.current[e] = a) };
+    controls.current[e] = { key, v };
+    return v;
+  };
   const dims = product?.dimensions;
   const m3 = product?.model3d;
 
@@ -291,55 +313,14 @@ export default function Lab() {
                 styleKey="hand"
                 stylePrompt=""
                 styleChips={null}
-                lab={{ engine: e, stream, mirror, options: opts, onStats, onApi: (a) => (apis.current[e] = a) }}
+                lab={labFor(e)}
               />
             </div>
           ))}
       </div>
 
-      <div style={{ ...css.box, marginTop: 12, overflowX: 'auto' }}>
-        <b>실시간 수치</b> <span style={{ color: '#9aa4b5' }}>(칸이 여러 개면 감지 작업도 그만큼 늘어 FPS가 단독 실행보다 낮게 나옵니다. 추적 지연은 감지 시간 + 감지 간격의 절반으로 추정한 값입니다.)</span>
-        <table style={{ borderCollapse: 'collapse', marginTop: 6 }} data-testid="lab-stats">
-          <thead>
-            <tr>{['엔진', 'FPS', '프레임 ms', '포즈 ms', '손 ms', '감지 간격 ms', '지연 추정 ms', '손 추적', '유실 횟수', '마지막 유실 ms', '복귀 최대 이동 px', '가방 그림', '가방 폭 px'].map((h) => <th key={h} style={css.th}>{h}</th>)}</tr>
-          </thead>
-          <tbody>
-            {engines.map((e) => {
-              const s = stats[e];
-              return (
-                <tr key={e}>
-                  <td style={css.td}><b>{e.toUpperCase()}</b></td>
-                  <td style={css.td}>{f1(s?.fps, 0)}</td>
-                  <td style={css.td}>{f1(s?.frameMs)}</td>
-                  <td style={css.td}>{f1(s?.poseMs, 0)}</td>
-                  <td style={css.td}>{f1(s?.handMs, 0)}</td>
-                  <td style={css.td}>{f1(s?.detectIntervalMs, 0)}</td>
-                  <td style={css.td}>{f1(s?.lagEstimateMs, 0)}</td>
-                  <td style={{ ...css.td, color: s?.tracked ? '#5dd196' : '#ff9aa2' }}>{s ? (s.tracked ? '추적 중' : s.currentLossMs ? `유실 ${f1(s.currentLossMs, 0)}ms` : '없음') : '–'}</td>
-                  <td style={css.td}>{s?.losses ?? '–'}</td>
-                  <td style={css.td}>{f1(s?.lastLossMs, 0)}</td>
-                  <td style={css.td}>{f1(s?.recoverStepPx)}</td>
-                  <td style={css.td}>{s ? (s.drawn ? '표시' : '숨김') : '–'}</td>
-                  <td style={css.td}>{f1(s?.widthPx, 0)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={css.box} data-testid="lab-size-panel">
-        <b>제품 크기 확인</b>
-        <div style={{ color: '#9aa4b5', margin: '4px 0' }}>실제 치수는 product.json, 3D 모델 치수는 model3d입니다(둘 다 단위 cm, 3D는 미터로 변환해 그림). 실측 자료가 없으면 절대 크기가 맞는지는 알 수 없습니다.</div>
-        <table style={{ borderCollapse: 'collapse' }}>
-          <tbody>
-            <tr><td style={css.th}>상품 치수(W×H×D cm)</td><td style={css.td}>{dims ? `${dims.widthCm ?? '–'} × ${dims.heightCm ?? '–'} × ${dims.depthCm ?? '–'}` : '–'}</td></tr>
-            <tr><td style={css.th}>3D 모델(W×H×D, 손잡이 cm)</td><td style={css.td}>{m3 ? `${m3.widthCm} × ${m3.heightCm} × ${m3.depthCm}, 손잡이 ${m3.handleCm}` : '–'}</td></tr>
-            <tr><td style={css.th}>지금 쓰는 px/cm(추정)</td><td style={css.td}>{f1(first?.scales?.used)} (9뼈 {f1(first?.scales?.all)} · 마디 줄 {f1(first?.scales?.mcp)} · 7.5cm 가정 {f1(first?.scales?.knuckle)})</td></tr>
-            <tr><td style={css.th}>화면의 가방 폭 ÷ px/cm</td><td style={css.td}>{first && m3 && first.scales ? `${f1(first.widthPx / (first.scales.used * opts.gain * opts.size), 1)} cm (3D 폭 ${m3.widthCm}cm와 같아야 함)` : '–'}</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <Polled statsRef={statsRef} render={(stats) => <StatsTable engines={engines} stats={stats} />} />
+      <Polled statsRef={statsRef} render={(stats) => <SizePanel first={engines.map((e) => stats[e]).find(Boolean)} dims={dims} m3={m3} opts={opts} />} />
 
       <div style={css.box} data-testid="lab-calib">
         <b>기준물로 크기 보정</b>
@@ -397,6 +378,68 @@ function RawView({ stream, mirror }: { stream: MediaStream | null; mirror: boole
   return (
     <div style={{ background: '#000', aspectRatio: '16 / 9', overflow: 'hidden' }}>
       <video ref={ref} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: mirror ? 'scaleX(-1)' : 'none' }} data-testid="lab-raw" />
+    </div>
+  );
+}
+
+/** Re-renders its view twice a second from the live-stats ref. */
+function Polled({ statsRef, render }: { statsRef: React.MutableRefObject<Partial<Record<LabEngine, LabStats>>>; render: (s: Partial<Record<LabEngine, LabStats>>) => React.ReactNode }) {
+  const [, setT] = useState(0);
+  useEffect(() => {
+    const i = window.setInterval(() => setT((t) => t + 1), 500);
+    return () => window.clearInterval(i);
+  }, []);
+  return <>{render(statsRef.current)}</>;
+}
+
+function StatsTable({ engines, stats }: { engines: LabEngine[]; stats: Partial<Record<LabEngine, LabStats>> }) {
+  return (
+    <div style={{ ...css.box, marginTop: 12, overflowX: 'auto' }}>
+      <b>실시간 수치</b> <span style={{ color: '#9aa4b5' }}>(칸이 여러 개면 감지 작업도 그만큼 늘어 FPS가 단독 실행보다 낮게 나옵니다. 추적 지연은 감지 시간 + 감지 간격의 절반으로 추정한 값입니다.)</span>
+      <table style={{ borderCollapse: 'collapse', marginTop: 6 }} data-testid="lab-stats">
+        <thead>
+          <tr>{['엔진', 'FPS', '프레임 ms', '포즈 ms', '손 ms', '감지 간격 ms', '지연 추정 ms', '손 추적', '유실 횟수', '마지막 유실 ms', '복귀 최대 이동 px', '가방 그림', '가방 폭 px'].map((h) => <th key={h} style={css.th}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {engines.map((e) => {
+            const s = stats[e];
+            return (
+              <tr key={e}>
+                <td style={css.td}><b>{e.toUpperCase()}</b></td>
+                <td style={css.td}>{f1(s?.fps, 1)}</td>
+                <td style={css.td}>{f1(s?.frameMs)}</td>
+                <td style={css.td}>{f1(s?.poseMs, 0)}</td>
+                <td style={css.td}>{f1(s?.handMs, 0)}</td>
+                <td style={css.td}>{f1(s?.detectIntervalMs, 0)}</td>
+                <td style={css.td}>{f1(s?.lagEstimateMs, 0)}</td>
+                <td style={{ ...css.td, color: s?.tracked ? '#5dd196' : '#ff9aa2' }}>{s ? (s.tracked ? '추적 중' : s.currentLossMs ? `유실 ${f1(s.currentLossMs, 0)}ms` : '없음') : '–'}</td>
+                <td style={css.td}>{s?.losses ?? '–'}</td>
+                <td style={css.td}>{f1(s?.lastLossMs, 0)}</td>
+                <td style={css.td}>{f1(s?.recoverStepPx)}</td>
+                <td style={css.td}>{s ? (s.drawn ? '표시' : '숨김') : '–'}</td>
+                <td style={css.td}>{f1(s?.widthPx, 0)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SizePanel({ first, dims, m3, opts }: { first: LabStats | undefined; dims: { widthCm?: number | null; heightCm?: number | null; depthCm?: number | null } | undefined; m3: { widthCm: number; heightCm: number; depthCm: number; handleCm: number } | undefined; opts: LabOptions }) {
+  return (
+    <div style={css.box} data-testid="lab-size-panel">
+      <b>제품 크기 확인</b>
+      <div style={{ color: '#9aa4b5', margin: '4px 0' }}>실제 치수는 product.json, 3D 모델 치수는 model3d입니다(둘 다 단위 cm, 3D는 미터로 변환해 그림). 실측 자료가 없으면 절대 크기가 맞는지는 알 수 없습니다.</div>
+      <table style={{ borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr><td style={css.th}>상품 치수(W×H×D cm)</td><td style={css.td}>{dims ? `${dims.widthCm ?? '–'} × ${dims.heightCm ?? '–'} × ${dims.depthCm ?? '–'}` : '–'}</td></tr>
+          <tr><td style={css.th}>3D 모델(W×H×D, 손잡이 cm)</td><td style={css.td}>{m3 ? `${m3.widthCm} × ${m3.heightCm} × ${m3.depthCm}, 손잡이 ${m3.handleCm}` : '–'}</td></tr>
+          <tr><td style={css.th}>지금 쓰는 px/cm(추정)</td><td style={css.td}>{f1(first?.scales?.used)} (9뼈 {f1(first?.scales?.all)} · 마디 줄 {f1(first?.scales?.mcp)} · 7.5cm 가정 {f1(first?.scales?.knuckle)})</td></tr>
+          <tr><td style={css.th}>화면의 가방 폭 ÷ px/cm</td><td style={css.td}>{first && m3 && first.scales ? `${f1(first.widthPx / (first.scales.used * opts.gain * opts.size), 1)} cm (3D 폭 ${m3.widthCm}cm와 같아야 함)` : '–'}</td></tr>
+        </tbody>
+      </table>
     </div>
   );
 }
