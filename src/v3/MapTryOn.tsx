@@ -4,7 +4,13 @@ import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
-import { HAND_HOLD_MS, OneEuro, OneEuroAngle, isHandJump } from './fitFilter';
+import { HAND_HOLD_MS, HoldPolicy, OneEuro, OneEuroAngle, Swing, isHandJump } from './fitFilter';
+
+/** Fitting engine from the page address: `?engine=v1` (original), `v2` (default), `v3` (contact shadow, swing, loss policy). */
+const engineOf = (): 'v1' | 'v2' | 'v3' => {
+  const e = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('engine');
+  return e === 'v1' || e === 'v3' ? e : 'v2';
+};
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
 
@@ -153,7 +159,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           bag.dispose();
           return;
         }
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: engineOf() === 'v3' }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
       }
       setStatus(null);
       setPhase('live');
@@ -196,7 +202,14 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     // Fitting engine: V2 (One Euro smoothing, jump rejection, short hold on loss) unless `?engine=v1`.
     // V1 stays selectable for side-by-side comparison. `?fitdebug=1` records per-frame telemetry on window.__fit.
     const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-    const v2 = query.get('engine') !== 'v1';
+    const eng = engineOf();
+    const v2 = eng !== 'v1';
+    const v3 = eng === 'v3';
+    const policy = new HoldPolicy();
+    const swing = new Swing();
+    let freshAt = -1e9; // time of the last real hand detection
+    let freshSeen = -1e9;
+    let tint: [number, number, number] = [1, 1, 1];
     const telemetry: Record<string, number | boolean>[] | null = query.get('fitdebug') ? ((window as unknown as { __fit: unknown[] }).__fit = []) as Record<string, number | boolean>[] : null;
     const fx = new OneEuro(2.0, 0.008);
     const fy = new OneEuro(2.0, 0.008);
@@ -206,6 +219,13 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lastHandAt = -1e9;
     let rawGrip: { x: number; y: number } | null = null;
     let rejected = 0;
+    // V3: the person mask as an alpha canvas, to trim the hand overlay's halo (background pixels near the fingers).
+    let personVer = 0;
+    let personDrawn = -1;
+    const personCv = document.createElement('canvas');
+    const personCtx = personCv.getContext('2d')!;
+    const shade = document.createElement('canvas');
+    const shadeCtx = shade.getContext('2d')!;
     const handMask = document.createElement('canvas');
     const hmctx = handMask.getContext('2d')!;
     let handMiss = 0;
@@ -326,6 +346,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
               handScale = v2 ? s : handScale ? handScale + (s - handScale) * 0.25 : s;
             }
             handMiss = 0;
+            freshAt = now;
           } else if (++handMiss > 8) {
             handScale = 0;
             grip = null;
@@ -336,6 +357,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         }
         const m = res.segmentationMasks?.[0];
         mask = m ? { data: m.getAsFloat32Array().slice(), w: m.width, h: m.height } : null;
+        personVer++;
         res.segmentationMasks?.forEach((x) => x.close());
         misses = lm ? 0 : misses + 1;
         setFound(misses < 10);
@@ -346,6 +368,23 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         let L = 0;
         for (let i = 0; i < px.length; i += 4) L += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
         brightness = Math.min(1, L / (px.length / 4) / 200);
+        if (v3) {
+          // The room's colour, from four patches spread over the frame (the bag is lit by it, partly).
+          let r = 0;
+          let g = 0;
+          let b = 0;
+          for (const [qx, qy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+            const d = rctx.getImageData(Math.round(W * qx) - 4, Math.round(H * qy) - 4, 8, 8).data;
+            for (let i = 0; i < d.length; i += 4) {
+              r += d[i];
+              g += d[i + 1];
+              b += d[i + 2];
+            }
+          }
+          const m = (r + g + b) / 3 || 1;
+          const nt: [number, number, number] = [r, g, b].map((c) => Math.max(0.8, Math.min(1.2, c / m))) as [number, number, number];
+          tint = [tint[0] + (nt[0] - tint[0]) * 0.3, tint[1] + (nt[1] - tint[1]) * 0.3, tint[2] + (nt[2] - tint[2]) * 0.3];
+        }
       }
       const l3 = p && layer.current?.id === p.id ? layer.current : null;
       const img = p && matte.current?.id === p.id ? matte.current.img : null;
@@ -355,7 +394,18 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       // (index to little finger) is about 7.5 cm, which holds even when the shoulders are off screen.
       const fromHand = !!(l3 && grip && handPts && HELD.has(style) && p);
       // V2: a hand lost for a moment keeps the bag where it was for a short time instead of hiding it.
-      const holdHand = v2 && !fromHand && lastFromHand && now - lastHandAt < HAND_HOLD_MS && l3 && p && HELD.has(style);
+      // V3: a lost hand is held only as long as it was still, faded out rather than cut (HoldPolicy).
+      if (v3 && !fromHand && lastFromHand && l3 && p && HELD.has(style)) {
+        const sh = policy.show(now, null);
+        if (sh) {
+          const yawH = fyaw.filter(spin.current + handYaw, now);
+          const roll = (placed.current?.rot ?? 0) + swing.step(now, sh.pose.cx, sh.pose.w / (l3.widthCm / 100));
+          l3.l.render(W, H, { x: sh.pose.cx, y: sh.pose.top, widthPx: sh.pose.w, yaw: yawH, roll, brightness, tint, alpha: sh.alpha });
+          if (telemetry) telemetry.push({ t: now, cx: sh.pose.cx, top: sh.pose.top, w: sh.pose.w, yaw: yawH, rawCx: -1, rawTop: -1, rawW: -1, hand: false, held: true, rejected, alpha: sh.alpha });
+          return;
+        }
+      }
+      const holdHand = v2 && !v3 && !fromHand && lastFromHand && now - lastHandAt < HAND_HOLD_MS && l3 && p && HELD.has(style);
       if (holdHand && lastFromHand) {
         const yawH = fyaw.filter(spin.current + handYaw, now);
         if (telemetry) telemetry.push({ t: now, cx: placed.current?.cx ?? 0, top: placed.current?.top ?? 0, w: placed.current?.w ?? 0, yaw: yawH, rawCx: -1, rawTop: -1, rawW: -1, hand: false, held: true, rejected });
@@ -378,7 +428,11 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         const xs = [5, 9, 13, 17].map((i) => hp[i].x);
         const gx = xs.reduce((a, b) => a + b, 0) / xs.length;
         const handlePx = l3!.handleCm * pxPerCm * sz;
-        next = { cx: gx, top: fistBottom - handlePx * 0.55, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
+        // V3: the handle's apex goes where the fingers curl round it — about 3 cm above the bottom of the fist
+        // whatever the handle's length. (V1/V2 put it 55 % of the handle length up: right for a 5 cm handle, but a
+        // 13 cm tote handle ended up with its apex above the fist, the hand floating inside the loop.)
+        const apexUp = v3 ? Math.min(handlePx * 0.55, 3 * pxPerCm * sz) : handlePx * 0.55;
+        next = { cx: gx, top: fistBottom - apexUp, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
       }
       if (!next) {
         l3?.l.render(W, H, null);
@@ -398,7 +452,32 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       const yawRaw = spin.current + (held && grip ? handYaw : bodyYaw);
       const yaw = v2 ? fyaw.filter(yawRaw, now) : yawRaw;
       if (telemetry) telemetry.push({ t: now, cx: placed.current.cx, top: placed.current.top, w: placed.current.w, yaw, rawCx: next.cx, rawTop: next.top, rawW: next.w, hand: fromHand, rejected });
-      if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
+      let shown = placed.current;
+      if (l3 && v3) {
+        let pose = placed.current;
+        let alpha = 1;
+        if (fromHand) {
+          if (freshAt !== freshSeen) {
+            freshSeen = freshAt;
+            policy.fresh(now, placed.current, Math.hypot(handPts![5].x - handPts![17].x, handPts![5].y - handPts![17].y));
+          }
+          const sh = policy.show(now, placed.current);
+          if (!sh) {
+            l3.l.render(W, H, null);
+            return;
+          }
+          pose = { ...placed.current, ...sh.pose };
+          alpha = sh.alpha;
+          if (telemetry) telemetry.push({ t: now, v3: true, alpha, age: now - freshAt });
+        }
+        let roll = pose.rot;
+        if (held && fromHand) {
+          swing.setLength(((l3.widthCm / l3.aspect) / 100) * 0.66);
+          roll += swing.step(now, pose.cx, pose.w / (l3.widthCm / 100));
+        } else swing.reset();
+        shown = pose;
+        l3.l.render(W, H, { x: pose.cx, y: pose.top, widthPx: pose.w, yaw, roll, brightness, tint, alpha });
+      } else if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
       else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
       // The holding hand goes back on top of the handles: person pixels from the mask, around the wrist.
@@ -439,6 +518,58 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         hmctx.filter = 'none';
         hmctx.globalCompositeOperation = 'source-in';
         hmctx.drawImage(raw, 0, 0);
+        if (v3 && mask) {
+          // Keep only what the person segmentation also calls person (generously: only clear background goes),
+          // so the stroke-widened hand shape does not paint wall pixels over the handles.
+          if (personDrawn !== personVer) {
+            personCv.width = mask.w;
+            personCv.height = mask.h;
+            const id = personCtx.createImageData(mask.w, mask.h);
+            for (let i = 0; i < mask.data.length; i++) id.data[i * 4 + 3] = Math.round(Math.max(0, Math.min(1, (mask.data[i] - 0.12) / 0.25)) * 255);
+            personCtx.putImageData(id, 0, 0);
+            personDrawn = personVer;
+          }
+          hmctx.globalCompositeOperation = 'destination-in';
+          hmctx.save();
+          if (mirrored) {
+            hmctx.translate(W, 0);
+            hmctx.scale(-1, 1);
+          }
+          hmctx.drawImage(personCv, 0, 0, W, H);
+          hmctx.restore();
+        }
+        if (v3) {
+          // Contact: the bag's shadow on the skin where the handle leaves the fist (only hand pixels take it),
+          // and the fist's shadow on the top of the bag (only bag pixels take it). Light comes from upper right.
+          const fist = Math.max(...pts.map((q) => q.y));
+          const gx = shown.cx;
+          hmctx.globalCompositeOperation = 'source-atop';
+          const g1 = hmctx.createRadialGradient(gx - palmW * 0.05, fist, 0, gx - palmW * 0.05, fist, palmW * 0.55);
+          g1.addColorStop(0, 'rgba(20,12,8,0.38)');
+          g1.addColorStop(1, 'rgba(20,12,8,0)');
+          hmctx.fillStyle = g1;
+          hmctx.fillRect(gx - palmW, fist - palmW, palmW * 2, palmW * 2);
+          hmctx.globalCompositeOperation = 'source-over';
+          const r = Math.ceil(palmW * 1.2);
+          const x0 = Math.max(0, Math.floor(gx - r));
+          const y0 = Math.max(0, Math.floor(fist - r * 0.3));
+          const sw = Math.min(W - x0, r * 2);
+          const sh = Math.min(H - y0, r * 1.4);
+          if (sw > 0 && sh > 0 && gl.current) {
+            shade.width = sw;
+            shade.height = sh;
+            shadeCtx.globalCompositeOperation = 'source-over';
+            shadeCtx.clearRect(0, 0, sw, sh);
+            const g2 = shadeCtx.createRadialGradient(gx - x0 - palmW * 0.1, fist - y0, 0, gx - x0 - palmW * 0.1, fist - y0, palmW * 0.9);
+            g2.addColorStop(0, 'rgba(0,0,0,0.42)');
+            g2.addColorStop(1, 'rgba(0,0,0,0)');
+            shadeCtx.fillStyle = g2;
+            shadeCtx.fillRect(0, 0, sw, sh);
+            shadeCtx.globalCompositeOperation = 'destination-in';
+            shadeCtx.drawImage(gl.current, x0, y0, sw, sh, 0, 0, sw, sh);
+            out.drawImage(shade, x0, y0);
+          }
+        }
         hmctx.globalCompositeOperation = 'source-over';
         out.drawImage(handMask, 0, 0);
       } else if (holding && mask && lm) {

@@ -42,6 +42,15 @@ export interface AiTryOnInput {
 }
 
 /** Plain facts from the site's own product data (nothing invented): kind of bag, handle drop, handle count. */
+/** The flat surface photos the 3D model is textured with (real photos, not AI-redrawn), as absolute URLs, at most 3. */
+export function productFaceUrls(product: Product, base: string): string[] | undefined {
+  const m = product.model3d;
+  if (!m) return undefined;
+  const paths = [m.faces?.front, m.textures?.front, m.faces?.back, m.textures?.back, m.faces?.left ?? m.faces?.right, m.textures?.side].filter((x): x is string => !!x);
+  const urls = [...new Set(paths)].slice(0, 3).map((x) => new URL(x, base).toString());
+  return urls.length ? urls : undefined;
+}
+
 export function productFacts(product: Product): string | undefined {
   const m = product.model3d;
   if (!m) return undefined;
@@ -74,6 +83,8 @@ export async function requestAiTryOn({ person, product, style, signal }: AiTryOn
       facts: productFacts(product),
       // Opt-in while the improved prompt is being judged: `?prompt=v2` in the address.
       promptVersion: new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('prompt') === 'v2' ? 'v2' : undefined,
+      // Opt-in too (`?prompt=v2&ref=faces`): the product's real surface photos as extra references.
+      faces: new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('ref') === 'faces' ? productFaceUrls(product, base) : undefined,
     }),
   });
   const body = (await res.json().catch(() => ({}))) as { image?: string; error?: string; reason?: string; detail?: string };

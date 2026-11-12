@@ -73,6 +73,12 @@ export interface TryOnRequest {
   style?: string;
   /** Plain facts about the product from the site's own data (kind, handle drop …), short. Used by prompt v2. */
   facts?: string;
+  /**
+   * Absolute URLs of up to 3 flat, unretouched photos of the product's real surfaces (the ones the 3D model is
+   * textured with). Sent as extra references so printed lettering and graphics can be copied from the real thing
+   * instead of from the AI-redrawn cut-out. Only used with prompt v2; same-origin only.
+   */
+  faces?: string[];
   /** "v2" asks for the improved prompt on this request (otherwise the PROMPT_VERSION setting decides; default v1). */
   promptVersion?: string;
 }
@@ -125,7 +131,7 @@ function toBase64(buf: ArrayBuffer) {
  * PROMPT_VERSION="v2"); whether it is better than v1 has to be judged on real generations
  * (scripts/ai-fitting-ab.mjs) — it was not measured with paid calls.
  */
-export function buildPromptV2(r: TryOnRequest, cutout: boolean) {
+export function buildPromptV2(r: TryOnRequest, cutout: boolean, faceCount = 0) {
   const style = (r.style ?? '').slice(0, 200);
   const facts = (r.facts ?? '').slice(0, 300);
   const name = [r.productName?.slice(0, 120), r.category?.slice(0, 40)].filter(Boolean).join(', ');
@@ -145,6 +151,9 @@ export function buildPromptV2(r: TryOnRequest, cutout: boolean) {
     'KEEP THE PERSON: the same face, identity, hair, skin, body shape, clothing, pose and background as in image 1. Only the arm and hand that hold or wear the product may move, and only as far as needed. No extra people.',
     'ANATOMY: exactly two arms and two hands with five fingers each, all belonging to this person; never add a hand, arm or finger, and take no hands, arms, bodies or background from image 2.',
     'KEEP THE PRODUCT: the same shape, proportions, colours, materials, hardware (zippers, buckles, clips, rings), handles and straps, and the same prints and lettering — letters must keep their spelling, orientation and position; do not redraw, translate, simplify or add logos. Do not add other bags or accessories.',
+    faceCount > 0
+      ? `Image${faceCount > 1 ? 's' : ''} 3${faceCount > 1 ? `–${2 + faceCount}` : ''} ${faceCount > 1 ? 'are' : 'is a'} flat, unretouched photo${faceCount > 1 ? 's' : ''} of the product's real surface${faceCount > 1 ? 's' : ''}: copy printed lettering, graphics, colours and material texture exactly from ${faceCount > 1 ? 'them' : 'it'} (they show surface only, not the product's outline — take the outline from image 2).`
+      : '',
     'LIGHT AND CONTACT: match the light direction, colour and shadows of image 1; give the product a soft contact shadow and let the body or hand overlap it where it naturally would.',
     'FRAMING: output the same framing and aspect ratio as image 1, without cropping or zooming. Return only the edited photo.',
   ]
@@ -934,10 +943,19 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
   const ref = cutout ?? product;
+  const v2 = body.promptVersion === 'v2' || env.PROMPT_VERSION === 'v2';
+  // Real surface photos as extra references (prompt v2 only; same-origin only; a failed fetch just skips that one).
+  const faces: { mime: string; data: string }[] = [];
+  if (v2 && Array.isArray(body.faces))
+    for (const u of body.faces.slice(0, 3)) {
+      const f = typeof u === 'string' ? await fetchProductImage(u, allowed) : null;
+      if (f && !('error' in f)) faces.push(f);
+    }
   const out = await geminiImage(env, [
-    { text: body.promptVersion === 'v2' || env.PROMPT_VERSION === 'v2' ? buildPromptV2(body, !!cutout) : buildPrompt(body, !!cutout) },
+    { text: v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
     { inline_data: { mime_type: person.mime, data: person.data } },
     { inline_data: { mime_type: ref.mime, data: ref.data } },
+    ...faces.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
   ]);
   if (!out.image) {
     const message =

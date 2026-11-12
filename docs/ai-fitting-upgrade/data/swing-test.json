@@ -1,0 +1,30 @@
+[
+ {
+  "clip": "fist3",
+  "speed": 1,
+  "rmsDeg": 0,
+  "maxDeg": 0,
+  "maxStepDegPerFrame": 0
+ },
+ {
+  "clip": "fist3-pan",
+  "speed": 1,
+  "rmsDeg": 6.98,
+  "maxDeg": 10.5,
+  "maxStepDegPerFrame": 0.93
+ },
+ {
+  "clip": "fist3-pan",
+  "speed": 4,
+  "rmsDeg": 6.07,
+  "maxDeg": 11.3,
+  "maxStepDegPerFrame": 2.89
+ },
+ {
+  "clip": "fist3-pan",
+  "speed": 8,
+  "rmsDeg": 3.22,
+  "maxDeg": 5.8,
+  "maxStepDegPerFrame": 1.4
+ }
+]
