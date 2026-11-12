@@ -927,6 +927,7 @@ export default {
       if (throttled(`order:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
       return handleOrders(path, request, env, headers);
     }
+    if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
     if (path === '/realtime/token' || path === '/cutout') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
@@ -1033,6 +1034,21 @@ export class QuotaCounter {
   constructor(private state: { storage: { get(k: string): Promise<unknown>; put(entries: Record<string, unknown>): Promise<void> } }) {}
 
   async fetch(request: Request): Promise<Response> {
+    const route = new URL(request.url).pathname;
+    if (route === '/record') {
+      const { outcome } = (await request.json()) as { outcome?: string };
+      const name = String(outcome ?? 'unknown').replace(/[^a-z0-9_]/gi, '').slice(0, 32) || 'unknown';
+      const n = Number((await this.state.storage.get(`out:${name}`)) ?? 0);
+      await this.state.storage.put({ [`out:${name}`]: n + 1 });
+      return Response.json({ ok: true });
+    }
+    if (route === '/usage') {
+      const all = Number((await this.state.storage.get('all')) ?? 0);
+      const outcomes: Record<string, number> = {};
+      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy'])
+        outcomes[k] = Number((await this.state.storage.get(`out:${k}`)) ?? 0);
+      return Response.json({ spentCenti: all, outcomes });
+    }
     const body = (await request.json()) as { ip: string; cost: number; siteCap?: number; ipCap?: number };
     const site = Number((await this.state.storage.get('all')) ?? 0);
     const mine = Number((await this.state.storage.get(`ip:${body.ip}`)) ?? 0);
@@ -1142,7 +1158,30 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  */
 async function callGemini(env: Env, body: string, model: string, budget: Budget, units = 1): Promise<Response> {
   await takeUnits(env, budget, units); // throws QuotaError: no unit, no call (and the unit is never given back)
-  return callGeminiUnmetered(env, body, model);
+  try {
+    const res = await callGeminiUnmetered(env, body, model);
+    void recordOutcome(env, 'tryon', res.ok ? 'http_ok' : `http_${res.status}`);
+    return res;
+  } catch (e) {
+    void recordOutcome(env, 'tryon', 'network_error');
+    throw e;
+  }
+}
+
+/**
+ * The attempt-vs-bill ledger. Units are reserved BEFORE a call (attempts); this notes what each attempt turned into
+ * (http_ok, http_429, no_image, blocked, network_error…). It is bookkeeping only: a failure here never changes whether
+ * a call is allowed, and nothing is refunded. Compare the totals with Google's own billing page — they will differ
+ * (failed or blocked attempts may or may not be billed), and that difference is what this ledger exists to show.
+ */
+async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string): Promise<void> {
+  if (!env.QUOTA) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`)).fetch('https://quota/record', { method: 'POST', body: JSON.stringify({ outcome }) });
+  } catch {
+    /* bookkeeping only */
+  }
 }
 
 async function callGeminiUnmetered(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
@@ -1242,16 +1281,46 @@ async function geminiImage(env: Env, parts: GeminiPart[], budget: Budget): Promi
     const got = result.candidates?.[0]?.content?.parts ?? [];
     for (const part of got) {
       const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
-      if (img?.data) return { image: `data:${img.mimeType};base64,${img.data}` };
+      if (img?.data) {
+        void recordOutcome(env, 'tryon', 'image');
+        return { image: `data:${img.mimeType};base64,${img.data}` };
+      }
     }
     const finish = result.candidates?.[0]?.finishReason ?? '';
     const said = got.map((p) => p.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
     const blocked = !!result.promptFeedback?.blockReason || /SAFETY|PROHIBITED|BLOCKLIST|RECITATION/.test(finish);
     console.log('gemini no image', attempt, finish, result.promptFeedback?.blockReason, said.slice(0, 200));
     reason = blocked ? 'blocked' : 'no_image';
+    void recordOutcome(env, 'tryon', reason);
     detail = [finish || result.promptFeedback?.blockReason || 'NO_IMAGE', said.slice(0, 140)].filter(Boolean).join(' · ');
     // The same photo will be blocked again; stop early.
     if (blocked && attempt >= 1) return { reason, detail };
   }
   return { reason, detail };
+}
+
+/** GET /admin/usage — today's units (attempts) by scope, outcome counts, and the ESTIMATED spend. Not a bill: compare with Google/Decart billing. */
+async function adminUsage(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const token = /^Bearer (.+)$/.exec(request.headers.get('Authorization') ?? '')?.[1] ?? '';
+  if (!env.ADMIN_TOKEN || !sameString(token, env.ADMIN_TOKEN)) return json({ error: 'unauthorized' }, 401, headers);
+  if (!env.QUOTA) return json({ error: 'no counter bound' }, 503, headers);
+  const day = new Date().toISOString().slice(0, 10);
+  const perUnit = Number(env.TRYON_USD_PER_UNIT ?? 0.04);
+  const read = async (scope: 'tryon' | 'rt') => {
+    const r = await env.QUOTA!.get(env.QUOTA!.idFromName(`${scope}:${day}`)).fetch('https://quota/usage');
+    const u = (await r.json()) as { spentCenti: number; outcomes: Record<string, number> };
+    return { unitsReserved: u.spentCenti / 100, outcomes: u.outcomes };
+  };
+  const gemini = await read('tryon');
+  const realtime = await read('rt');
+  return json(
+    {
+      day,
+      gemini: { ...gemini, estimatedUsd: Number((gemini.unitsReserved * perUnit).toFixed(2)), siteCapUnits: Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT) },
+      realtime: { sessionsReserved: realtime.unitsReserved, siteCapSessions: Number(env.REALTIME_DAILY_SESSIONS ?? 100) },
+      note: 'Units are attempts reserved before each call, never refunded. Estimated USD = units × TRYON_USD_PER_UNIT. The real bill is on the provider billing pages; failed/blocked attempts may or may not be billed.',
+    },
+    200,
+    headers,
+  );
 }
