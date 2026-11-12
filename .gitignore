@@ -6,3 +6,6 @@ dist-ssr
 .env
 .env.local
 *.tsbuildinfo
+
+# wrangler local dev scratch (real-workerd test harness)
+.wrangler/
