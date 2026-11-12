@@ -85,9 +85,12 @@ function simulate(name, speed, every, variant, noisePx = 0) {
 }
 const scen = [['fist3-pan', 1, 1], ['fist3-pan', 1, 2], ['fist3-pan', 1, 3], ['fist3-pan', 4, 1], ['fist3-pan', 4, 2], ['fist3-pan', 4, 3], ['fist3-pan', 8, 1], ['fist3-pan', 8, 2]];
 const agg = (variant, noise = 0) => { const r = scen.map(([c, s, e]) => simulate(c, s, e, variant, noise)); const m = (k) => r.reduce((a, x) => a + (Number.isNaN(x[k]) ? 0 : x[k]), 0) / r.length; const still = simulate('fist3', 1, 1, variant, noise); return { err: +m('err').toFixed(3), p95: +m('p95').toFixed(3), acc: +m('acc').toFixed(1), accEx: +m('accEx').toFixed(1), accTr: +m('accTr').toFixed(1), jump: +m('jump').toFixed(1), rev: +m('rev').toFixed(3), still: +still.acc.toFixed(3) }; };
-const variants = [['V3  OneEuro(2.0,0.008)', { oe: [2.0, 0.008] }], ['V4  V3+lead(1.0)', { oe: [2.0, 0.008], lead: 1 }], ['OneEuro(2,0.02)', { oe: [2.0, 0.02] }]];
-for (const [mc, b] of [[1, 0.008], [2, 0.008], [4, 0.008], [2, 0.02], [4, 0.02], [2, 0.05]]) variants.push([`OneEuro@detection + glide(${mc},${b})`, { oedet: [mc, b] }]);
-variants.push(['KalmanCV adaptive σa=1+20·speed', { kf: { r: 1.5, adapt: { base: 1, gain: 20 }, maxLead: 100 } }]);
+const variants = [['V3  OneEuro(2.0,0.008)', { oe: [2.0, 0.008] }], ['V4  V3+lead(1.0)', { oe: [2.0, 0.008], lead: 1 }]];
+for (const lead of [0.25, 0.5]) variants.push([`OneEuro+lead(${lead})`, { oe: [2.0, 0.008], lead }]);
+for (const [mc, b] of [[4, 0.004], [1, 0.02], [2, 0.02], [4, 0.02], [2, 0.08], [4, 0.08]]) variants.push([`OneEuro(${mc},${b})`, { oe: [mc, b] }]);
+for (const [mc, b] of [[2, 0.008], [4, 0.008], [2, 0.02], [4, 0.02]]) variants.push([`OneEuro@detection + glide(${mc},${b})`, { oedet: [mc, b] }]);
+for (const sig of [10, 30, 100]) variants.push([`KalmanCV σa=${sig} (fixed)`, { kf: { r: 1.5, sig, maxLead: 100 } }]);
+for (const base of [1, 3]) for (const gain of [20, 60]) variants.push([`KalmanCV adaptive σa=${base}+${gain}·speed`, { kf: { r: 1.5, adapt: { base, gain }, maxLead: 100 } }]);
 const out2 = [];
 for (const noise of [0, 2, 4]) for (const [n, v] of variants) out2.push({ noisePx: noise, variant: n, ...agg(v, noise) });
 fs.writeFileSync(`${R}/aiq/motion-study.json`, JSON.stringify(out2, null, 1));

@@ -210,9 +210,11 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     const v2 = eng !== 'v1';
     const off = offOf();
     const v3 = eng === 'v3' || eng === 'v4' || eng === 'v5';
-    // V5 (experimental): V3 with a faster-following position filter (beta 0.02 instead of 0.008 — measured to beat V4's lead on
-    // every metric, docs/ai-fitting-upgrade/V5-MOTION-COMPARISON.md) and the hand scale taken from the knuckle row (the depth
-    // the handle hangs from) instead of all nine bones. Neither is validated against a real ruler: V5-PHYSICAL-ACCURACY.md.
+    // V5 (experimental): V3 with a faster-following position filter (beta 0.02 instead of 0.008) and the hand scale taken
+    // from the knuckle row (the depth the handle hangs from) instead of all nine bones. Measured against V3 and V4 on the
+    // same recorded tracking (docs/ai-fitting-upgrade/V5-MOTION-COMPARISON.md): lower mean error than V3 but rougher, and
+    // better than V4 on smoothness/jump/direction changes/still jitter but not on p95 error — a trade-off, not a clear win.
+    // Neither change is validated against a real ruler (V5-PHYSICAL-ACCURACY.md); V5 is NOT the default engine.
     const v5 = eng === 'v5';
     // Hand-scale estimator: `?scale=all|mcp|knuckle` (default: all, V5: mcp); `?gain=0.9` multiplies the size (calibration by hand).
     const scaleMode = query.get('scale') ?? (v5 ? 'mcp' : 'all');
