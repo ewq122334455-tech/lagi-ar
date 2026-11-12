@@ -51,8 +51,12 @@ const burst = (e, k, tag = 'a') => Promise.all(Array.from({ length: k }, (_, i) 
 { const q = makeQuota(); attempts = 0; mode = 'text'; const res = await burst(env({ QUOTA: q.ns }), 20, 'rt'); ok('retry storm (no image → 3 tries per call): attempts still ≤ 5', attempts <= 5, `${attempts} attempts, statuses ${[...new Set(res.map((r) => r.status))].join('/')}`); mode = 'ok'; }
 // 4. HTTP 503 from Google is not refunded (it may be billed) and is retried → metered per attempt
 { const q = makeQuota(); attempts = 0; mode = 'e503'; await call(env({ QUOTA: q.ns }), '8.8.8.8', 'plano-bag/images/main.jpg?e=1'); ok('503 answers are metered (no refund) — attempts ≤ cap, counter = attempts', attempts <= 5 && q.store.get('all') === attempts * 100, `${attempts} attempts, ${q.store.get('all') / 100} units`); mode = 'ok'; }
-// 5. refund only when the request itself threw (no answer at all)
-{ const q = makeQuota(); attempts = 0; mode = 'throw'; await call(env({ QUOTA: q.ns }), '7.7.7.7', 'plano-bag/images/main.jpg?t=1'); ok('network failure before any answer: units refunded (counter back to 0)', (q.store.get('all') ?? 0) === 0, `${attempts} attempts made, counter ${(q.store.get('all') ?? 0) / 100}`); mode = 'ok'; }
+// 5. NO refunds: a call that failed (network error before any answer) keeps its unit spent — and cannot be retried past the cap
+{ const q = makeQuota(); attempts = 0; mode = 'throw'; await call(env({ QUOTA: q.ns }), '7.7.7.7', 'plano-bag/images/main.jpg?t=1'); const spent = q.store.get('all');
+  ok('network failure before any answer: the unit stays spent (no refund)', spent === attempts * 100 && attempts > 0, `${attempts} attempts, counter ${spent / 100} units`);
+  attempts = 0; for (let i = 0; i < 5; i++) await call(env({ QUOTA: q.ns }), '7.7.7.7', `plano-bag/images/main.jpg?t=${i + 2}`);
+  ok('a storm of failing calls cannot get past the cap (failures are not free retries)', attempts <= 5 - spent / 100 + 0 && q.store.get('all') <= 500, `${attempts} more attempts, counter ${q.store.get('all') / 100} units (cap 5)`); mode = 'ok'; }
+{ const q = makeQuota(); const r = await q.ns.get('x').fetch('https://quota/refund', { method: 'POST', body: JSON.stringify({ ip: '1.1.1.1', cost: 100 }) }); const b = await r.json(); ok('the counter has no refund endpoint (a bogus refund request gives nothing back)', !(q.store.get('all') < 0) && b.ok !== true || r.status >= 400, `answered ${r.status} ${JSON.stringify(b)}`); }
 // 6. per-address cap
 { const q = makeQuota(); attempts = 0; const e = env({ QUOTA: q.ns, TRYON_DAILY_UNITS_SITE: '999', TRYON_DAILY_UNITS_PER_IP: '3' }); const res = await Promise.all(Array.from({ length: 12 }, () => call(e, '6.6.6.6', 'plano-bag/images/main.jpg?p=1'))); ok('per-address cap 3 with 12 simultaneous requests from one address: attempts ≤ 3', attempts <= 3, `${attempts} attempts`); }
 // 7. duplicate / retried requests are charged each time

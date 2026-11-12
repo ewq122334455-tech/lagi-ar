@@ -989,16 +989,12 @@ async function takeUnits(env: Env, budget: Budget, units: number): Promise<void>
   throw new QuotaError('quota_unavailable');
 }
 
-/** Gives units back — only when the call provably never reached Google (the request itself threw before any answer). */
-async function refundUnits(env: Env, budget: Budget, units: number): Promise<void> {
-  if (env.TRYON_QUOTA === 'unmetered' || !env.QUOTA) return;
-  try {
-    const day = new Date().toISOString().slice(0, 10);
-    await env.QUOTA.get(env.QUOTA.idFromName(`tryon:${day}`)).fetch('https://quota/refund', { method: 'POST', body: JSON.stringify({ ip: budget.ip, cost: centi(units) }) });
-  } catch {
-    /* a failed refund only costs the visitor a unit; never the owner money */
-  }
-}
+/*
+ * NO REFUNDS, by design. A reserved unit stays spent whatever happens to the call. A request that threw or timed out may
+ * still have reached Google (and been billed), and a refund path is also a way around the cap (induce failures → get units
+ * back → call again). So the daily budget is a spending CEILING, not an entitlement: a visitor whose attempt failed has
+ * lost that unit. Every attempt that leaves the Worker was reserved first, exactly once — nothing is ever returned.
+ */
 
 /**
  * Durable Object: the day's cost counters, in centi-units (integers, no float drift). It handles one request at a time
@@ -1009,14 +1005,9 @@ export class QuotaCounter {
   constructor(private state: { storage: { get(k: string): Promise<unknown>; put(entries: Record<string, unknown>): Promise<void> } }) {}
 
   async fetch(request: Request): Promise<Response> {
-    const path = new URL(request.url).pathname;
     const body = (await request.json()) as { ip: string; cost: number; siteCap?: number; ipCap?: number };
     const site = Number((await this.state.storage.get('all')) ?? 0);
     const mine = Number((await this.state.storage.get(`ip:${body.ip}`)) ?? 0);
-    if (path === '/refund') {
-      await this.state.storage.put({ all: Math.max(0, site - body.cost), [`ip:${body.ip}`]: Math.max(0, mine - body.cost) });
-      return Response.json({ ok: true });
-    }
     if (!Number.isFinite(body.cost) || body.cost <= 0) return Response.json({ ok: false, reason: 'bad_request' }, { status: 400 });
     if (mine + body.cost > (body.ipCap ?? 0)) return Response.json({ ok: false, reason: 'daily_limit' });
     if (site + body.cost > (body.siteCap ?? 0)) return Response.json({ ok: false, reason: 'site_limit' });
@@ -1122,13 +1113,8 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * local tests) the call is made directly.
  */
 async function callGemini(env: Env, body: string, model: string, budget: Budget, units = 1): Promise<Response> {
-  await takeUnits(env, budget, units); // throws QuotaError: no unit, no call
-  try {
-    return await callGeminiUnmetered(env, body, model);
-  } catch (e) {
-    await refundUnits(env, budget, units); // the request itself failed before any answer: it cannot have been billed
-    throw e;
-  }
+  await takeUnits(env, budget, units); // throws QuotaError: no unit, no call (and the unit is never given back)
+  return callGeminiUnmetered(env, body, model);
 }
 
 async function callGeminiUnmetered(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
