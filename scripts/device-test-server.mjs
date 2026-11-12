@@ -3,7 +3,7 @@
  * A small, access-limited server for testing a BUILT copy of the site on a phone (camera needs HTTPS).
  * It never touches production and never publishes anything by itself.
  *
- *   npm run build
+ *   VITE_BENCH=1 npm run build      # the bench tool is compiled in only with this flag (the public build has none)
  *   node scripts/device-test-server.mjs --minutes 60                 # HTTP on this machine only (127.0.0.1)
  *   node scripts/device-test-server.mjs --lan --https --minutes 60   # LAN + self-signed HTTPS (phone on the same Wi-Fi)
  *

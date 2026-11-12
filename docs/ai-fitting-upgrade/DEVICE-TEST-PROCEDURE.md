@@ -6,7 +6,7 @@
 카메라는 HTTPS에서만 동작하므로 **빌드한 사본을 접근 제한 서버로 서빙**합니다. 운영 사이트에는 V3·벤치 도구가 배포되어 있지 않습니다.
 
 ```
-npm ci && npm run build                       # 이 브랜치(feature/ai-fitting-v3-realism)
+VITE_BENCH=1 npm ci && VITE_BENCH=1 npm run build   # 이 브랜치(feature/ai-fitting-v4). V4부터 벤치 도구는 VITE_BENCH=1 빌드에만 들어갑니다(공개 빌드에는 없음)
 node scripts/device-test-server.mjs --lan --https --minutes 60
 ```
 - 접근키가 없으면 403. 키는 서버를 켤 때마다 무작위 생성(주소에 `?k=…`로 한 번 붙이면 쿠키로 유지).
@@ -40,6 +40,9 @@ https://<서버주소>/?k=<키>#/again?p=plano-bag&m=map&engine=v3&bench=1&dur=3
 - 저장 위치: ① 서버의 `bench-results/*.json`("서버로 저장") ② 휴대폰에 파일 다운로드("파일로 저장") ③ 클립보드("결과 복사"). 완료된 모든 실행은 이 브라우저의 `localStorage`에도 쌓이며 "저장된 전체 복사"로 한 번에 복사됩니다.
 - 비교: `node scripts/compare-bench.mjs bench-results/*.json` → 기기·제품별로 V1/V2/V3를 나란히 표로 출력합니다. 빠진 엔진은 "비교 불가"로 표시하고 추정하지 않습니다. 4분 미만 실행에는 "열 제한 판단 불가" 경고가 붙습니다.
 - 추가로 측정되는 값: 유실 횟수·평균 길이, 유실 중 가방이 그려진 시간, **복귀 직후 프레임당 최대 이동(px)**, 가방 표시·추적 성공 프레임 비율. 정답 위치는 실기기에서 알 수 없으므로 "틀린 위치에 그려진 비율"은 측정되지 않습니다(녹화 재생 시험의 몫).
+
+## 어색함 원인 가려내기 (같은 제품, 같은 자세로 번갈아)
+주소의 `engine=`과 `&off=`를 바꿔 가며 "무엇이 어색한지" 알려 주세요. `engine=v4`는 위치 앞당김 실험, `off=swing`(흔들림 끄기), `off=grip`(손잡이 위치 V2 방식), `off=mask`(손 후광 정리 끄기), `off=shadow`(그림자 끄기). 자세한 해석: `V4-NATURALNESS.md`.
 
 ## 결과 해석 (JSON `summary`)
 | 값 | 의미 | 합격 기준(제안, 조정 가능) |
