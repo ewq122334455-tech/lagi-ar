@@ -244,6 +244,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       ? new FitBench(`${engineOf()} ${product?.id ?? ''}`, { durSec: Number(query.get('dur')) || 0, device: query.get('dev') ?? undefined, post: !!query.get('post') })
       : null;
     const benchWrapped = new WeakSet<object>();
+    let benchFreshSeen = -1;
+    let benchInterval = 60;
     const frame = (now: number) => {
       if (!stream.current) {
         bench?.stop();
@@ -260,7 +262,12 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           return orig(W, H, p);
         };
       }
-      bench?.track(now, !!grip && now - freshAt < 250);
+      if (bench && freshAt !== benchFreshSeen) {
+        // Typical time between hand detections: a gap is a "loss" only if it is clearly longer than that.
+        if (benchFreshSeen > 0 && freshAt - benchFreshSeen < 3000) benchInterval += (freshAt - benchFreshSeen - benchInterval) * 0.3;
+        benchFreshSeen = freshAt;
+      }
+      bench?.track(now, !!grip && now - freshAt < Math.max(250, benchInterval * 2.5), benchInterval);
       frameBody(now);
       bench?.frame(now, performance.now() - t0);
     };

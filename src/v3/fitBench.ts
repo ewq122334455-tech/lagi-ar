@@ -45,6 +45,7 @@ export class FitBench {
   // Tracking: a "loss" is the stretch where the hand tracker had no fresh detection. What the page can see of
   // it is how long it lasted, whether a bag was still drawn, and how far the drawn bag moved per frame after.
   private tracked = true;
+  private intervals: number[] = [];
   private lossStart = 0;
   private lossDrawnMs = 0;
   private lossHiddenMs = 0;
@@ -117,8 +118,9 @@ export class FitBench {
   }
 
   /** Per frame: does the tracker currently have the hand (a fresh detection)? */
-  track(now: number, tracked: boolean) {
+  track(now: number, tracked: boolean, detectIntervalMs = 0) {
     if (this.ended) return;
+    if (detectIntervalMs) this.intervals.push(detectIntervalMs);
     if (tracked) this.framesTracked++;
     if (this.tracked && !tracked) {
       this.tracked = false;
@@ -204,6 +206,7 @@ export class FitBench {
       detectMsLastThird: +(m(tail, 'poseMs') + m(tail, 'handMs')).toFixed(1),
       worstFps1pctLow: w.length ? Math.min(...w.map((x) => x.fps1pctLow)) : null,
       longFramesTotal: w.reduce((a, x) => a + x.longFrames, 0),
+      detectIntervalMsMean: this.intervals.length ? Math.round(avg(this.intervals)) : null,
       framesDrawnPct: this.framesAll ? +((this.framesDrawn / this.framesAll) * 100).toFixed(1) : null,
       framesTrackedPct: this.framesAll ? +((this.framesTracked / this.framesAll) * 100).toFixed(1) : null,
       lossEvents: this.losses.length,
