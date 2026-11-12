@@ -1030,7 +1030,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
   const live = phase === 'live';
 
   // Comparison lab: only the stage (camera frame, 3D bag, hand overlay) — the controls live in the lab page.
-  if (lab) {
+  if (import.meta.env.VITE_LAB === "1" && lab) {
     return (
       <div className="relative overflow-hidden bg-black" style={{ aspectRatio: '16 / 9' }} data-testid={`lab-pane-${lab.engine}`}>
         <video ref={video} playsInline muted className="hidden" />
