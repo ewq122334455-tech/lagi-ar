@@ -4,6 +4,7 @@ import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
+import { FitBench } from './fitBench';
 import { HAND_HOLD_MS, HoldPolicy, OneEuro, OneEuroAngle, Swing, isHandJump } from './fitFilter';
 
 /** Fitting engine from the page address: `?engine=v1` (original), `v2` (default), `v3` (contact shadow, swing, loss policy). */
@@ -65,7 +66,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   // and the holding hand is drawn on a layer above it.
   const gl = useRef<HTMLCanvasElement>(null);
   const top = useRef<HTMLCanvasElement>(null);
-  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number; handleCm: number } | null>(null);
+  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number; handleCm: number; gripCm?: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
   const hands = useRef<Promise<HandLandmarker | null> | null>(null);
@@ -159,7 +160,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
           bag.dispose();
           return;
         }
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: engineOf() === 'v3' }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: engineOf() === 'v3' }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
       }
       setStatus(null);
       setPhase('live');
@@ -239,7 +240,17 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lastT = -1;
     let misses = 0;
 
+    const bench = query.get('bench') ? new FitBench(`${engineOf()} ${product?.id ?? ''}`) : null;
     const frame = (now: number) => {
+      if (!stream.current) {
+        bench?.stop();
+        return;
+      }
+      const t0 = performance.now();
+      frameBody(now);
+      bench?.frame(now, performance.now() - t0);
+    };
+    const frameBody = (now: number) => {
       if (!stream.current) return;
       requestAnimationFrame(frame);
       const W = v.videoWidth;
@@ -267,7 +278,9 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       if (now - lastDetect > 45 && v.currentTime !== lastT) {
         lastDetect = now;
         lastT = v.currentTime;
+        const d0 = performance.now();
         const res = marker.detectForVideo(v, now);
+        bench?.det('pose', performance.now() - d0);
         const l = res.landmarks[0];
         lm = l ? l.map((q) => ({ x: (mirrored ? 1 - q.x : q.x) * W, y: q.y * H, visibility: q.visibility })) : null;
         // Body turn from the 3D landmarks (metres): the shoulder line's depth gives the yaw.
@@ -302,7 +315,9 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             handCtx.drawImage(v, crop.x, crop.y, crop.size, crop.size, 0, 0, 256, 256);
             src = handCrop;
           } else crop = null;
+          const h0 = performance.now();
           const hr = handMarker.detectForVideo(src, now);
+          bench?.det('hand', performance.now() - h0);
           const hw = hr.worldLandmarks?.[0];
           const hl = hr.landmarks?.[0];
           const side = (hr.handedness?.[0]?.[0]?.categoryName ?? 'Right') as 'Left' | 'Right';
@@ -431,7 +446,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         // V3: the handle's apex goes where the fingers curl round it — about 3 cm above the bottom of the fist
         // whatever the handle's length. (V1/V2 put it 55 % of the handle length up: right for a 5 cm handle, but a
         // 13 cm tote handle ended up with its apex above the fist, the hand floating inside the loop.)
-        const apexUp = v3 ? Math.min(handlePx * 0.55, 3 * pxPerCm * sz) : handlePx * 0.55;
+        const apexUp = v3 ? Math.min(handlePx * 0.55, (l3!.gripCm ?? 3) * pxPerCm * sz) : handlePx * 0.55;
         next = { cx: gx, top: fistBottom - apexUp, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
       }
       if (!next) {

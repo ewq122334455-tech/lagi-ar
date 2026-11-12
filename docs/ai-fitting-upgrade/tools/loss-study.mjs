@@ -20,7 +20,7 @@ function run(series, engine, P) {
   const W = series[0].W, H = series[0].H, out = [];
   let di = -1, handYaw = 0, handScale = 0, grip = null, last = null, miss = 0, rawGrip = null, rejected = 0, placed = null, lastHandAt = -1e9;
   const fx = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fy = new OneEuro(P.v2c ?? 2.0, P.v2b ?? 0.008), fw = new OneEuro(0.8, 0.002), fyaw = new OneEuroAngle(1.5, 0.8);
-  const tx = null, ty = null, tw = null; const pol = engine === 'v3' ? new HoldPolicy() : null; let lastFreshT = -1e9;
+  const tx = null, ty = null, tw = null; const pol = engine === 'v3' ? new HoldPolicy(P.maxHold, P.minHold, P.fast, P.glide) : null; let lastFreshT = -1e9;
   const rawTrace = []; let truth = [];
   const T = series[series.length - 1].t;
   for (let t = 0; t <= T; t += 1000 / 60) {
@@ -75,7 +75,7 @@ function metrics(out, rawTrace) {
 // ---- Loss study: is the V2 "visible during a gap" ratio real tracking or a stale pose? ----
 // Ground truth = the same clip with no dropout (raw measured placement). We then blank a detection window
 // and measure how far the displayed bag is from where the hand really is, and how far it snaps on recovery.
-const P0 = {};
+const P0 = process.argv[3] ? JSON.parse(process.argv[3]) : {};
 const base = (name, speed = 1) => JSON.parse(fs.readFileSync(`${R}/aiq/series-${name}.json`)).map((d) => ({ ...d, t: Math.round(d.t / speed) }));
 const truthAt = (series, t) => { // placement the hand really has at time t (from the undropped clip)
   const W = series[0].W, H = series[0].H; let lo = 0; while (lo + 1 < series.length && series[lo + 1].t <= t) lo++;
@@ -107,6 +107,7 @@ function study(name, speed, gapMs, starts) {
 const all = [];
 for (const [clip, speed, gaps] of [['fist3', 1, [300, 600, 1000]], ['fist3-pan', 1, [300, 600, 1000]], ['fist3-pan', 4, [150, 300, 600]], ['fist3-pan', 8, [100, 200, 300]]])
   for (const gap of gaps) { const dur = 11900 / speed; all.push(...study(clip, speed, gap, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7].map((f) => Math.round(f * dur)))); }
+if (process.env.SWEEP) { const v = all.filter((r) => r.engine === 'v3' && r.clip === 'fist3-pan'); const m = (k) => +(v.reduce((a, r) => a + r[k], 0) / v.length).toFixed(1); console.log(JSON.stringify(P0), 'shown', m('shownPct'), 'err', m('meanErrPx'), 'wrong', m('wrongShownPct'), 'step', m('snapMaxPx')); process.exit(0); }
 console.table(all);
 fs.writeFileSync(`${R}/aiq/loss-study.json`, JSON.stringify(all, null, 1));
 
