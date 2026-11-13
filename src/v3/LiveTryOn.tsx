@@ -5,6 +5,25 @@ import { keyMatte } from './productOverlay';
 import { createDesignMapper, greenReference, type DesignMapper } from './greenMap';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
+/** What the visitor sees as the current step (11 states). */
+type Step = 'before' | 'ready' | 'permission' | 'checking' | 'connecting' | 'processing' | 'live' | 'failed' | 'disconnected' | 'limited' | 'ended';
+const STEP_LABEL: Record<Step, string> = {
+  before: '제품을 고르고 동의하면 시작할 수 있어요',
+  ready: '준비 완료 · 시작을 누르세요',
+  permission: '카메라 권한을 확인하는 중',
+  checking: '카메라 입력과 제품 이미지를 확인하는 중',
+  connecting: 'AI 서버에 연결하는 중',
+  processing: 'AI가 영상을 만드는 중',
+  live: '실시간 AI 영상 출력 중',
+  failed: '시작하지 못했어요',
+  disconnected: '연결이 끊겼어요',
+  limited: '오늘 사용량을 모두 썼어요',
+  ended: '체험이 끝났어요',
+};
+const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'connecting', 'processing', 'live', 'ended'];
+class ApiError extends Error {
+  reason?: string;
+}
 
 /** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
 function promptFor(product: Product, stylePrompt: string, description?: string) {
@@ -85,7 +104,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(data.error ?? `요청에 실패했습니다 (${res.status}).`);
+  if (!res.ok) {
+    const err = new ApiError(data.error ?? `요청에 실패했습니다 (${res.status}).`);
+    err.reason = (data as { reason?: string }).reason;
+    throw err;
+  }
   return data;
 }
 
@@ -112,6 +135,13 @@ export function LiveTryOn({
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   // Connected but the AI has not sent a generated frame yet (queued or warming up).
   const [waiting, setWaiting] = useState<string | null>(null);
+  const [stage, setStage] = useState<'permission' | 'checking' | 'connecting' | null>(null);
+  const [fail, setFail] = useState<'failed' | 'disconnected' | 'limited' | null>(null);
+  // Optional local recording of the output video (never uploaded).
+  const [recOn, setRecOn] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [clip, setClip] = useState<{ url: string; ext: string; size: number } | null>(null);
+  const recorder = useRef<MediaRecorder | null>(null);
   // "정확한 사진": the live pose re-made by the photo compositor, which keeps the real product design.
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const out = useRef<HTMLVideoElement>(null);
@@ -126,9 +156,12 @@ export function LiveTryOn({
   // Never leave a paid session running: stop on unmount and when the tab is hidden.
   useEffect(() => {
     const onHide = () => document.hidden && session.current?.stop();
+    const onGone = () => session.current?.stop();
     document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onGone);
     return () => {
       document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onGone);
       session.current?.stop();
     };
   }, []);
@@ -174,10 +207,40 @@ export function LiveTryOn({
     return garment.current;
   }
 
+  /** The output video as a recordable stream: the design-mapped canvas when mapping is on, else the AI's own video. */
+  function startRecording() {
+    try {
+      if (typeof MediaRecorder === 'undefined') return;
+      const src: MediaStream | null = mapOn && mapped.current ? mapped.current.captureStream(30) : ((out.current?.srcObject as MediaStream | null) ?? null);
+      if (!src) return;
+      const type = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+      const rec = new MediaRecorder(src, type ? { mimeType: type } : undefined);
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      rec.onstop = () => {
+        setRecording(false);
+        if (!chunks.length) return;
+        const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
+        setClip((old) => {
+          if (old) URL.revokeObjectURL(old.url);
+          return { url: URL.createObjectURL(blob), ext: blob.type.includes('mp4') ? 'mp4' : 'webm', size: blob.size };
+        });
+      };
+      rec.start(1000);
+      recorder.current = rec;
+      setRecording(true);
+    } catch {
+      setRecording(false);
+    }
+  }
+
   async function start() {
     if (!product || phase === 'starting' || phase === 'live' || !consent) return;
     setError(null);
+    setFail(null);
     setExact({ busy: false });
+    if (clip) URL.revokeObjectURL(clip.url);
+    setClip(null);
     setPhase('starting');
     let stream: MediaStream | null = null;
     let timer = 0;
@@ -189,28 +252,42 @@ export function LiveTryOn({
       if (stopped) return;
       stopped = true;
       window.clearInterval(timer);
+      try {
+        if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
+      } catch {
+        /* already stopped */
+      }
+      recorder.current = null;
       rt?.disconnect();
       stream?.getTracks().forEach((t) => t.stop());
       if (out.current) out.current.srcObject = null;
       if (local.current) local.current.srcObject = null;
       session.current = null;
       setWaiting(null);
+      setStage(null);
       // Only a session that actually ran "ended"; a failed start goes back to the start state.
       setPhase(wentLive ? 'ended' : 'idle');
     };
     try {
-      const [ref, token, sdk] = await Promise.all([
-        garmentBlob(product),
-        post<{ apiKey: string; seconds: number; remainingToday: number | null }>('/realtime/token', {}),
-        import('@decartai/sdk'),
-      ]);
-      setRemaining(token.remainingToday ?? 'unlimited');
+      // 1. The camera FIRST. A visitor who says no (or has no camera) must not cost a paid token or any Gemini call, and the
+      //    30-second token must not run out while the permission dialog is still open.
+      setStage('permission');
+      const sdk = await import('@decartai/sdk');
       const model = sdk.models.realtime('lucy-2.6');
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: { facingMode: facing, frameRate: model.fps, width: model.width, height: model.height },
       });
       if (local.current) local.current.srcObject = stream;
+      // 2. Check what will be sent: the camera really delivers video, and the product reference is ready.
+      setStage('checking');
+      const track = stream.getVideoTracks()[0];
+      if (!track || track.readyState !== 'live') throw new Error('카메라 영상이 들어오지 않습니다. 다른 앱이 카메라를 쓰고 있지 않은지 확인해 주세요.');
+      const ref = await garmentBlob(product);
+      // 3. The token last, right before connecting (it is minted and metered only now).
+      setStage('connecting');
+      const token = await post<{ apiKey: string; seconds: number; remainingToday: number | null }>('/realtime/token', {});
+      setRemaining(token.remainingToday ?? 'unlimited');
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       const conn = await client.realtime.connect(stream, {
         model,
@@ -225,6 +302,7 @@ export function LiveTryOn({
         onQueuePosition: (q: { position: number }) => setWaiting(q.position > 0 ? `대기 중입니다 · ${q.position}번째` : 'AI가 영상을 만들고 있습니다…'),
       });
       rt = conn;
+      setStage(null);
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
@@ -236,10 +314,14 @@ export function LiveTryOn({
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
       conn.on('sessionEnded', (e: { reason?: string }) => {
-        if (!gotFrames && e?.reason) setError(`AI 영상이 시작되기 전에 세션이 끝났습니다 (${e.reason}).`);
+        if (!gotFrames && e?.reason) {
+          setFail('failed');
+          setError(`AI 영상이 시작되기 전에 세션이 끝났습니다 (${e.reason}).`);
+        }
         stop();
       });
       conn.on('error', (e: { message?: string }) => {
+        setFail('disconnected');
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
       });
@@ -253,6 +335,7 @@ export function LiveTryOn({
         if (gotFrames) return;
         gotFrames = true;
         setWaiting(null);
+        if (recOn) window.setTimeout(startRecording, 200);
       };
       conn.on('generationTick', onFrames);
       setLeft(token.seconds);
@@ -264,6 +347,7 @@ export function LiveTryOn({
         const s = Math.max(0, Math.ceil((until - Date.now()) / 1000));
         setLeft(s);
         if (!gotFrames && Date.now() - begun > 12000) {
+          setFail('failed');
           setError('AI 영상이 오지 않아 중단했습니다. 잠시 후 다시 시도해 주세요.');
           stop();
         } else if (s <= 0) stop();
@@ -271,6 +355,9 @@ export function LiveTryOn({
     } catch (e) {
       stop();
       const name = (e as DOMException)?.name;
+      const reason = (e as ApiError).reason;
+      const limited = reason === 'daily_limit' || reason === 'site_limit' || reason === 'busy_ip' || reason === 'busy_site' || reason === 'quota_unavailable';
+      setFail(limited ? 'limited' : 'failed');
       setError(
         name === 'NotAllowedError'
           ? '카메라 권한이 꺼져 있습니다. 주소창의 카메라 설정에서 허용한 뒤 다시 시도해 주세요.'
@@ -279,6 +366,14 @@ export function LiveTryOn({
             : (e as Error).message || '실시간 착용을 시작하지 못했습니다.',
       );
     }
+  }
+
+  function saveClip() {
+    if (!clip || !product) return;
+    const a = document.createElement('a');
+    a.href = clip.url;
+    a.download = `lagi-live-${product.id}.${clip.ext}`;
+    a.click();
   }
 
   /** Freeze the visitor's own camera frame, end the paid live session, and have the photo AI place the real product. */
@@ -346,6 +441,12 @@ export function LiveTryOn({
   }
 
   const live = phase === 'live';
+  const step: Step =
+    phase === 'live' ? (waiting ? 'processing' : 'live')
+    : phase === 'starting' ? (stage ?? 'connecting')
+    : fail ? fail
+    : phase === 'ended' ? 'ended'
+    : product && consent ? 'ready' : 'before';
 
   return (
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
@@ -369,6 +470,24 @@ export function LiveTryOn({
             </>
           )}
         </div>
+        <div className="mt-3" data-testid="live-steps" data-step={step}>
+          <ol className="flex flex-wrap gap-x-4 gap-y-1" aria-label="진행 단계">
+            {STEP_ORDER.map((k) => {
+              const at = STEP_ORDER.indexOf(step);
+              const here = k === step;
+              const done = at > STEP_ORDER.indexOf(k);
+              return (
+                <li key={k} className={`t-caption kr ${here ? 'font-bold text-[var(--c-ink)]' : done ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)]'}`} aria-current={here ? 'step' : undefined}>
+                  {done ? '✓ ' : here ? '● ' : '○ '}
+                  {k === 'ready' ? '준비' : k === 'permission' ? '카메라' : k === 'checking' ? '입력 검사' : k === 'connecting' ? '서버 연결' : k === 'processing' ? 'AI 처리' : k === 'live' ? '영상 출력' : '종료'}
+                </li>
+              );
+            })}
+          </ol>
+          <p className="t-caption kr mt-1 text-[var(--c-mute)]" role="status" data-testid="live-step-label">
+            {STEP_LABEL[step]}
+          </p>
+        </div>
         {live && (
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" className="btn btn-primary" onClick={exactPhoto} data-testid="exact-photo">
@@ -383,6 +502,32 @@ export function LiveTryOn({
           </div>
         )}
         {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
+        {recording && (
+          <p className="t-caption kr mt-2 text-[var(--c-ink)]" data-testid="rec-on">
+            ● 이 기기에 녹화 중입니다 (서버로 보내지 않습니다)
+          </p>
+        )}
+        {clip && (
+          <div className="mt-6" data-testid="clip-result">
+            <video src={clip.url} controls playsInline muted className="block h-auto w-full max-w-xl bg-[var(--c-ink)]" />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" className="btn btn-primary" onClick={saveClip}>
+                영상 저장 ({clip.ext.toUpperCase()}, {(clip.size / 1048576).toFixed(1)}MB)
+              </button>
+              <button
+                type="button"
+                className="btn btn-line"
+                onClick={() => {
+                  URL.revokeObjectURL(clip.url);
+                  setClip(null);
+                }}
+              >
+                삭제
+              </button>
+            </div>
+            <p className="t-caption kr mt-2 text-[var(--c-mute)]">AI가 만든 영상입니다. 이 기기에만 있고, 이 화면을 닫으면 사라집니다.</p>
+          </div>
+        )}
         {(exact.busy || exact.image || exact.error) && (
           <div className="mt-6" data-testid="exact-result" aria-live="polite">
             {exact.busy && <p className="t-body kr">이 포즈에 실제 제품을 합성하고 있습니다… (10~40초)</p>}
@@ -432,6 +577,15 @@ export function LiveTryOn({
               AI는 제품 모양의 초록 가방을 자연스럽게 들게 만들고, 그 위에 실제 제품 디자인을 그대로 입힙니다. 끄면 AI가 그린 제품이 그대로 보여 모양과 무늬가 달라질 수 있어요.
             </span>
           </label>
+          {typeof MediaRecorder !== 'undefined' && (
+            <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
+              <input type="checkbox" className="mt-1" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
+              <span>
+                <b className="block text-[var(--c-ink)]">결과 영상을 이 기기에 녹화</b>
+                끝나면 영상으로 저장할 수 있습니다. 파일은 이 기기에만 만들어지고 라기 서버로 올라가지 않습니다.
+              </span>
+            </label>
+          )}
           <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>체험하는 20초 동안 카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
@@ -449,7 +603,7 @@ export function LiveTryOn({
             한 번에 20초, 하루 3번까지 체험할 수 있습니다{remaining === 'unlimited' ? ' (이 계정은 횟수 제한 없음)' : remaining != null ? ` (오늘 남은 횟수 ${remaining}번)` : ''}. 화면은 AI가 만든 영상이며, 실제 크기와 색은 다를 수 있습니다.
           </p>
           {error && (
-            <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert">
+            <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert" data-testid="live-error" data-kind={fail ?? 'failed'}>
               {error}
             </p>
           )}

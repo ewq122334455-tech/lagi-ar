@@ -1,0 +1,253 @@
+[
+ {
+  "id": "book-cover",
+  "name": "북커버",
+  "category": "Acc.",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "25x17x4",
+  "has3d": false,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1800x1347",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "daily-pouch-bag",
+  "name": "데일리 파우치백",
+  "category": "Bag",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "19x16x14",
+  "has3d": false,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1554x1800",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "daily-tote",
+  "name": "데일리토트백",
+  "category": "Bag",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "28x25x13",
+  "has3d": true,
+  "notes": [],
+  "size": "1800x1658",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "glasses-case",
+  "name": "안경 보관함",
+  "category": "Acc.",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "19x9x5",
+  "has3d": true,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1800x1677",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "lagi-again-tee-black",
+  "name": "AGAIN 오버핏 티셔츠 블랙",
+  "category": "Top",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-cargo-pants",
+  "name": "나일론 카고 팬츠 카키",
+  "category": "Bottom",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-chino-pants",
+  "name": "코튼 치노 팬츠 베이지",
+  "category": "Bottom",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-colorblock-tee",
+  "name": "컬러블록 티셔츠 블루",
+  "category": "Top",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-jogger-pants",
+  "name": "스웨트 조거 팬츠 그레이",
+  "category": "Bottom",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-motif-tee-white",
+  "name": "라기 모티프 반팔 티셔츠 화이트",
+  "category": "Top",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-pocket-tee-cream",
+  "name": "포켓 라운드 티셔츠 크림",
+  "category": "Top",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "lagi-wide-denim",
+  "name": "와이드 데님 팬츠",
+  "category": "Bottom",
+  "status": "AI_DRAFT",
+  "images": 1,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "치수 없음"
+  ],
+  "size": "1200x1440",
+  "whiteBg": true,
+  "usable": true
+ },
+ {
+  "id": "milkpack-earphone-case",
+  "name": "우유팩 이어폰 케이스",
+  "category": "Acc.",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "8x8x4",
+  "has3d": true,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1800x1675",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "modular-bag-s",
+  "name": "모듈러백 스몰 S",
+  "category": "Bag",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "22x14x2.5",
+  "has3d": true,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1800x1669",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "origami-picnic-bag",
+  "name": "Origami 오리가미 피크닉백",
+  "category": "Bag",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "60x33x14",
+  "has3d": true,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1800x1685",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "plano-bag",
+  "name": "플라노백 PLANO BAG",
+  "category": "Bag",
+  "status": "VERIFIED",
+  "images": 1,
+  "dims": "14x14x14",
+  "has3d": true,
+  "notes": [
+   "배경이 흰색이 아님 → 컷아웃 단계(Gemini 1회)가 필요"
+  ],
+  "size": "1446x1800",
+  "whiteBg": false,
+  "usable": true
+ },
+ {
+  "id": "product-001",
+  "name": "모듈러 지퍼백",
+  "category": "Bag",
+  "status": "AI_DRAFT",
+  "images": 0,
+  "dims": null,
+  "has3d": false,
+  "notes": [
+   "이미지 파일 없음"
+  ],
+  "usable": false
+ }
+]

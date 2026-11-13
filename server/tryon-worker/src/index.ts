@@ -49,6 +49,8 @@ export interface Env {
   GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
+  /** Realtime sessions that may be open at once, whole site. Default 3. */
+  REALTIME_MAX_CONCURRENT?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
   /** Atomic daily counters for the AI-photo cost caps (Durable Object `QuotaCounter`). Without it the caps fall back to KV, which is NOT atomic. */
   QUOTA?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } };
@@ -823,6 +825,8 @@ async function handleReviews(path: string, request: Request, env: Env, headers: 
 const REALTIME_SECONDS = 20;
 /** Realtime sessions per visitor (IP) per day. */
 const REALTIME_PER_IP = 3;
+/** Sessions that may be open at the same moment, whole site (Decart bills open session-seconds). */
+const REALTIME_MAX_CONCURRENT = 3;
 
 /**
  * POST /realtime/token — a short-lived Decart client token for one 20-second session.
@@ -868,10 +872,18 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   const member = unlimited.length && env.USERS ? await sessionUser(env.USERS, request) : null;
   const vip = !!member && unlimited.includes(member.user.email.toLowerCase());
   let usedToday = 0;
+  // One open session per visitor and a site-wide ceiling, BEFORE a unit is spent or a token is minted. The lease outlives the
+  // session by a margin (connect time) and expires on its own; the owner's own account is exempt only from the daily cap.
+  const maxOpen = Number(env.REALTIME_MAX_CONCURRENT ?? REALTIME_MAX_CONCURRENT);
+  const busy = await leaseRealtime(env, ip, (REALTIME_SECONDS + 25) * 1000, maxOpen);
+  if (busy === 'busy_ip') return json({ error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' }, 429, headers);
+  if (busy === 'busy_site') return json({ error: '지금 실시간 착용을 이용하는 분이 많습니다. 잠시 후 다시 시도해 주세요.', reason: 'busy_site' }, 429, headers);
+  if (busy) return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
   if (!vip) {
     try {
       usedToday = (await meter(env, 'rt', ip, 1, dailyAll, REALTIME_PER_IP)).ipSpent;
     } catch (e) {
+      await releaseRealtime(env, ip);
       if (!(e instanceof QuotaError)) throw e;
       if (e.reason === 'daily_limit') return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
       if (e.reason === 'site_limit') return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
@@ -884,7 +896,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     method: 'POST',
     headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      expiresIn: 60, // enough to connect; an open session is capped by maxSessionDuration
+      expiresIn: 30, // enough to connect (the camera is already on); an open session is capped by maxSessionDuration
       allowedModels: ['lucy-2.6'],
       allowedOrigins: origins,
       constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
@@ -892,6 +904,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   });
   if (!res.ok) {
     console.log('decart token error', res.status, (await res.text()).slice(0, 300));
+    await releaseRealtime(env, ip);
     return json({ error: '실시간 착용 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.', reason: 'provider' }, 502, headers);
   }
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
@@ -978,6 +991,35 @@ async function takeUnits(env: Env, budget: Budget, units: number): Promise<void>
   await meter(env, 'tryon', budget.ip, units, siteCap, ipCap);
 }
 
+/**
+ * Concurrent-session guard for realtime (Decart bills per second of an OPEN session, not per token). One open session per
+ * visitor address and at most `max` across the site. Fails closed like the meter. Returns a refusal reason or null.
+ */
+async function leaseRealtime(env: Env, ip: string, ttlMs: number, max: number): Promise<'busy_ip' | 'busy_site' | 'quota_unavailable' | null> {
+  if (env.TRYON_QUOTA === 'unmetered' && localOnly(env)) return null;
+  if (!env.QUOTA) return 'quota_unavailable';
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const res = await env.QUOTA.get(env.QUOTA.idFromName(`rt:${day}`)).fetch('https://quota/lease', { method: 'POST', body: JSON.stringify({ ip, ttlMs, max, now: Date.now() }) });
+    if (!res.ok) return 'quota_unavailable';
+    const out = (await res.json()) as { ok?: boolean; reason?: string };
+    if (out.ok === true) return null;
+    return out.reason === 'busy_ip' || out.reason === 'busy_site' ? out.reason : 'quota_unavailable';
+  } catch {
+    return 'quota_unavailable';
+  }
+}
+
+async function releaseRealtime(env: Env, ip: string): Promise<void> {
+  if (!env.QUOTA) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.QUOTA.get(env.QUOTA.idFromName(`rt:${day}`)).fetch('https://quota/release', { method: 'POST', body: JSON.stringify({ ip }) });
+  } catch {
+    /* the lease expires by itself */
+  }
+}
+
 /** Only localhost origins may run unmetered: a production origin with the meter switched off is a misconfiguration, so it blocks. */
 function localOnly(env: Env): boolean {
   return env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean).every((o) => {
@@ -1040,6 +1082,26 @@ export class QuotaCounter {
       const name = String(outcome ?? 'unknown').replace(/[^a-z0-9_]/gi, '').slice(0, 32) || 'unknown';
       const n = Number((await this.state.storage.get(`out:${name}`)) ?? 0);
       await this.state.storage.put({ [`out:${name}`]: n + 1 });
+      return Response.json({ ok: true });
+    }
+    if (route === '/lease') {
+      // Concurrent realtime sessions: one lease per visitor address, and a site-wide ceiling. Leases expire by themselves,
+      // so a crashed page can never block the site for long. Decided in one request (no interleaving).
+      const { ip, ttlMs, max, now } = (await request.json()) as { ip: string; ttlMs: number; max: number; now: number };
+      const raw = ((await this.state.storage.get('leases')) as Record<string, number> | undefined) ?? {};
+      const live: Record<string, number> = {};
+      for (const [k, v] of Object.entries(raw)) if (v > now) live[k] = v;
+      if (live[ip]) return Response.json({ ok: false, reason: 'busy_ip', retryInMs: live[ip] - now });
+      if (Object.keys(live).length >= max) return Response.json({ ok: false, reason: 'busy_site' });
+      live[ip] = now + ttlMs;
+      await this.state.storage.put({ leases: live });
+      return Response.json({ ok: true });
+    }
+    if (route === '/release') {
+      const { ip } = (await request.json()) as { ip: string };
+      const raw = ((await this.state.storage.get('leases')) as Record<string, number> | undefined) ?? {};
+      delete raw[ip];
+      await this.state.storage.put({ leases: raw });
       return Response.json({ ok: true });
     }
     if (route === '/usage') {
