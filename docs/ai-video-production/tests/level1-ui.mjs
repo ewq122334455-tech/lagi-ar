@@ -5,7 +5,7 @@ const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images
 const W = 'https://lagi-tryon.lagi-official.workers.dev';
 const ok = (n, c, i = '') => console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${i ? '  — ' + i : ''}`);
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
-async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5 } = {}) {
+async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, permissions: ['camera'], acceptDownloads: true });
   await ctx.addInitScript(([m, d]) => {
     sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: m };
@@ -17,6 +17,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5 } = {
   const cors = { 'Access-Control-Allow-Origin': 'http://localhost:4195', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' };
   await p.route(W + '/**', (rt) => {
     const u = rt.request().url().replace(W, ''); const body = rt.request().postData() ?? '';
+    if (u === '/realtime/report') { p.calls.push(u); return rt.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: '{"ok":true}' }); }
     if (rt.request().method() === 'OPTIONS') return rt.fulfill({ status: 204, headers: cors });
     p.calls.push(u + (body.includes('matte') ? '(matte)' : ''));
     const J = (status, o) => rt.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(o) });
@@ -25,7 +26,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5 } = {
       if (token === 'daily') return J(429, { error: '실시간 착용은 하루 3번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.', reason: 'daily_limit' });
       if (token === 'busy') return J(429, { error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' });
       if (token === 'down') return J(503, { error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' });
-      return J(200, { apiKey: 'mock-token', seconds, remainingToday: 2 });
+      return J(200, { apiKey: 'mock-token', seconds, remainingToday: 2, ...(model ? { model } : {}) });
     }
     return rt.abort();
   });
@@ -60,9 +61,23 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
   await p.waitForSelector('[data-testid=clip-result]', { timeout: 10000 }); ok('C8 recorded clip preview appears', true);
   const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /영상 저장/ }).click()]); const f = '/tmp/rtclip-' + dl.suggestedFilename(); await dl.saveAs(f);
   ok('C9 clip downloads and is not empty', fs.statSync(f).size > 2000, `${dl.suggestedFilename()} ${fs.statSync(f).size} bytes`);
-  ok('C10 no request carries video to our server (only /cutout, /realtime/token)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token'), p.calls.join(','));
+  ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report'), p.calls.join(','));
   ok('C11 no page errors', p.errs.length === 0, p.errs.join('|')); await p.context().close(); }
 
+ok_(); function ok_() {}
+{ const p = await open({ seconds: 5 }); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  const log = await p.evaluate(() => window.__rtLog);
+  ok('F1 default model is lucy-2.6 and standard speed (fast mode bills 2x and is never requested)', log.includes('model:lucy-2.6') && log.includes('speed:standard'), log.filter((l) => /^(model|speed)/.test(l)).join(' '));
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 20000 });
+  await p.waitForTimeout(500);
+  ok('F2 the page reports the real run time to the Worker when the session ends (advisory)', p.calls.includes('/realtime/report'), p.calls.join(','));
+  await p.context().close(); }
+{ const p = await open({ seconds: 5, model: 'lucy-vton-3.6' }); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  const log = await p.evaluate(() => window.__rtLog);
+  ok('F3 when the Worker names lucy-vton-3.6 the page uses it with the VTON "Add … to the outfit" prompt', log.includes('model:lucy-vton-3.6') && log.some((l) => l.startsWith('setImage:Add a plain flat chroma-key')), log.filter((l) => /^(model|setImage)/.test(l)).join(' | '));
+  await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');

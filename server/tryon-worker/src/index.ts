@@ -49,6 +49,12 @@ export interface Env {
   GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
+  /** Realtime model for new sessions. Default lucy-2.6. Only models listed in REALTIME_MODELS are accepted. */
+  REALTIME_MODEL?: string;
+  /** USD per realtime second used for the estimate in /admin/usage (default 0.02, standard mode). */
+  DECART_USD_PER_SEC?: string;
+  /** Base URL of the Decart API (tests point this at a local mock). Default https://api.decart.ai */
+  DECART_BASE_URL?: string;
   /** Realtime sessions that may be open at once, whole site. Default 3. */
   REALTIME_MAX_CONCURRENT?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
@@ -827,6 +833,8 @@ const REALTIME_SECONDS = 20;
 const REALTIME_PER_IP = 3;
 /** Sessions that may be open at the same moment, whole site (Decart bills open session-seconds). */
 const REALTIME_MAX_CONCURRENT = 3;
+/** The only realtime models a token can be scoped to (a model is never switched automatically). */
+const REALTIME_MODELS = ['lucy-2.6', 'lucy-vton-3.6', 'lucy-vton-3.5'];
 
 /**
  * POST /realtime/token — a short-lived Decart client token for one 20-second session.
@@ -836,6 +844,23 @@ const REALTIME_MAX_CONCURRENT = 3;
 async function realtime(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405, headers);
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+
+  // The page tells us how long a session really ran. ADVISORY ONLY: the browser can lie, so it never frees a lease or a
+  // quota unit; it just lets the owner compare "what pages say" with Decart's own usage page. Each report counts at most
+  // the session cap, and the endpoint is rate-limited.
+  if (path === '/realtime/report') {
+    if (throttled(`rtrep:${ip}`, 10)) return json({ error: 'slow down' }, 429, headers);
+    let r: { seconds?: number; ok?: boolean };
+    try {
+      r = await request.json();
+    } catch {
+      return json({ error: 'invalid JSON' }, 400, headers);
+    }
+    const sec = Math.min(Math.max(Number.isFinite(r.seconds) ? Number(r.seconds) : 0, 0), REALTIME_SECONDS);
+    void recordOutcome(env, 'rt', r.ok === false ? 'report_fail' : 'report_ok');
+    if (sec > 0) void recordOutcome(env, 'rt', 'reported_ms', Math.round(sec * 1000));
+    return json({ ok: true }, 200, headers);
+  }
 
   if (path === '/cutout') {
     if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
@@ -875,7 +900,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   // One open session per visitor and a site-wide ceiling, BEFORE a unit is spent or a token is minted. The lease outlives the
   // session by a margin (connect time) and expires on its own; the owner's own account is exempt only from the daily cap.
   const maxOpen = Number(env.REALTIME_MAX_CONCURRENT ?? REALTIME_MAX_CONCURRENT);
-  const busy = await leaseRealtime(env, ip, (REALTIME_SECONDS + 25) * 1000, maxOpen);
+  const busy = await leaseRealtime(env, ip, (REALTIME_SECONDS + 15) * 1000, maxOpen);
   if (busy === 'busy_ip') return json({ error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' }, 429, headers);
   if (busy === 'busy_site') return json({ error: '지금 실시간 착용을 이용하는 분이 많습니다. 잠시 후 다시 시도해 주세요.', reason: 'busy_site' }, 429, headers);
   if (busy) return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
@@ -892,12 +917,13 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   }
 
   const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
-  const res = await fetch('https://api.decart.ai/v1/client/tokens', {
+  const model = REALTIME_MODELS.includes(env.REALTIME_MODEL ?? '') ? (env.REALTIME_MODEL as string) : 'lucy-2.6';
+  const res = await fetch(`${env.DECART_BASE_URL ?? 'https://api.decart.ai'}/v1/client/tokens`, {
     method: 'POST',
     headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      expiresIn: 30, // enough to connect (the camera is already on); an open session is capped by maxSessionDuration
-      allowedModels: ['lucy-2.6'],
+      expiresIn: 20, // enough to connect (the camera is already on); an open session is capped by maxSessionDuration
+      allowedModels: [model],
       allowedOrigins: origins,
       constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
     }),
@@ -909,8 +935,10 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   }
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
   if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
-  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: null }, 200, headers);
-  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
+  void recordOutcome(env, 'rt', vip ? 'token_vip' : 'token');
+  void recordOutcome(env, 'rt', 'reserved_ms', REALTIME_SECONDS * 1000);
+  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, model, remainingToday: null }, 200, headers);
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, model, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
 }
 
 // ---- Router ----------------------------------------------------------------------------------
@@ -941,7 +969,7 @@ export default {
       return handleOrders(path, request, env, headers);
     }
     if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
-    if (path === '/realtime/token' || path === '/cutout') return realtime(path, request, env, headers);
+    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -1078,10 +1106,11 @@ export class QuotaCounter {
   async fetch(request: Request): Promise<Response> {
     const route = new URL(request.url).pathname;
     if (route === '/record') {
-      const { outcome } = (await request.json()) as { outcome?: string };
+      const { outcome, n: add } = (await request.json()) as { outcome?: string; n?: number };
       const name = String(outcome ?? 'unknown').replace(/[^a-z0-9_]/gi, '').slice(0, 32) || 'unknown';
+      const inc = Number.isFinite(add) ? Math.min(Math.max(Math.trunc(add as number), 0), 60_000) : 1;
       const n = Number((await this.state.storage.get(`out:${name}`)) ?? 0);
-      await this.state.storage.put({ [`out:${name}`]: n + 1 });
+      await this.state.storage.put({ [`out:${name}`]: n + inc });
       return Response.json({ ok: true });
     }
     if (route === '/lease') {
@@ -1107,7 +1136,7 @@ export class QuotaCounter {
     if (route === '/usage') {
       const all = Number((await this.state.storage.get('all')) ?? 0);
       const outcomes: Record<string, number> = {};
-      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy'])
+      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms'])
         outcomes[k] = Number((await this.state.storage.get(`out:${k}`)) ?? 0);
       return Response.json({ spentCenti: all, outcomes });
     }
@@ -1236,11 +1265,11 @@ async function callGemini(env: Env, body: string, model: string, budget: Budget,
  * a call is allowed, and nothing is refunded. Compare the totals with Google's own billing page — they will differ
  * (failed or blocked attempts may or may not be billed), and that difference is what this ledger exists to show.
  */
-async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string): Promise<void> {
+async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string, n = 1): Promise<void> {
   if (!env.QUOTA) return;
   try {
     const day = new Date().toISOString().slice(0, 10);
-    await env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`)).fetch('https://quota/record', { method: 'POST', body: JSON.stringify({ outcome }) });
+    await env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`)).fetch('https://quota/record', { method: 'POST', body: JSON.stringify({ outcome, n }) });
   } catch {
     /* bookkeeping only */
   }
@@ -1379,7 +1408,16 @@ async function adminUsage(request: Request, env: Env, headers: Record<string, st
     {
       day,
       gemini: { ...gemini, estimatedUsd: Number((gemini.unitsReserved * perUnit).toFixed(2)), siteCapUnits: Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT) },
-      realtime: { sessionsReserved: realtime.unitsReserved, siteCapSessions: Number(env.REALTIME_DAILY_SESSIONS ?? 100) },
+      realtime: {
+        sessionsReserved: realtime.unitsReserved,
+        siteCapSessions: Number(env.REALTIME_DAILY_SESSIONS ?? 100),
+        tokens: (realtime.outcomes.token ?? 0) + (realtime.outcomes.token_vip ?? 0),
+        reservedSeconds: (realtime.outcomes.reserved_ms ?? 0) / 1000,
+        reportedByPagesSeconds: (realtime.outcomes.reported_ms ?? 0) / 1000,
+        reports: { ok: realtime.outcomes.report_ok ?? 0, failed: realtime.outcomes.report_fail ?? 0 },
+        estimatedUsdIfAllReserved: Number((((realtime.outcomes.reserved_ms ?? 0) / 1000) * Number(env.DECART_USD_PER_SEC ?? 0.02)).toFixed(2)),
+        caveat: 'Reserved seconds assume ONE connection per token that runs to the cap. The server cannot see the real WebRTC connection (it goes browser to Decart), and page reports can be wrong. Compare with the Decart usage page; Decart bills per active generation second, at 2x in fast mode.',
+      },
       note: 'Units are attempts reserved before each call, never refunded. Estimated USD = units × TRYON_USD_PER_UNIT. The real bill is on the provider billing pages; failed/blocked attempts may or may not be billed.',
     },
     200,

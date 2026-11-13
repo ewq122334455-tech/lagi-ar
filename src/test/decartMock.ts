@@ -20,9 +20,11 @@ export function createDecartClient(opts: { apiKey: string }) {
   log(`client:${opts.apiKey ? 'key' : 'nokey'}`);
   return {
     realtime: {
-      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void }) {
+      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string }) {
         const mode = window.__rtMock?.mode ?? 'ok';
         log(`connect:${mode}`);
+        log(`model:${o.model?.name}`);
+        log(`speed:${o.speed ?? 'standard'}`);
         const handlers = new Map<string, Handler>();
         const v = document.createElement('video');
         v.muted = true;

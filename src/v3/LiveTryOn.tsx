@@ -26,8 +26,10 @@ class ApiError extends Error {
 }
 
 /** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
-function promptFor(product: Product, stylePrompt: string, description?: string) {
+function promptFor(product: Product, stylePrompt: string, description?: string, vton = false) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
+  // Lucy VTON (opt-in via the Worker): Decart's guide asks for one action, "Add <what it looks like> to the outfit", describing only what the reference shows (about 750 characters at most).
+  if (vton) return `Add ${description ? `the ${kind}: ${description.slice(0, 380)}` : `the ${kind} shown in the reference image`} to the outfit, ${stylePrompt}. Copy its exact shape, colours and prints; do not invent details.`;
   // The written description (from the server, per product) pins colours and parts the image alone lets drift.
   if (description)
     return `Add the ${kind} from the reference image, ${stylePrompt}. The ${kind}: ${description} It is an accessory, not clothing: do not change the person's clothes. Copy its exact design, colours and prints; keep the person and background unchanged.`;
@@ -35,8 +37,9 @@ function promptFor(product: Product, stylePrompt: string, description?: string) 
 }
 
 /** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
-function greenPromptFor(product: Product, stylePrompt: string) {
+function greenPromptFor(product: Product, stylePrompt: string, vton = false) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
+  if (vton) return `Add a plain flat chroma-key green (#00FF00) ${kind} with exactly the outline shown in the reference image to the outfit, ${stylePrompt}. No print, no logo, no texture, no other colour.`;
   const dims = product.dimensions.widthCm ? ` about ${product.dimensions.widthCm} cm wide and ${product.dimensions.heightCm ?? ''} cm tall,` : '';
   // No written description here: its colours made the AI paint the bag instead of keeping it green.
   return `Add a ${kind} with exactly the outline of the green ${kind} in the reference image,${dims} ${stylePrompt}. The ${kind} is plain flat chroma-key green (#00FF00) all over: no print, no logo, no texture, no other colour. It is an accessory, not clothing: do not change the person's clothes. Keep the person and background unchanged.`;
@@ -85,6 +88,15 @@ async function smallReference(blob: Blob): Promise<Blob> {
   ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
   bmp.close();
   return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', 0.88));
+}
+
+/** Fire-and-forget usage note for the owner's records (survives the page closing). */
+async function report(seconds: number, ok: boolean) {
+  try {
+    await fetch(`${AI_TRYON_URL}/realtime/report`, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seconds: Math.round(seconds * 10) / 10, ok }) });
+  } catch {
+    /* bookkeeping only */
+  }
 }
 
 function sessionToken() {
@@ -150,6 +162,7 @@ export function LiveTryOn({
   const garment = useRef<{ id: string; blob: Blob; description?: string; green?: Blob; product?: HTMLCanvasElement } | null>(null);
   // Real design mapped onto the green bag the AI draws (on by default); off shows the AI's own drawing.
   const [mapOn, setMapOn] = useState(true);
+  const vtonRef = useRef(false);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
 
@@ -169,7 +182,7 @@ export function LiveTryOn({
   // A new product or way of wearing it while live: send the new instruction without reconnecting.
   useEffect(() => {
     if (phase === 'live' && product)
-      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt) : promptFor(product, stylePrompt, garment.current?.description)).catch(() => undefined);
+      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, garment.current?.description, vtonRef.current)).catch(() => undefined);
   }, [stylePrompt, product, phase, mapOn]);
 
   // Mapping loop: AI frame in, real design on the green bag out.
@@ -248,9 +261,13 @@ export function LiveTryOn({
     let wentLive = false;
     let gotFrames = false;
     let rt: { disconnect: () => void } | null = null;
+    let tokenAt = 0;
+    let connectedAt = 0;
     const stop = () => {
       if (stopped) return;
       stopped = true;
+      // Tell the Worker how long it really ran. Advisory bookkeeping only (the Worker never trusts it for limits).
+      if (tokenAt) void report(connectedAt ? (Date.now() - connectedAt) / 1000 : 0, !!connectedAt && gotFrames);
       window.clearInterval(timer);
       try {
         if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
@@ -286,11 +303,15 @@ export function LiveTryOn({
       const ref = await garmentBlob(product);
       // 3. The token last, right before connecting (it is minted and metered only now).
       setStage('connecting');
-      const token = await post<{ apiKey: string; seconds: number; remainingToday: number | null }>('/realtime/token', {});
+      const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', {});
       setRemaining(token.remainingToday ?? 'unlimited');
+      tokenAt = Date.now();
+      // The model is chosen by the Worker (default lucy-2.6); the page never switches it by itself. Standard speed: no `speed` option (fast mode bills 2x).
+      const rtModel = sdk.models.realtime((token.model ?? 'lucy-2.6') as Parameters<typeof sdk.models.realtime>[0]);
+      vtonRef.current = rtModel.name.startsWith('lucy-vton');
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       const conn = await client.realtime.connect(stream, {
-        model,
+        model: rtModel,
         mirror: 'auto',
         onRemoteStream: (remote: MediaStream) => {
           const v = out.current;
@@ -302,14 +323,15 @@ export function LiveTryOn({
         onQueuePosition: (q: { position: number }) => setWaiting(q.position > 0 ? `대기 중입니다 · ${q.position}번째` : 'AI가 영상을 만들고 있습니다…'),
       });
       rt = conn;
+      connectedAt = Date.now();
       setStage(null);
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
       try {
         if (mapOn && ref.green && ref.product) {
           mapper.current = createDesignMapper(ref.product);
-          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt), enhance: false });
-        } else await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description), enhance: false });
+          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt, vtonRef.current), enhance: false });
+        } else await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description, vtonRef.current), enhance: false });
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
