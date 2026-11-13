@@ -51,6 +51,8 @@ export interface Env {
   REALTIME_DAILY_SESSIONS?: string;
   /** "1" = stop issuing realtime tokens at once (kill switch; sessions already open end at their own cap). */
   REALTIME_DISABLED?: string;
+  /** Realtime sessions per visitor per day, 1 to 10 (default 3). */
+  REALTIME_PER_IP_DAILY?: string;
   /** Session length in seconds, 10 to 20 (default 20). Lower it for smoke tests. */
   REALTIME_SESSION_SECONDS?: string;
   /** Realtime model for new sessions. Default lucy-2.6. Only models listed in REALTIME_MODELS are accepted. */
@@ -840,6 +842,11 @@ const sessionSeconds = (env: Env) => {
 };
 /** Realtime sessions per visitor (IP) per day. */
 const REALTIME_PER_IP = 3;
+/** Per-visitor realtime sessions per day: the default above, or REALTIME_PER_IP_DAILY (1 to 10) for a deliberate test. */
+const perIp = (env: Env) => {
+  const n = Number(env.REALTIME_PER_IP_DAILY ?? REALTIME_PER_IP);
+  return Number.isFinite(n) ? Math.min(10, Math.max(1, Math.round(n))) : REALTIME_PER_IP;
+};
 /** Sessions that may be open at the same moment, whole site (Decart bills open session-seconds). */
 const REALTIME_MAX_CONCURRENT = 3;
 /** The only realtime models a token can be scoped to (a model is never switched automatically). */
@@ -916,11 +923,11 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   if (busy) return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
   if (!vip) {
     try {
-      usedToday = (await meter(env, 'rt', ip, 1, dailyAll, REALTIME_PER_IP)).ipSpent;
+      usedToday = (await meter(env, 'rt', ip, 1, dailyAll, perIp(env))).ipSpent;
     } catch (e) {
       await releaseRealtime(env, ip);
       if (!(e instanceof QuotaError)) throw e;
-      if (e.reason === 'daily_limit') return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
+      if (e.reason === 'daily_limit') return json({ error: `실시간 착용은 하루 ${perIp(env)}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
       if (e.reason === 'site_limit') return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
       return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
     }
@@ -948,7 +955,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   void recordOutcome(env, 'rt', vip ? 'token_vip' : 'token');
   void recordOutcome(env, 'rt', 'reserved_ms', sessionSeconds(env) * 1000);
   if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: null }, 200, headers);
-  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, perIp(env) - usedToday) }, 200, headers);
 }
 
 // ---- Router ----------------------------------------------------------------------------------

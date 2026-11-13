@@ -19,6 +19,8 @@ const file = path.join(root, 'server', 'tryon-worker', '.dev.vars');
 const parse = (t) => Object.fromEntries(t.split('\n').filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
 const old = fs.existsSync(file) ? parse(fs.readFileSync(file, 'utf8')) : {};
 let key = old.DECART_API_KEY ?? '';
+const withGemini = process.argv.includes('--gemini');
+let gemini = old.GEMINI_API_KEY ?? '';
 
 function askHidden(q) {
   return new Promise((resolve) => {
@@ -34,13 +36,20 @@ if (!key && !process.argv.includes('--no-key')) {
   if (!key || /\s/.test(key) || key.length < 12) { console.log('That does not look like an API key. Nothing was written.'); process.exit(3); }
 }
 
+if (withGemini && !gemini) {
+  if (!process.stdin.isTTY) { console.log('No terminal for hidden input. Run this in your own terminal.'); process.exit(2); }
+  gemini = await askHidden('Gemini TEST API key (input is hidden, never shown or saved elsewhere): ');
+  if (!gemini || /\s/.test(gemini) || gemini.length < 12) { console.log('That does not look like an API key. Nothing was written.'); process.exit(3); }
+}
 const lines = [
   '# Level 2 smoke test (local only, git-ignored). Do not paste this file anywhere.',
   `DECART_API_KEY=${key}`,
   'ALLOWED_ORIGINS=http://localhost:5173',
   'REALTIME_SESSION_SECONDS=10',
-  'REALTIME_DAILY_SESSIONS=2',
+  `REALTIME_DAILY_SESSIONS=${withGemini ? 4 : 2}`,
+  ...(withGemini ? ['REALTIME_PER_IP_DAILY=4'] : []),
   'REALTIME_MAX_CONCURRENT=1',
+  ...(gemini ? [`GEMINI_API_KEY=${gemini}`, 'TRYON_DAILY_UNITS_SITE=8', 'TRYON_DAILY_UNITS_PER_IP=8'] : []),
   `ADMIN_TOKEN=${old.ADMIN_TOKEN && old.ADMIN_TOKEN.length >= 16 ? old.ADMIN_TOKEN : crypto.randomBytes(24).toString('hex')}`,
   '',
 ];
@@ -51,4 +60,5 @@ console.log(`Wrote ${path.relative(root, file)} (mode 600).`);
 console.log(`  DECART_API_KEY : ${key ? 'set (not shown)' : 'NOT SET — run again without --no-key in your own terminal'}`);
 console.log('  ADMIN_TOKEN    : generated (not shown). Read it for the usage check with:');
 console.log("    export ADMIN_TOKEN=$(grep '^ADMIN_TOKEN=' server/tryon-worker/.dev.vars | cut -d= -f2-)");
-console.log('  Not written on purpose: GEMINI_API_KEY, REALTIME_MODEL, TRYON_QUOTA, REALTIME_DISABLED.');
+console.log(`  GEMINI_API_KEY : ${gemini ? 'set (not shown); Gemini units capped at 8 per day' : 'not set (Gemini stays off)'}`);
+console.log('  Not written on purpose: REALTIME_MODEL, TRYON_QUOTA, REALTIME_DISABLED.');
