@@ -182,6 +182,9 @@ export function LiveTryOn({
   const [clip, setClip] = useState<{ url: string; ext: string; size: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const [evidence, setEvidence] = useState<Evidence | null>(null);
+  // Diagnostic mode (add &debug=1 to the address): keeps one picture of the AI's raw frame, the camera and the result side by side.
+  const debug = typeof window !== 'undefined' && /[?&]debug=1(&|$)/.test(window.location.hash);
+  const [diag, setDiag] = useState<string | null>(null);
   // "정확한 사진": the live pose re-made by the photo compositor, which keeps the real product design.
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const out = useRef<HTMLVideoElement>(null);
@@ -233,6 +236,51 @@ export function LiveTryOn({
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [phase, waiting, mapOn, facing]);
+
+  // Diagnostic picture, refreshed every 1.5 s while live so the last one before the session ends can be saved.
+  useEffect(() => {
+    if (!debug || phase !== 'live' || waiting) return;
+    const take = () => {
+      const v = out.current;
+      const cam = local.current;
+      if (!v || !v.videoWidth) return;
+      const pw = 960;
+      const ph = Math.round((v.videoHeight / v.videoWidth) * pw);
+      const c = document.createElement('canvas');
+      c.width = pw * 3;
+      c.height = ph + 36;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(v, 0, 36, pw, ph);
+      if (cam && cam.videoWidth) {
+        g.save();
+        if (facing === 'user') {
+          g.translate(pw * 2, 0);
+          g.scale(-1, 1);
+          g.drawImage(cam, 0, 36, pw, ph);
+        } else g.drawImage(cam, pw, 36, pw, ph);
+        g.restore();
+      }
+      const m = mapped.current;
+      if (mapOn && m && m.width) g.drawImage(m, pw * 2, 36, pw, ph);
+      else g.drawImage(v, pw * 2, 36, pw, ph);
+      g.fillStyle = '#fff';
+      g.font = '700 22px sans-serif';
+      g.fillText('1 AI raw frame', 10, 26);
+      g.fillText('2 camera (flipped like the AI input)', pw + 10, 26);
+      g.fillText(`3 result (design mapping ${mapOn ? 'ON' : 'OFF'})`, pw * 2 + 10, 26);
+      c.toBlob((b) => {
+        if (!b) return;
+        setDiag((old) => {
+          if (old) URL.revokeObjectURL(old);
+          return URL.createObjectURL(b);
+        });
+      }, 'image/png');
+    };
+    const id = window.setInterval(take, 1500);
+    return () => window.clearInterval(id);
+  }, [debug, phase, waiting, mapOn, facing]);
 
   async function garmentBlob(p: Product) {
     if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;
@@ -736,6 +784,13 @@ export function LiveTryOn({
               측정 기록 저장 (JSON)
             </button>
           </div>
+        )}
+        {debug && diag && (
+          <p className="mt-3">
+            <a href={diag} download={`lagi-diag-${product?.id ?? 'product'}.png`} className="btn btn-line" data-testid="save-diag">
+              진단 이미지 저장 (AI 원본 · 카메라 · 합성)
+            </a>
+          </p>
         )}
         {recError && (
           <p className="t-caption kr mt-2 text-[var(--c-blue)]" role="alert" data-testid="rec-error">

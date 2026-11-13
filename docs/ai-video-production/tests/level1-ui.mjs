@@ -105,6 +105,15 @@ ok_(); function ok_() {}
   ok('G7 after the session a link to the product page is offered', (await p.getByTestId('to-product').getAttribute('href'))?.includes('/product/plano-bag'));
   const over2 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok('G8 phone-size: no sideways scrolling after the session either; no page errors', over2 <= 1 && p.errs.length === 0, `overflow ${over2}px; ${p.errs.join('|')}`); await ctx.close(); }
+// H. diagnostic mode (&debug=1): one picture with the AI raw frame, the camera and the result; invisible without the flag
+{ const p = await open({ seconds: 6 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&debug=1'); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
+  await p.waitForSelector('[data-testid=save-diag]', { timeout: 5000 }).catch(() => {});
+  const has = (await p.getByTestId('save-diag').count()) > 0; ok('H1 with &debug=1 a diagnostic picture can be saved after the session', has);
+  if (has) { const [dl] = await Promise.all([p.waitForEvent('download'), p.getByTestId('save-diag').click()]); const f = '/tmp/rtdiag-' + dl.suggestedFilename(); await dl.saveAs(f); const hdr = fs.readFileSync(f).subarray(16, 24); const m = { width: hdr.readUInt32BE(0), height: hdr.readUInt32BE(4) }; ok('H2 the picture holds three panels side by side (AI raw, camera, result)', m.width >= 2800 && m.height > 400, `${m.width}x${m.height}`); }
+  await p.context().close(); }
+{ const p = await open({ seconds: 5 }); await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
+  ok('H3 without the flag there is no diagnostic button for normal visitors', (await p.getByTestId('save-diag').count()) === 0); await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
