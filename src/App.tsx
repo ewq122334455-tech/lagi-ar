@@ -7,8 +7,13 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CartDrawer } from '@/components/CartDrawer';
 import { CartProvider } from '@/commerce/CartContext';
 import { AuthProvider } from '@/auth/AuthContext';
+import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 
-const AssetWorkspace = lazy(() => import('@/pages/workspace/AssetWorkspace'));
+// Internal tool: only bundled in development builds (the published site does not ship its code).
+const AssetWorkspace = import.meta.env.DEV ? lazy(() => import('@/pages/workspace/AssetWorkspace')) : () => null;
+
+// Fitting comparison lab: only in builds made with VITE_LAB=1 (the published site contains none of its code).
+const Lab = import.meta.env.VITE_LAB === '1' ? lazy(() => import('@/v3/pages/Lab')) : () => null;
 
 // Site (v3). The previous site's code is kept in src/pages but no longer routed (its copy used the old concept).
 const V3Layout = lazy(() => import('@/v3/Layout').then((m) => ({ default: m.V3Layout })));
@@ -29,6 +34,7 @@ const V3NotFound = lazy(() => import('@/v3/pages/NotFound'));
 const V3Account = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.AccountPage })));
 const V3Order = lazy(() => import('@/v3/pages/Auth').then((m) => ({ default: m.OrderLookupPage })));
 const V3Review = lazy(() => import('@/v3/pages/ReviewPage'));
+const V3Legal = lazy(() => import('@/v3/pages/Legal'));
 
 function SiteLayout() {
   const { pathname } = useLocation();
@@ -75,6 +81,9 @@ export default function App() {
             <Route path="/account" element={<V3Account />} />
             <Route path="/order" element={<V3Order />} />
             <Route path="/review" element={<V3Review />} />
+            {/* Legal notices: only routed once the owner has filled them in (src/content/legal.ts). */}
+            {PRIVACY_POLICY && <Route path="/privacy" element={<V3Legal doc={PRIVACY_POLICY} />} />}
+            {TERMS && <Route path="/terms" element={<V3Legal doc={TERMS} />} />}
             <Route path="*" element={<V3NotFound />} />
           </Route>
           {/* Old addresses that were shared before the rebuild. */}
@@ -86,9 +95,13 @@ export default function App() {
 
           {/* The previous site used the old "Look closer" concept — its addresses now lead home. */}
           <Route path="/classic/*" element={<Navigate to="/" replace />} />
-          <Route element={<SiteLayout />}>
-            <Route path="/workspace" element={<AssetWorkspace />} />
-          </Route>
+          {/* Internal product-entry tool: local development only, never in the published site. */}
+          {import.meta.env.DEV && (
+            <Route element={<SiteLayout />}>
+              <Route path="/workspace" element={<AssetWorkspace />} />
+            </Route>
+          )}
+          {import.meta.env.VITE_LAB === '1' && <Route path="/lab" element={<Lab />} />}
           <Route path="/exhibition" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

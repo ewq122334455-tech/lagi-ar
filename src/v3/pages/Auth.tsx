@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { LagiLogo } from '@/components/LagiLogo';
-import { lookupOrder, myOrders, type OrderSummary } from '../reviews';
+import { lookupOrder, myOrders, type OrderSummary } from '../reviewsApi';
 import { price } from '../data';
+import { PRIVACY_POLICY, TERMS } from '@/content/legal';
 
 /** Login / sign-up / account / order lookup — same AuthContext and Worker endpoints, a centred card layout. */
 function Field(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
@@ -48,13 +49,32 @@ function Divider({ label = '또는' }: { label?: string }) {
 export function LoginPage() {
   const { user, login } = useAuth();
   const nav = useNavigate();
-  const back = (useLocation().state as { from?: string } | null)?.from ?? '/';
+  const state = useLocation().state as { from?: string; withdrawn?: Withdrawn } | null;
+  const back = state?.from ?? '/';
+  // The result comes with the navigation, or (if the account page redirected first) from storage.
+  const [withdrawn] = useState<Withdrawn | undefined>(() => {
+    const stored = takeWithdrawn(); // always consume it, so it is shown once only
+    return state?.withdrawn ?? stored;
+  });
+  // Drop it from the history entry too, so a refresh does not show it again.
+  useEffect(() => {
+    if (state?.withdrawn) nav('/login', { replace: true, state: state.from ? { from: state.from } : null });
+  }, [state, nav]);
   const [f, setF] = useState({ email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   if (user) return <Navigate to="/account" replace />;
   return (
     <Card title="로그인" en="Log in">
+      {withdrawn && (
+        <div className="t-caption kr mb-6 rounded-[var(--radius-card)] bg-[var(--c-gray)] px-4 py-3" role="status" data-testid="withdrawn-notice">
+          <p className="font-semibold">회원 탈퇴가 완료되었습니다.</p>
+          <p className="mt-1 text-[var(--c-mute)]">
+            계정과 로그인 정보를 삭제했습니다.
+            {withdrawn.reviews > 0 && (withdrawn.reviewPolicy === 'delete' ? ` 작성한 구매평 ${withdrawn.reviews}개도 삭제했습니다.` : ` 작성한 구매평 ${withdrawn.reviews}개는 이름과 이메일 없이 남겨 두었습니다.`)} 결제한 주문은 주문 번호와 휴대폰 번호로 계속 조회할 수 있습니다.
+          </p>
+        </div>
+      )}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -84,10 +104,10 @@ export function LoginPage() {
           {busy ? '확인 중…' : '로그인'}
         </button>
         <div className="t-caption kr mt-4 flex justify-between">
-          <Link to="/signup" className="underline-offset-4 hover:underline">
+          <Link to="/signup" className="hit underline-offset-4 hover:underline">
             회원가입
           </Link>
-          <a href="https://www.instagram.com/lagi.official/" target="_blank" rel="noopener noreferrer" className="text-[var(--c-mute)] underline-offset-4 hover:underline">
+          <a href="https://www.instagram.com/lagi.official/" target="_blank" rel="noopener noreferrer" className="hit text-[var(--c-mute)] underline-offset-4 hover:underline">
             비밀번호 찾기 문의 ↗
           </a>
         </div>
@@ -139,6 +159,21 @@ export function SignupPage() {
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5" />
             <span>
               [필수] 이용약관 및 개인정보 수집·이용에 동의합니다.{' '}
+              {(TERMS || PRIVACY_POLICY) && (
+                <span>
+                  {TERMS && (
+                    <Link to="/terms" target="_blank" className="hit underline underline-offset-2">
+                      이용약관 보기
+                    </Link>
+                  )}
+                  {TERMS && PRIVACY_POLICY && ' · '}
+                  {PRIVACY_POLICY && (
+                    <Link to="/privacy" target="_blank" className="hit underline underline-offset-2">
+                      개인정보처리방침 보기
+                    </Link>
+                  )}{' '}
+                </span>
+              )}
               <span className="text-[var(--c-mute)]">수집 항목: 이름, 이메일, 비밀번호(암호화) · 목적: 회원 식별 · 보관: 탈퇴 시까지</span>
             </span>
           </label>
@@ -157,7 +192,7 @@ export function SignupPage() {
         </button>
         <p className="t-caption kr text-center text-[var(--c-mute)]">
           이미 회원이신가요?{' '}
-          <Link to="/login" className="text-[var(--c-ink)] underline underline-offset-4">
+          <Link to="/login" className="hit text-[var(--c-ink)] underline underline-offset-4">
             로그인
           </Link>
         </p>
@@ -252,6 +287,86 @@ export function OrderLookupPage() {
   );
 }
 
+type Withdrawn = { reviews: number; reviewPolicy: string };
+const WITHDRAWN_KEY = 'lagi-withdrawn';
+/** The deletion result, read once by the login page. */
+function takeWithdrawn(): Withdrawn | undefined {
+  try {
+    const raw = sessionStorage.getItem(WITHDRAWN_KEY);
+    sessionStorage.removeItem(WITHDRAWN_KEY);
+    return raw ? (JSON.parse(raw) as Withdrawn) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Account deletion: password and a typed confirmation word, then the server removes the account. */
+function Withdraw() {
+  const { withdraw } = useAuth();
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ password: '', confirm: '' });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <section className="mt-16 border-t border-black/10 pt-6" aria-labelledby="withdraw-title">
+      <h2 id="withdraw-title" className="t-caption kr font-semibold">
+        회원 탈퇴
+      </h2>
+      {!open ? (
+        <button type="button" className="t-caption kr mt-2 inline-flex min-h-[44px] items-center text-[var(--c-mute)] underline underline-offset-4" onClick={() => setOpen(true)} data-testid="withdraw-open">
+          탈퇴 절차 보기
+        </button>
+      ) : (
+        <form
+          className="mt-3 max-w-md"
+          data-testid="withdraw-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setErr(null);
+            try {
+              const r = await withdraw(f.password, f.confirm);
+              const result: Withdrawn = { reviews: r.reviews, reviewPolicy: r.reviewPolicy };
+              try {
+                sessionStorage.setItem(WITHDRAWN_KEY, JSON.stringify(result));
+              } catch {
+                // the navigation state below still carries it
+              }
+              nav('/login', { replace: true, state: { withdrawn: result } });
+            } catch (x) {
+              setErr((x as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <p className="t-caption kr text-[var(--c-mute)]">
+            탈퇴하면 계정과 로그인 정보가 삭제되고 이 계정으로 다시 로그인할 수 없습니다. 결제한 주문은 주문 번호와 휴대폰 번호로 계속 조회할 수 있습니다. 계속하려면 비밀번호와 확인 문구 <strong>탈퇴</strong>를 입력해 주세요.
+          </p>
+          <div className="mt-4 -space-y-px">
+            <Field label="비밀번호" type="password" autoComplete="current-password" required value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+            <Field label="확인 문구 (탈퇴)" required value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} />
+          </div>
+          {err && (
+            <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert">
+              {err}
+            </p>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button type="button" className="btn btn-line !min-h-[44px]" onClick={() => setOpen(false)}>
+              취소
+            </button>
+            <button type="submit" className="btn btn-primary !min-h-[44px]" disabled={busy || f.confirm !== '탈퇴' || !f.password}>
+              {busy ? '처리 중…' : '회원 탈퇴'}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export function AccountPage() {
   const { user, ready, logout } = useAuth();
   const nav = useNavigate();
@@ -301,6 +416,7 @@ export function AccountPage() {
             <OrderCard key={o.orderId} o={o} />
           ))}
         </div>
+        <Withdraw />
       </div>
     </div>
   );

@@ -1,0 +1,24 @@
+// Runs the live 3D try-on on a recorded video with engine V1 or V2 and writes per-frame telemetry.
+import { chromium } from 'playwright-core';
+import fs from 'node:fs';
+const S = '/tmp/claude-0/-home-user-lagi-ar/fa4cf5bc-42af-5652-8686-a3b6f4e33b80/scratchpad/';
+const WASM = '/home/user/lagi-ar/node_modules/@mediapipe/tasks-vision/wasm/';
+const [engine, video, product = 'plano-bag', secs = '12'] = process.argv.slice(2);
+const B = process.env.BASE || 'http://localhost:4190/';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-video-capture=${S}mp/${video}.y4m`, '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+await p.addInitScript(() => sessionStorage.setItem('lagi-intro-seen', '1'));
+const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.route(/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-vision@0\.10\.21\/wasm\/(.+)$/, (r) => { const f = r.request().url().split('/wasm/')[1]; return r.fulfill({ body: fs.readFileSync(WASM + f), contentType: f.endsWith('.wasm') ? 'application/wasm' : 'text/javascript' }); });
+await p.route(/storage\.googleapis\.com\/mediapipe-models\/pose_landmarker/, (r) => r.fulfill({ body: fs.readFileSync(S + 'mp/pose_landmarker_lite.task') }));
+await p.route(/storage\.googleapis\.com\/mediapipe-models\/hand_landmarker/, (r) => r.fulfill({ body: fs.readFileSync(S + 'mp/hand_landmarker.task') }));
+await p.goto(`${B}#/again?p=${product}&m=map&engine=${engine}&fitdebug=1`); await p.waitForTimeout(1500);
+await p.locator('section[aria-labelledby=m2] .chip', { hasText: '손에 들기' }).dispatchEvent('click');
+await p.getByTestId('map-start').dispatchEvent('click');
+await p.waitForSelector('[data-testid=map-canvas]:not(.hidden)', { timeout: 60000 });
+await p.waitForTimeout(Number(secs) * 1000);
+const heap = await p.evaluate(() => performance.memory ? performance.memory.usedJSHeapSize / 1e6 : null);
+const fit = await p.evaluate(() => window.__fit ?? []);
+fs.writeFileSync(`${S}aiq/bench-${engine}-${video}-${product}.json`, JSON.stringify({ engine, video, product, heapMB: heap, errs, fit }));
+console.log(engine, video, product, 'frames', fit.length, 'heapMB', heap && heap.toFixed(0), 'errors', errs.length);
+await b.close();

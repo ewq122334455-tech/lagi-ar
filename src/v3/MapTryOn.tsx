@@ -4,6 +4,18 @@ import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { easeAngle, handYaw as handYawOf, keyMatte, loadHands, loadPose, paint, placeFor, smooth, type Placement, type Pt } from './productOverlay';
 import { buildBag, createBagLayer } from './bag3d';
+import type { FitBench } from './fitBench';
+import type { LabControl, LabEngine, LabStats } from './labTypes';
+import { HAND_HOLD_MS, HoldPolicy, OneEuro, OneEuroAngle, Swing, isHandJump } from './fitFilter';
+
+/** Diagnostic switches for finding out WHICH V3/V4 part feels wrong on a real phone: `?off=swing,grip,mask,shadow` (any of them). */
+const offOf = (): Set<string> => new Set((new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('off') ?? '').split(',').filter(Boolean));
+
+/** Fitting engine from the page address: `?engine=v1` (original), `v2` (default), `v3` (contact shadow, swing, loss policy). */
+const engineOf = (): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' => {
+  const e = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('engine');
+  return e === 'v1' || e === 'v3' || e === 'v4' || e === 'v5' ? e : 'v2';
+};
 
 type Phase = 'idle' | 'loading' | 'live' | 'ended';
 
@@ -44,7 +56,7 @@ async function matteFor(p: Product): Promise<HTMLCanvasElement> {
  * the real product photo placed and scaled on the body — its shape and print stay exactly as they are.
  * Nothing leaves the device except the product image request; no time limit, no cost.
  */
-export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { product: Product | undefined; styleKey: string; stylePrompt: string; styleChips: React.ReactNode }) {
+export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { product: Product | undefined; styleKey: string; stylePrompt: string; styleChips: React.ReactNode; lab?: LabControl }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +70,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   // and the holding hand is drawn on a layer above it.
   const gl = useRef<HTMLCanvasElement>(null);
   const top = useRef<HTMLCanvasElement>(null);
-  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number; handleCm: number } | null>(null);
+  const layer = useRef<{ id: string; l: ReturnType<typeof createBagLayer>; aspect: number; widthCm: number; handleCm: number; gripCm?: number } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const pose = useRef<Promise<PoseLandmarker> | null>(null);
   const hands = useRef<Promise<HandLandmarker | null> | null>(null);
@@ -75,17 +87,33 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   const aiVideo = useRef<HTMLVideoElement>(null);
   const aiOut = useRef<HTMLCanvasElement>(null);
   const aiConn = useRef<{ stop: () => void } | null>(null);
+  const labRef = useRef(lab);
+  labRef.current = lab;
   const opts = useRef({ styleKey, size, product, facing, aiOn });
-  opts.current = { styleKey, size, product, facing, aiOn };
+  opts.current = lab ? { styleKey, size: lab.options.size, product, facing: lab.mirror ? 'user' : 'environment', aiOn: false } : { styleKey, size, product, facing, aiOn };
 
   const stop = () => {
-    stream.current?.getTracks().forEach((t) => t.stop());
+    if (!labRef.current?.stream) stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
     if (video.current) video.current.srcObject = null;
     placed.current = null;
     setPhase((p) => (p === 'idle' ? p : 'ended'));
   };
   useEffect(() => stop, []);
+  // Leaving the page: free the 3D layer (WebGL context, textures) and the body/hand models.
+  const gone = useRef(false);
+  useEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
+      layer.current?.l.dispose(true);
+      layer.current = null;
+      pose.current?.then((m) => m.close()).catch(() => undefined);
+      hands.current?.then((m) => m?.close()).catch(() => undefined);
+      pose.current = null;
+      hands.current = null;
+    };
+  }, []);
   useEffect(() => {
     const onHide = () => document.hidden && stop();
     document.addEventListener('visibilitychange', onHide);
@@ -115,7 +143,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     setPhase('loading');
     try {
       setStatus('카메라를 켜고 있습니다…');
-      const s = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } });
+      const s = labRef.current?.stream ?? (await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } }));
       stream.current = s;
       const v = video.current!;
       v.srcObject = s;
@@ -134,12 +162,16 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         layer.current?.l.dispose();
         const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
         const bag = await buildBag(model, base);
-        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm };
+        if (gone.current) {
+          bag.dispose();
+          return;
+        }
+        layer.current = { id: product.id, l: createBagLayer(gl.current!, bag, { realism: ['v3', 'v4', 'v5'].includes(labRef.current?.engine ?? engineOf()), shadow: labRef.current ? true : !offOf().has('shadow') }), aspect: model.widthCm / (model.heightCm + model.handleCm), widthCm: model.widthCm, handleCm: model.handleCm, gripCm: model.gripCm };
       }
       setStatus(null);
       setPhase('live');
       // Never wait long for the hand model: the bag follows the wrist until it is ready.
-      const handReady = product.model3d && hands.current ? await Promise.race([hands.current, new Promise<null>((ok) => window.setTimeout(() => ok(null), 8000))]) : null;
+      const handReady = product.model3d && hands.current ? await Promise.race([hands.current, new Promise<null>((ok) => window.setTimeout(() => ok(null), labRef.current ? 90000 : 8000))]) : null;
       run(marker, handReady);
     } catch (e) {
       stop();
@@ -156,6 +188,16 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       );
     }
   }
+
+  // Lab panes start themselves as soon as the shared input and a product are there.
+  const labStarted = useRef(false);
+  useEffect(() => {
+    if (lab?.stream && product && phase === 'idle' && !labStarted.current) {
+      labStarted.current = true;
+      void start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lab?.stream, product?.id, phase]);
 
   /** The drawing loop: mirrored camera frame, product on the body, then the holding hand on top. */
   function run(marker: PoseLandmarker, handMarker: HandLandmarker | null) {
@@ -174,6 +216,52 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let handPts: { x: number; y: number }[] | null = null;
     // Pixels per cm of the hand, from its 3D joints, eased: does not change when the hand turns.
     let handScale = 0;
+    // Fitting engine: V2 (One Euro smoothing, jump rejection, short hold on loss) unless `?engine=v1`.
+    // V1 stays selectable for side-by-side comparison. `?fitdebug=1` records per-frame telemetry on window.__fit.
+    const query = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    const eng: LabEngine = labRef.current?.engine ?? engineOf();
+    const v2 = eng !== 'v1';
+    const off = offOf();
+    // In the lab every switch is read live from the controls; on the site they come from the address as before.
+    const isOff = (k: 'grip' | 'swing' | 'mask' | 'shadow') => (labRef.current ? !labRef.current.options[k] : off.has(k));
+    const v3 = eng === 'v3' || eng === 'v4' || eng === 'v5';
+    // V5 (experimental): V3 with a faster-following position filter (beta 0.02 instead of 0.008) and the hand scale taken
+    // from the knuckle row (the depth the handle hangs from) instead of all nine bones. Measured against V3 and V4 on the
+    // same recorded tracking (docs/ai-fitting-upgrade/V5-MOTION-COMPARISON.md): lower mean error than V3 but rougher, and
+    // better than V4 on smoothness/jump/direction changes/still jitter but not on p95 error — a trade-off, not a clear win.
+    // Neither change is validated against a real ruler (V5-PHYSICAL-ACCURACY.md); V5 is NOT the default engine.
+    const v5 = eng === 'v5';
+    // Hand-scale estimator: `?scale=all|mcp|knuckle` (default: all, V5: mcp); `?gain=0.9` multiplies the size (calibration by hand).
+    const urlScale = query.get('scale') ?? (v5 ? 'mcp' : 'all');
+    const urlGain = Math.min(2, Math.max(0.5, Number(query.get('gain')) || 1));
+    const scaleNow = (): string => (labRef.current ? labRef.current.options.scale : urlScale);
+    const gainNow = (): number => (labRef.current ? labRef.current.options.gain : urlGain);
+    // V4 (experimental): V3 plus a lead — the pose is pushed forward along the hand's velocity by the time since the
+    // last detection, so the bag is not drawn where the hand was one detection ago (docs/ai-fitting-upgrade/V4-NATURALNESS.md).
+    const v4 = eng === 'v4';
+    let prevDet: { cx: number; top: number; at: number } | null = null;
+    let detVel = { x: 0, y: 0 };
+    const policy = new HoldPolicy();
+    const swing = new Swing();
+    let freshAt = -1e9; // time of the last real hand detection
+    let freshSeen = -1e9;
+    let tint: [number, number, number] = [1, 1, 1];
+    const telemetry: Record<string, number | boolean>[] | null = query.get('fitdebug') ? ((window as unknown as { __fit: unknown[] }).__fit = []) as Record<string, number | boolean>[] : null;
+    const fx = new OneEuro(2.0, eng === 'v5' ? 0.02 : 0.008);
+    const fy = new OneEuro(2.0, eng === 'v5' ? 0.02 : 0.008);
+    const fw = new OneEuro(0.8, 0.002);
+    const fyaw = new OneEuroAngle(1.5, 0.8);
+    let lastFromHand: Placement | null = null;
+    let lastHandAt = -1e9;
+    let rawGrip: { x: number; y: number } | null = null;
+    let rejected = 0;
+    // V3: the person mask as an alpha canvas, to trim the hand overlay's halo (background pixels near the fingers).
+    let personVer = 0;
+    let personDrawn = -1;
+    const personCv = document.createElement('canvas');
+    const personCtx = personCv.getContext('2d')!;
+    const shade = document.createElement('canvas');
+    const shadeCtx = shade.getContext('2d')!;
     const handMask = document.createElement('canvas');
     const hmctx = handMask.getContext('2d')!;
     let handMiss = 0;
@@ -187,7 +275,126 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
     let lastT = -1;
     let misses = 0;
 
+    // The on-device benchmark is an admin tool: it is only compiled into builds made with VITE_BENCH=1
+    // (the public build has no bench code at all — `grep lagi-bench dist` finds nothing).
+    let bench: FitBench | null = null;
+    if (import.meta.env.VITE_BENCH === '1' && query.get('bench')) {
+      const label = `${engineOf()} ${product?.id ?? ''}`;
+      const opts = { durSec: Number(query.get('dur')) || 0, device: query.get('dev') ?? undefined, post: !!query.get('post') };
+      void import('./fitBench').then((m) => {
+        bench = new m.FitBench(label, opts);
+      });
+    }
+    const benchWrapped = new WeakSet<object>();
+    let benchFreshSeen = -1;
+    let benchInterval = 60;
+    // Live numbers for the comparison lab (null/unused on the site). Updated here and in the detection block.
+    const st = {
+      scales: null as LabStats['scales'],
+      poseMs: 0,
+      handMs: 0,
+      fps: 0,
+      lastNow: 0,
+      lastPub: 0,
+      tracked: false,
+      lostSince: 0,
+      losses: 0,
+      lastLossMs: 0,
+      recoverUntil: 0,
+      recoverStep: 0,
+      drawn: false,
+      widthPx: 0,
+      lastDrawn: null as { x: number; y: number; t: number } | null,
+      frameMs: 0,
+    };
+    if (labRef.current?.onApi) {
+      const snap = (layers: boolean) => {
+        const o = document.createElement('canvas');
+        o.width = c.width;
+        o.height = c.height;
+        const x = o.getContext('2d')!;
+        x.drawImage(layers ? c : raw, 0, 0);
+        if (layers) {
+          if (gl.current && gl.current.width) x.drawImage(gl.current, 0, 0, o.width, o.height);
+          if (top.current && top.current.width) x.drawImage(top.current, 0, 0, o.width, o.height);
+        }
+        return o;
+      };
+      labRef.current.onApi({ compose: () => (c.width ? snap(true) : null), raw: () => (c.width ? snap(false) : null) });
+    }
     const frame = (now: number) => {
+      if (!stream.current) {
+        bench?.stop();
+        labRef.current?.onApi?.(null);
+        return;
+      }
+      const t0 = performance.now();
+      const labOn = !!labRef.current;
+      if ((bench || labOn) && layer.current && !benchWrapped.has(layer.current)) {
+        // Where the bag is actually drawn each frame (bench and lab).
+        benchWrapped.add(layer.current);
+        const l = layer.current.l;
+        const orig = l.render.bind(l);
+        l.render = (W, H, p) => {
+          const tn = performance.now();
+          bench?.draw(tn, p ? { x: p.x, y: p.y, alpha: p.alpha ?? 1 } : null);
+          const shown = !!p && (p.alpha ?? 1) > 0.5;
+          st.drawn = shown;
+          st.widthPx = p ? p.widthPx : 0;
+          if (shown && st.lastDrawn && tn - st.lastDrawn.t < 100 && tn < st.recoverUntil) st.recoverStep = Math.max(st.recoverStep, Math.hypot(p!.x - st.lastDrawn.x, p!.y - st.lastDrawn.y));
+          st.lastDrawn = shown ? { x: p!.x, y: p!.y, t: tn } : null;
+          return orig(W, H, p);
+        };
+      }
+      if ((bench || labOn) && freshAt !== benchFreshSeen) {
+        // Typical time between hand detections: a gap is a "loss" only if it is clearly longer than that.
+        if (benchFreshSeen > 0 && freshAt - benchFreshSeen < 10000) benchInterval += (freshAt - benchFreshSeen - benchInterval) * 0.3;
+        benchFreshSeen = freshAt;
+      }
+      const trackedNow = !!grip && now - freshAt < Math.max(250, benchInterval * 2.5);
+      bench?.track(now, trackedNow, benchInterval);
+      if (labOn) {
+        const tn = performance.now();
+        if (st.tracked && !trackedNow) st.lostSince = tn;
+        if (!st.tracked && trackedNow && st.lostSince) {
+          st.losses++;
+          st.lastLossMs = tn - st.lostSince;
+          st.lostSince = 0;
+          st.recoverUntil = tn + 400;
+          st.recoverStep = 0;
+        }
+        st.tracked = trackedNow;
+        if (st.lastNow) st.fps = st.fps ? st.fps * 0.9 + (1000 / Math.max(1, now - st.lastNow)) * 0.1 : 1000 / Math.max(1, now - st.lastNow);
+        st.lastNow = now;
+      }
+      frameBody(now);
+      bench?.frame(now, performance.now() - t0);
+      if (labOn) {
+        st.frameMs = st.frameMs * 0.9 + (performance.now() - t0) * 0.1;
+        if (now - st.lastPub > 250) {
+          st.lastPub = now;
+          labRef.current?.onStats?.({
+            engine: eng,
+            fps: st.fps,
+            frameMs: st.frameMs,
+            poseMs: st.poseMs,
+            handMs: st.handMs,
+            detectIntervalMs: benchInterval,
+            lagEstimateMs: st.poseMs + st.handMs + benchInterval / 2,
+            tracked: st.tracked,
+            losses: st.losses,
+            lastLossMs: st.lastLossMs,
+            currentLossMs: !st.tracked && st.lostSince ? performance.now() - st.lostSince : 0,
+            recoverStepPx: st.recoverStep,
+            drawn: st.drawn,
+            widthPx: st.widthPx,
+            scales: st.scales,
+          });
+          layer.current?.l.setShadowVisible(labRef.current ? labRef.current.options.shadow : true);
+        }
+      }
+    };
+    const frameBody = (now: number) => {
       if (!stream.current) return;
       requestAnimationFrame(frame);
       const W = v.videoWidth;
@@ -215,7 +422,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       if (now - lastDetect > 45 && v.currentTime !== lastT) {
         lastDetect = now;
         lastT = v.currentTime;
+        const d0 = performance.now();
         const res = marker.detectForVideo(v, now);
+        bench?.det('pose', performance.now() - d0);
+        st.poseMs += (performance.now() - d0 - st.poseMs) * 0.2;
         const l = res.landmarks[0];
         lm = l ? l.map((q) => ({ x: (mirrored ? 1 - q.x : q.x) * W, y: q.y * H, visibility: q.visibility })) : null;
         // Body turn from the 3D landmarks (metres): the shoulder line's depth gives the yaw.
@@ -250,17 +460,26 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             handCtx.drawImage(v, crop.x, crop.y, crop.size, crop.size, 0, 0, 256, 256);
             src = handCrop;
           } else crop = null;
+          const h0 = performance.now();
           const hr = handMarker.detectForVideo(src, now);
+          bench?.det('hand', performance.now() - h0);
+          st.handMs += (performance.now() - h0 - st.handMs) * 0.2;
           const hw = hr.worldLandmarks?.[0];
           const hl = hr.landmarks?.[0];
           const side = (hr.handedness?.[0]?.[0]?.categoryName ?? 'Right') as 'Left' | 'Right';
-          if (hw && hl) {
-            handYaw = easeAngle(handYaw, handYawOf(hw, side, mirrored), 0.45);
-            const nx = (hl[5].x + hl[17].x) / 2;
-            const ny = (hl[5].y + hl[17].y) / 2;
-            const gx = crop ? crop.x + nx * crop.size : nx * W;
-            const gy = crop ? crop.y + ny * crop.size : ny * H;
-            grip = { x: mirrored ? W - gx : gx, y: gy };
+          const nx0 = hl ? (hl[5].x + hl[17].x) / 2 : 0;
+          const ny0 = hl ? (hl[5].y + hl[17].y) / 2 : 0;
+          const gx0 = hl ? (crop ? crop.x + nx0 * crop.size : nx0 * W) : 0;
+          const gy0 = hl ? (crop ? crop.y + ny0 * crop.size : ny0 * H) : 0;
+          const cand = { x: mirrored ? W - gx0 : gx0, y: gy0 };
+          const palmNow = hl ? Math.hypot((hl[5].x - hl[17].x) * (crop ? crop.size : W), (hl[5].y - hl[17].y) * (crop ? crop.size : H)) : 0;
+          // V2: a detection that jumps further than a hand can move between two detections is a mis-detection.
+          const jumped = v2 && !!hw && !!hl && isHandJump(rawGrip, cand, palmNow);
+          if (jumped) rejected++;
+          if (hw && hl && !jumped) {
+            handYaw = v2 ? handYawOf(hw, side, mirrored) : easeAngle(handYaw, handYawOf(hw, side, mirrored), 0.45);
+            grip = cand;
+            rawGrip = cand;
             handPts = hl.map((q) => {
               const px = crop ? crop.x + q.x * crop.size : q.x * W;
               return { x: mirrored ? W - px : px, y: crop ? crop.y + q.y * crop.size : q.y * H };
@@ -269,6 +488,8 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
             // image plane gives pixels per metre whichever way the hand is turned (both shrink together).
             let pix = 0;
             let met = 0;
+            let pixM = 0; // the knuckle row (5-9, 9-13, 13-17): the same depth as the handle the bag hangs from
+            let metM = 0;
             for (const [a, b] of [
               [0, 5],
               [0, 9],
@@ -280,23 +501,39 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
               [5, 6],
               [9, 10],
             ]) {
-              pix += Math.hypot(handPts[a].x - handPts[b].x, handPts[a].y - handPts[b].y);
-              met += Math.hypot(hw[a].x - hw[b].x, hw[a].y - hw[b].y);
+              const pl = Math.hypot(handPts[a].x - handPts[b].x, handPts[a].y - handPts[b].y);
+              const ml = Math.hypot(hw[a].x - hw[b].x, hw[a].y - hw[b].y);
+              pix += pl;
+              met += ml;
+              if ((a === 5 && b === 9) || (a === 9 && b === 13) || (a === 13 && b === 17)) {
+                pixM += pl;
+                metM += ml;
+              }
             }
-            if (met > 0.01) {
-              const s = pix / met / 100;
-              handScale = handScale ? handScale + (s - handScale) * 0.25 : s;
-            }
+            let s = met > 0.01 ? pix / met / 100 : 0;
+            const palmPx = Math.hypot(handPts[5].x - handPts[17].x, handPts[5].y - handPts[17].y);
+            const allS = s;
+            const mcpS = metM > 0.012 ? pixM / metM / 100 : s;
+            const mode = scaleNow();
+            if (mode === 'mcp') s = mcpS;
+            if (mode === 'knuckle') s = palmPx / 7.5;
+            const ref = labRef.current?.options;
+            if (mode === 'ref' && ref?.refPxPerCm && ref.refPalmPx) s = (ref.refPxPerCm * palmPx) / ref.refPalmPx; // follows the hand's distance by its knuckle width
+            st.scales = { all: allS, mcp: mcpS, knuckle: palmPx / 7.5, palmPx, used: s };
+            if (s > 0) handScale = v2 ? s : handScale ? handScale + (s - handScale) * 0.25 : s;
             handMiss = 0;
+            freshAt = now;
           } else if (++handMiss > 8) {
             handScale = 0;
             grip = null;
             handPts = null;
+            rawGrip = null;
           }
           setHandSeen(handMiss < 8 && !!grip);
         }
         const m = res.segmentationMasks?.[0];
         mask = m ? { data: m.getAsFloat32Array().slice(), w: m.width, h: m.height } : null;
+        personVer++;
         res.segmentationMasks?.forEach((x) => x.close());
         misses = lm ? 0 : misses + 1;
         setFound(misses < 10);
@@ -307,6 +544,23 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         let L = 0;
         for (let i = 0; i < px.length; i += 4) L += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
         brightness = Math.min(1, L / (px.length / 4) / 200);
+        if (v3) {
+          // The room's colour, from four patches spread over the frame (the bag is lit by it, partly).
+          let r = 0;
+          let g = 0;
+          let b = 0;
+          for (const [qx, qy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+            const d = rctx.getImageData(Math.round(W * qx) - 4, Math.round(H * qy) - 4, 8, 8).data;
+            for (let i = 0; i < d.length; i += 4) {
+              r += d[i];
+              g += d[i + 1];
+              b += d[i + 2];
+            }
+          }
+          const m = (r + g + b) / 3 || 1;
+          const nt: [number, number, number] = [r, g, b].map((c) => Math.max(0.8, Math.min(1.2, c / m))) as [number, number, number];
+          tint = [tint[0] + (nt[0] - tint[0]) * 0.3, tint[1] + (nt[1] - tint[1]) * 0.3, tint[2] + (nt[2] - tint[2]) * 0.3];
+        }
       }
       const l3 = p && layer.current?.id === p.id ? layer.current : null;
       const img = p && matte.current?.id === p.id ? matte.current.img : null;
@@ -315,6 +569,25 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       // Held in a hand the hand model sees: size and place from the hand itself. The knuckle line
       // (index to little finger) is about 7.5 cm, which holds even when the shoulders are off screen.
       const fromHand = !!(l3 && grip && handPts && HELD.has(style) && p);
+      // V2: a hand lost for a moment keeps the bag where it was for a short time instead of hiding it.
+      // V3: a lost hand is held only as long as it was still, faded out rather than cut (HoldPolicy).
+      if (v3 && !fromHand && lastFromHand && l3 && p && HELD.has(style)) {
+        const sh = policy.show(now, null);
+        if (sh) {
+          const yawH = fyaw.filter(spin.current + handYaw, now);
+          const roll = (placed.current?.rot ?? 0) + swing.step(now, sh.pose.cx, sh.pose.w / (l3.widthCm / 100));
+          l3.l.render(W, H, { x: sh.pose.cx, y: sh.pose.top, widthPx: sh.pose.w, yaw: yawH, roll, brightness, tint, alpha: sh.alpha });
+          if (telemetry) telemetry.push({ t: now, cx: sh.pose.cx, top: sh.pose.top, w: sh.pose.w, yaw: yawH, rawCx: -1, rawTop: -1, rawW: -1, hand: false, held: true, rejected, alpha: sh.alpha });
+          return;
+        }
+      }
+      const holdHand = v2 && !v3 && !fromHand && lastFromHand && now - lastHandAt < HAND_HOLD_MS && l3 && p && HELD.has(style);
+      if (holdHand && lastFromHand) {
+        const yawH = fyaw.filter(spin.current + handYaw, now);
+        if (telemetry) telemetry.push({ t: now, cx: placed.current?.cx ?? 0, top: placed.current?.top ?? 0, w: placed.current?.w ?? 0, yaw: yawH, rawCx: -1, rawTop: -1, rawW: -1, hand: false, held: true, rejected });
+        if (placed.current) l3!.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw: yawH, roll: placed.current.rot, brightness });
+        return;
+      }
       if (!p || (!img && !l3) || (!lm && !fromHand)) {
         l3?.l.render(W, H, null);
         return;
@@ -324,24 +597,83 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
       if (fromHand) {
         const hp = handPts!;
         // Size from the hand's 3D scale (turn-proof); the knuckle line (~7.5 cm) only until that is known.
-        const pxPerCm = handScale || Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y) / 7.5;
+        const pxPerCm = (handScale || Math.hypot(hp[5].x - hp[17].x, hp[5].y - hp[17].y) / 7.5) * gainNow();
         const widthCm = l3!.widthCm;
         // The bag hangs below the whole hand: its handle loops up into the fist, the body starts under it.
         const fistBottom = Math.max(...hp.map((q) => q.y));
         const xs = [5, 9, 13, 17].map((i) => hp[i].x);
         const gx = xs.reduce((a, b) => a + b, 0) / xs.length;
         const handlePx = l3!.handleCm * pxPerCm * sz;
-        next = { cx: gx, top: fistBottom - handlePx * 0.55, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
+        // V3: the handle's apex goes where the fingers curl round it — about 3 cm above the bottom of the fist
+        // whatever the handle's length. (V1/V2 put it 55 % of the handle length up: right for a 5 cm handle, but a
+        // 13 cm tote handle ended up with its apex above the fist, the hand floating inside the loop.)
+        const apexUp = v3 && !isOff('grip') ? Math.min(handlePx * 0.55, (labRef.current?.options.gripCm ?? l3!.gripCm ?? 3) * pxPerCm * sz) : handlePx * 0.55;
+        next = { cx: gx, top: fistBottom - apexUp, w: widthCm * pxPerCm * sz, rot: next?.rot ?? 0 };
       }
       if (!next) {
         l3?.l.render(W, H, null);
         return;
       }
-      placed.current = smooth(placed.current, next);
+      if (v2) {
+        // Time-based One Euro smoothing (steady when still, close when fast), no snap on source changes.
+        const prev = placed.current;
+        placed.current = { cx: fx.filter(next.cx, now), top: fy.filter(next.top, now), w: fw.filter(next.w, now), rot: prev ? prev.rot + (next.rot - prev.rot) * 0.3 : next.rot };
+        if (fromHand) {
+          lastFromHand = next;
+          lastHandAt = now;
+        }
+      } else placed.current = smooth(placed.current, next);
       const held = ['hand', 'elbow'].includes(style);
       // Held and the hand seen: the bag turns with the hand, all the way round. Otherwise it follows the body.
-      const yaw = spin.current + (held && grip ? handYaw : bodyYaw);
-      if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
+      const yawRaw = spin.current + (held && grip ? handYaw : bodyYaw);
+      const yaw = v2 ? fyaw.filter(yawRaw, now) : yawRaw;
+      if (telemetry) telemetry.push({ t: now, cx: placed.current.cx, top: placed.current.top, w: placed.current.w, yaw, rawCx: next.cx, rawTop: next.top, rawW: next.w, hand: fromHand, rejected });
+      let shown = placed.current;
+      if (l3 && v3) {
+        let pose = placed.current;
+        let alpha = 1;
+        if (fromHand) {
+          if (freshAt !== freshSeen) {
+            freshSeen = freshAt;
+            policy.fresh(now, placed.current, Math.hypot(handPts![5].x - handPts![17].x, handPts![5].y - handPts![17].y));
+            if (v4) {
+              if (prevDet && freshAt - prevDet.at < 400 && freshAt > prevDet.at) {
+                const dt = (freshAt - prevDet.at) / 1000;
+                detVel = { x: detVel.x * 0.5 + ((next.cx - prevDet.cx) / dt) * 0.5, y: detVel.y * 0.5 + ((next.top - prevDet.top) / dt) * 0.5 };
+              } else detVel = { x: 0, y: 0 };
+              prevDet = { cx: next.cx, top: next.top, at: freshAt };
+            }
+          }
+          const sh = policy.show(now, placed.current);
+          if (!sh) {
+            l3.l.render(W, H, null);
+            return;
+          }
+          pose = { ...placed.current, ...sh.pose };
+          alpha = sh.alpha;
+          if (v4 && now - freshAt < 250) {
+            const palm = Math.hypot(handPts![5].x - handPts![17].x, handPts![5].y - handPts![17].y);
+            const age = (now - freshAt) / 1000;
+            const gate = Math.min(1, Math.max(0, (Math.hypot(detVel.x, detVel.y) / Math.max(1, palm) - 0.3) / 0.7)); // none for a nearly still hand
+            let dx = detVel.x * age * gate;
+            let dy = detVel.y * age * gate;
+            const mag = Math.hypot(dx, dy);
+            if (mag > palm * 0.6) {
+              dx *= (palm * 0.6) / mag;
+              dy *= (palm * 0.6) / mag;
+            }
+            pose = { ...pose, cx: pose.cx + dx, top: pose.top + dy };
+          }
+          if (telemetry) telemetry.push({ t: now, v3: true, alpha, age: now - freshAt });
+        }
+        let roll = pose.rot;
+        if (held && fromHand && !isOff('swing')) {
+          swing.setLength(((l3.widthCm / l3.aspect) / 100) * 0.66);
+          roll += swing.step(now, pose.cx, pose.w / (l3.widthCm / 100));
+        } else swing.reset();
+        shown = pose;
+        l3.l.render(W, H, { x: pose.cx, y: pose.top, widthPx: pose.w, yaw, roll, brightness, tint, alpha });
+      } else if (l3) l3.l.render(W, H, { x: placed.current.cx, y: placed.current.top, widthPx: placed.current.w, yaw, roll: placed.current.rot, brightness });
       else paint(ctx, img!, placed.current, { s: 1, ox: 0, oy: 0 });
 
       // The holding hand goes back on top of the handles: person pixels from the mask, around the wrist.
@@ -382,6 +714,58 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
         hmctx.filter = 'none';
         hmctx.globalCompositeOperation = 'source-in';
         hmctx.drawImage(raw, 0, 0);
+        if (v3 && mask && !isOff('mask')) {
+          // Keep only what the person segmentation also calls person (generously: only clear background goes),
+          // so the stroke-widened hand shape does not paint wall pixels over the handles.
+          if (personDrawn !== personVer) {
+            personCv.width = mask.w;
+            personCv.height = mask.h;
+            const id = personCtx.createImageData(mask.w, mask.h);
+            for (let i = 0; i < mask.data.length; i++) id.data[i * 4 + 3] = Math.round(Math.max(0, Math.min(1, (mask.data[i] - 0.12) / 0.25)) * 255);
+            personCtx.putImageData(id, 0, 0);
+            personDrawn = personVer;
+          }
+          hmctx.globalCompositeOperation = 'destination-in';
+          hmctx.save();
+          if (mirrored) {
+            hmctx.translate(W, 0);
+            hmctx.scale(-1, 1);
+          }
+          hmctx.drawImage(personCv, 0, 0, W, H);
+          hmctx.restore();
+        }
+        if (v3 && !(labRef.current && !labRef.current.options.shadow)) {
+          // Contact: the bag's shadow on the skin where the handle leaves the fist (only hand pixels take it),
+          // and the fist's shadow on the top of the bag (only bag pixels take it). Light comes from upper right.
+          const fist = Math.max(...pts.map((q) => q.y));
+          const gx = shown.cx;
+          hmctx.globalCompositeOperation = 'source-atop';
+          const g1 = hmctx.createRadialGradient(gx - palmW * 0.05, fist, 0, gx - palmW * 0.05, fist, palmW * 0.55);
+          g1.addColorStop(0, 'rgba(20,12,8,0.38)');
+          g1.addColorStop(1, 'rgba(20,12,8,0)');
+          hmctx.fillStyle = g1;
+          hmctx.fillRect(gx - palmW, fist - palmW, palmW * 2, palmW * 2);
+          hmctx.globalCompositeOperation = 'source-over';
+          const r = Math.ceil(palmW * 1.2);
+          const x0 = Math.max(0, Math.floor(gx - r));
+          const y0 = Math.max(0, Math.floor(fist - r * 0.3));
+          const sw = Math.min(W - x0, r * 2);
+          const sh = Math.min(H - y0, r * 1.4);
+          if (sw > 0 && sh > 0 && gl.current) {
+            shade.width = sw;
+            shade.height = sh;
+            shadeCtx.globalCompositeOperation = 'source-over';
+            shadeCtx.clearRect(0, 0, sw, sh);
+            const g2 = shadeCtx.createRadialGradient(gx - x0 - palmW * 0.1, fist - y0, 0, gx - x0 - palmW * 0.1, fist - y0, palmW * 0.9);
+            g2.addColorStop(0, 'rgba(0,0,0,0.42)');
+            g2.addColorStop(1, 'rgba(0,0,0,0)');
+            shadeCtx.fillStyle = g2;
+            shadeCtx.fillRect(0, 0, sw, sh);
+            shadeCtx.globalCompositeOperation = 'destination-in';
+            shadeCtx.drawImage(gl.current, x0, y0, sw, sh, 0, 0, sw, sh);
+            out.drawImage(shade, x0, y0);
+          }
+        }
         hmctx.globalCompositeOperation = 'source-over';
         out.drawImage(handMask, 0, 0);
       } else if (holding && mask && lm) {
@@ -644,6 +1028,25 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips }: { produ
   }
 
   const live = phase === 'live';
+
+  // Comparison lab: only the stage (camera frame, 3D bag, hand overlay) — the controls live in the lab page.
+  if (import.meta.env.VITE_LAB === "1" && lab) {
+    return (
+      <div className="relative overflow-hidden bg-black" style={{ aspectRatio: '16 / 9' }} data-testid={`lab-pane-${lab.engine}`}>
+        <video ref={video} playsInline muted className="hidden" />
+        <canvas ref={canvas} className={`h-full w-full object-contain ${live ? '' : 'hidden'}`} data-testid="map-canvas" />
+        <canvas ref={gl} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} data-testid="map-gl" />
+        <canvas ref={top} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && product?.model3d ? '' : 'hidden'}`} />
+        <video ref={aiVideo} playsInline muted className="hidden" />
+        <canvas ref={aiOut} aria-hidden="true" className="hidden" />
+        {!live && (
+          <p className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-white/80" data-testid="map-status">
+            {error ?? status ?? (product?.model3d ? '입력을 기다리는 중' : '이 제품은 3D 모델이 없어 실시간 비교를 할 수 없습니다')}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">

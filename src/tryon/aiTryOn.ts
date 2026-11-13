@@ -41,6 +41,30 @@ export interface AiTryOnInput {
   signal?: AbortSignal;
 }
 
+/** Plain facts from the site's own product data (nothing invented): kind of bag, handle drop, handle count. */
+/** The flat surface photos the 3D model is textured with (real photos, not AI-redrawn), as absolute URLs, at most 3. */
+export function productFaceUrls(product: Product, base: string): string[] | undefined {
+  const m = product.model3d;
+  if (!m) return undefined;
+  const paths = [m.faces?.front, m.textures?.front, m.faces?.back, m.textures?.back, m.faces?.left ?? m.faces?.right, m.textures?.side].filter((x): x is string => !!x);
+  const urls = [...new Set(paths)].slice(0, 3).map((x) => new URL(x, base).toString());
+  return urls.length ? urls : undefined;
+}
+
+export function productFacts(product: Product): string | undefined {
+  const m = product.model3d;
+  if (!m) return undefined;
+  // Only what the model data states; "box" is the shape, not a claim about stiffness.
+  const kind = m.type === 'box' ? 'a box-shaped bag' : m.type === 'pouch' ? 'a small zip pouch' : 'an open tote bag';
+  const handle =
+    m.type === 'pouch'
+      ? m.handleCm
+        ? `hangs from a carabiner and cord about ${m.handleCm} cm long`
+        : ''
+      : [m.handles?.length ? `${m.handles.length} top handle${m.handles.length > 1 ? 's' : ''}` : '', m.handleCm ? `handle rises about ${m.handleCm} cm above the body` : ''].filter(Boolean).join(', ');
+  return [kind, handle, m.openTop ? 'open top' : ''].filter(Boolean).join(', ');
+}
+
 export async function requestAiTryOn({ person, product, style, signal }: AiTryOnInput): Promise<string> {
   const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
   const d = product.dimensions;
@@ -56,6 +80,11 @@ export async function requestAiTryOn({ person, product, style, signal }: AiTryOn
       category: product.category.value ?? undefined,
       size,
       style,
+      facts: productFacts(product),
+      // Opt-in while the improved prompt is being judged: `?prompt=v2` in the address.
+      promptVersion: new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('prompt') === 'v2' ? 'v2' : undefined,
+      // Opt-in too (`?prompt=v2&ref=faces`): the product's real surface photos as extra references.
+      faces: new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('ref') === 'faces' ? productFaceUrls(product, base) : undefined,
     }),
   });
   const body = (await res.json().catch(() => ({}))) as { image?: string; error?: string; reason?: string; detail?: string };

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { price } from './data';
+import { responsive } from './img';
 
 /**
  * LAGI curved gallery. Products sit on one chain that runs from the bottom-left (near, large) to
@@ -321,7 +322,7 @@ export function CurvedGallery({
             style={{ width: g.frontW, visibility: 'hidden' }}
           >
             <img
-              src={p.images[0]}
+              {...responsive(p.images[0], '(max-width: 767px) 70vw, 40vw')} src={p.images[0]}
               alt=""
               draggable={false}
               className="block w-full bg-[var(--c-white)] object-cover"
@@ -341,7 +342,7 @@ export function CurvedGallery({
           className={`pointer-events-none absolute z-[120] w-[min(320px,60vw)] ${
             scrollMode
               ? 'bottom-6 right-[var(--page-x)] bg-[rgba(241,241,241,0.92)] p-2 text-right'
-              : 'left-[var(--page-x)] top-20 md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right'
+              : 'left-[var(--page-x)] top-20 max-md:bg-[rgba(241,241,241,0.92)] max-md:p-2 md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right'
           }`}
         >
           <p className="t-caption tabular-nums text-[var(--c-mute)]">
@@ -356,7 +357,7 @@ export function CurvedGallery({
             <button type="button" className="tag" onClick={() => step(1)} aria-label="다음 제품">
               →
             </button>
-            <button type="button" className="tag tag-ink kr ml-2" onClick={() => open(front)}>
+            <button type="button" className="tag tag-ink kr ml-2 whitespace-nowrap" onClick={() => open(front)}>
               자세히 보기 →
             </button>
           </div>

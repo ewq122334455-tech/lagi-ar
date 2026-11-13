@@ -12,6 +12,9 @@ export interface Bag3D {
   /** Hangs from its origin (handle top). Units: metres. */
   group: THREE.Group;
   widthM: number;
+  /** Depth (front to back) and the whole hang length from the handle top down, in metres — for the shadow. */
+  depthM?: number;
+  hangM?: number;
   dispose: () => void;
 }
 
@@ -177,7 +180,7 @@ async function buildPouch(model: Model, base: string): Promise<Bag3D> {
   root.add(pivot);
   const group = new THREE.Group();
   group.add(root);
-  return { group, widthM: w, dispose: () => disposables.forEach((x) => x.dispose()) };
+  return { group, widthM: w, depthM: d, hangM: carCm + cordM + h, dispose: () => disposables.forEach((x) => x.dispose()) };
 }
 
 /**
@@ -271,7 +274,7 @@ async function buildBox(model: Model, base: string): Promise<Bag3D> {
   bag.position.y = -(h + handleH);
   const group = new THREE.Group();
   group.add(bag);
-  return { group, widthM: w, dispose: () => disposables.forEach((x) => x.dispose()) };
+  return { group, widthM: w, depthM: d, hangM: h + handleH, dispose: () => disposables.forEach((x) => x.dispose()) };
 }
 
 async function buildTote(model: Model, base: string): Promise<Bag3D> {
@@ -355,14 +358,34 @@ async function buildTote(model: Model, base: string): Promise<Bag3D> {
   bag.position.y = -(h + handleH);
   const group = new THREE.Group();
   group.add(bag);
-  return { group, widthM: w, dispose: () => disposables.forEach((x) => x.dispose()) };
+  return { group, widthM: w, depthM: d, hangM: h + handleH, dispose: () => disposables.forEach((x) => x.dispose()) };
 }
 
 /**
  * A transparent WebGL layer the size of the video, with an orthographic camera in video pixels
  * (x right, y down), lights, and the bag. `place` positions it each frame.
+ *
+ * `realism` (engine V3): the bag casts a soft shadow onto a transparent "shadow catcher" plane just
+ * behind it — standing in for the body or clothes it hangs against — and the light takes on the colour
+ * of the room. It costs one extra 512 px shadow-map pass. There is no depth from the camera, so the
+ * shadow is a plausible cue, not a measured one.
  */
-export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D) {
+export interface LayerPlacement {
+  x: number;
+  y: number;
+  widthPx: number;
+  yaw: number;
+  roll: number;
+  brightness: number;
+  /** Room colour, each channel ~1 for neutral (V3). */
+  tint?: [number, number, number];
+  /** 0..1 opacity of the whole layer (V3 fades a bag out when the hand is lost). */
+  alpha?: number;
+}
+
+export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D, opts: { realism?: boolean; shadow?: boolean } = {}) {
+  const real = !!opts.realism;
+  const shadowOn = real && opts.shadow !== false;
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
@@ -372,9 +395,31 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D) {
   key.position.set(0.4, 1, 1);
   scene.add(hemi, key, bag.group);
   const camera = new THREE.OrthographicCamera(0, 1, 0, -1, -5000, 5000);
+  let catcher: THREE.Mesh | null = null;
+  const lightDir = new THREE.Vector3(0.22, 0.5, 1.5).normalize();
+  if (shadowOn) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    key.castShadow = true;
+    key.shadow.mapSize.set(512, 512);
+    key.shadow.radius = 9;
+    key.shadow.bias = -0.0004;
+    scene.add(key.target);
+    bag.group.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true;
+    });
+    catcher = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: 0.3 }));
+    catcher.receiveShadow = true;
+    scene.add(catcher);
+  }
+  let shadowVisible = true;
   return {
+    /** Shows or hides the soft shadow behind the bag (the lab's ON/OFF switch). */
+    setShadowVisible(v: boolean) {
+      shadowVisible = v;
+    },
     /** Put the handle top at (x, y) video pixels, the bag `widthPx` wide, turned `yaw` and tilted `roll` (radians). */
-    render(W: number, H: number, p: { x: number; y: number; widthPx: number; yaw: number; roll: number; brightness: number } | null) {
+    render(W: number, H: number, p: LayerPlacement | null) {
       if (canvas.width !== W || canvas.height !== H) {
         renderer.setSize(W, H, false);
         camera.right = W;
@@ -382,6 +427,7 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D) {
         camera.updateProjectionMatrix();
       }
       bag.group.visible = !!p;
+      if (catcher) catcher.visible = !!p && shadowVisible;
       if (p) {
         const s = p.widthPx / bag.widthM;
         bag.group.scale.setScalar(s);
@@ -390,12 +436,48 @@ export function createBagLayer(canvas: HTMLCanvasElement, bag: Bag3D) {
         bag.group.rotation.set(0.12, p.yaw, p.roll, 'YXZ');
         hemi.intensity = 1.1 + p.brightness * 0.9;
         key.intensity = 0.8 + p.brightness * 0.9;
+        if (real) {
+          // V1/V2 light the bag so that a flat sRGB-128 surface comes out at ~0.8 (a white bag looks grey, 10–30 %
+          // darker than its photo; measured in docs/ai-fitting-upgrade/V3-RENDER-QUALITY.md). V3 is calibrated to ~1.0
+          // at a normal room brightness and still follows the room up and down.
+          hemi.intensity = 1.55 + p.brightness * 1.0;
+          key.intensity = 1.15 + p.brightness * 0.9;
+          const t = p.tint ?? [1, 1, 1];
+          // Lean the light towards the room's colour, but only part of the way (a white bag must stay white-ish).
+          const c = new THREE.Color(0.5 + 0.5 * t[0], 0.5 + 0.5 * t[1], 0.5 + 0.5 * t[2]);
+          hemi.color.copy(c);
+          key.color.copy(c);
+          const depth = bag.depthM ?? bag.widthM * 0.5;
+          const hang = bag.hangM ?? bag.widthM * 1.5;
+          const cx = p.x;
+          const cy = -p.y - hang * s * 0.5;
+          if (catcher) catcher.position.set(cx, cy, -(depth * 0.5 + 0.012) * s);
+          if (catcher) catcher.scale.set(Math.max(bag.widthM, hang) * s * 2.6, hang * s * 1.9, 1);
+          key.target.position.set(cx, cy, 0);
+          key.position.set(cx + lightDir.x * 4 * s, cy + lightDir.y * 4 * s, lightDir.z * 4 * s);
+          const R = Math.max(bag.widthM, hang) * s * 1.1;
+          const sc = key.shadow.camera;
+          sc.left = -R;
+          sc.right = R;
+          sc.top = R;
+          sc.bottom = -R;
+          sc.near = 2 * s;
+          sc.far = 6.5 * s;
+          sc.updateProjectionMatrix();
+        }
+        if (p.alpha !== undefined) canvas.style.opacity = String(p.alpha);
       }
       renderer.render(scene, camera);
     },
-    dispose() {
+    /** `loseContext`: also release the WebGL context (when the canvas is going away for good). */
+    dispose(loseContext = false) {
       renderer.dispose();
       bag.dispose();
+      if (catcher) {
+        catcher.geometry.dispose();
+        (catcher.material as THREE.Material).dispose();
+      }
+      if (loseContext) renderer.forceContextLoss();
     },
   };
 }

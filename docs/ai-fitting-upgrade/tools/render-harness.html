@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>bag render harness</title>
+<body style="margin:0;background:#808080"><canvas id="c" style="width:900px;height:900px"></canvas>
+<script type="module">
+// Renders one product's 3D bag front-on with the production renderer, for colour/material measurements.
+// ?product=plano-bag&b=0.6&realism=1  (served by `vite` dev: it imports the real src/v3/bag3d.ts)
+import { buildBag, createBagLayer } from '/src/v3/bag3d.ts';
+const q = new URLSearchParams(location.search);
+const id = q.get('product') ?? 'plano-bag';
+let pj;
+if (q.get('flat')) {
+  // A synthetic box whose every face is one flat sRGB grey: the rendered value / grey is the pure lighting gain.
+  const c = document.createElement('canvas'); c.width = c.height = 8; const x = c.getContext('2d'); x.fillStyle = `rgb(${q.get('flat')},${q.get('flat')},${q.get('flat')})`; x.fillRect(0, 0, 8, 8);
+  const u = c.toDataURL('image/png');
+  pj = { model3d: { type: 'box', widthCm: 14, heightCm: 14, depthCm: 14, handleCm: 0, faces: { front: u, back: u, left: u, right: u, top: u, bottom: u }, handles: [], bodyColor: '#808080', edgeColor: '#808080' } };
+} else pj = await (await fetch(`/products/${id}/product.json`)).json();
+const bag = await buildBag(pj.model3d, location.origin + '/');
+const L = Number(q.get('light') ?? 0);
+const layer = createBagLayer(document.getElementById('c'), bag, { realism: q.get('realism') === '1' });
+const w = 360; // px wide
+layer.render(900, 900, { x: 450, y: 120, widthPx: w, yaw: Number(q.get('yaw') ?? 0), roll: 0, brightness: Number(q.get('b') ?? 0.6), tint: [1, 1, 1], alpha: 1 });
+window.__done = true;
+</script>

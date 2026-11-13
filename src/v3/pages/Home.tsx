@@ -5,14 +5,15 @@ import { BrandFilmOverlay } from '../BrandFilm';
 import { IntroMotion, introSeen } from '../IntroMotion';
 import { OFFICIAL_LINKS, useImageRatios, useRealProducts } from '../data';
 import { ProductCard, cleanImage } from '../ProductCard';
+import { responsive } from '../img';
 
 function SectionTitle({ en, kr, to, href }: { en: string; kr: string; to?: string; href?: string }) {
   const more = to ? (
-    <Link to={to} className="t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
+    <Link to={to} className="hit t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
       View
     </Link>
   ) : href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="hit t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
       @lagi.official
     </a>
   ) : null;
@@ -46,11 +47,12 @@ export default function Home() {
       <section className="relative h-[100svh] overflow-hidden bg-[var(--c-gray)]" aria-label="LAGI 제품 갤러리">
         {ready && <CurvedGallery products={products} ratios={ratios} pageScroll />}
         {error && <p className="t-caption kr absolute left-[var(--page-x)] top-24">{error}</p>}
-        <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-24 z-[160] lg:top-[176px]">
+        <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-24 z-[160] max-md:!bg-[rgba(241,241,241,0.92)] max-md:!px-2 max-md:py-1 lg:top-[176px]">
           ▶ Brand film
         </button>
         {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}
-        <div className="pointer-events-none absolute bottom-6 left-[var(--page-x)] z-[150]">
+        {/* Phones: on a light panel and above the floating help button, so it never sits on a photo. */}
+        <div className="pointer-events-none absolute bottom-6 left-[var(--page-x)] z-[150] max-md:bottom-[84px] max-md:bg-[rgba(241,241,241,0.92)] max-md:px-2 max-md:pt-2">
           <h1 className="t-display t-mark text-[var(--c-ink)]">
             LAGI
             <br />
@@ -89,7 +91,7 @@ export default function Home() {
             >
               {a.img && (
                 <img
-                  src={a.img}
+                  {...responsive(a.img, '(max-width: 767px) 100vw, 33vw')} src={a.img}
                   alt=""
                   loading="lazy"
                   className={
@@ -118,7 +120,7 @@ export default function Home() {
         <div className="mt-10 flex snap-x scroll-px-[var(--page-x)] gap-3 overflow-x-auto px-[var(--page-x)] pb-2" data-testid="home-follow">
           {products.map((p) => (
             <a key={p.id} href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="group relative block aspect-square w-[58vw] shrink-0 snap-start overflow-hidden rounded-[var(--radius-card)] sm:w-[34vw] lg:w-[19vw]" aria-label={`${p.name.value} — 인스타그램에서 보기`}>
-              <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <img {...responsive(p.images[0], '(max-width: 767px) 50vw, 25vw')} src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
             </a>
           ))}
         </div>

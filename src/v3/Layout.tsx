@@ -5,6 +5,9 @@ import { useCart } from '@/commerce/CartContext';
 import { useAuth } from '@/auth/AuthContext';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, price, useRealProducts } from './data';
 import './tokens.css';
+import { responsive } from './img';
+import { useRouteMeta } from './usePageMeta';
+import { BUSINESS, PRIVACY_POLICY, TERMS } from '@/content/legal';
 
 export const NAV = [
   { to: '/discover', label: 'Shop', kr: '제품' },
@@ -22,6 +25,7 @@ export const NAV = [
 export function V3Layout() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
+  useRouteMeta(pathname);
   const footerRef = useRef<HTMLElement>(null);
   const [footerH, setFooterH] = useState(0);
   const [searching, setSearching] = useState(false);
@@ -108,6 +112,40 @@ function Header({ onSearch }: { onSearch: () => void }) {
       document.body.style.overflow = '';
     };
   }, [open]);
+  // Menu as a proper dialog: focus moves in, Tab stays inside, Esc closes, focus returns to the button.
+  const menuBtn = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      if (wasOpen.current) menuBtn.current?.focus();
+      wasOpen.current = false;
+      return;
+    }
+    wasOpen.current = true;
+    const el = menu.current;
+    el?.querySelector<HTMLElement>('button, a[href]')?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !el) return;
+      const items = [...el.querySelectorAll<HTMLElement>('button, a[href]')];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const utilities = (
     <div className="flex items-center gap-1">
@@ -118,9 +156,11 @@ function Header({ onSearch }: { onSearch: () => void }) {
       <Link to={user ? '/account' : '/login'} className="icon-btn hidden sm:inline-flex" aria-label={user ? `내 계정 (${user.name})` : '로그인'}>
         {Icon.user}
       </Link>
-      <Link to="/cart" className="icon-btn" aria-label={`장바구니, ${count}개`}>
+      <Link to="/cart" className="icon-btn">
         {Icon.bag}
+        <span className="sr-only">장바구니 </span>
         <span className="t-nav tabular-nums">{count}</span>
+        <span className="sr-only">개</span>
       </Link>
     </div>
   );
@@ -141,7 +181,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         {/* Row 2: menu in the middle, utilities on the right (on phones: menu · logo · utilities). */}
         <div className="relative flex h-16 items-center justify-between px-page lg:h-14">
           <div className="flex min-w-[96px] items-center">
-            <button type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
+            <button ref={menuBtn} type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
               {Icon.menu}
             </button>
             <Link to="/" aria-label="LAGI home" className={`header-mini hidden lg:inline-flex`}>
@@ -163,7 +203,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
       </header>
 
       {open && (
-        <div id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
+        <div ref={menu} id="v3-menu" role="dialog" aria-modal="true" aria-label="메뉴" onClick={(e) => (e.target as HTMLElement).closest('a') && setOpen(false)} className="fixed inset-0 z-40 flex flex-col bg-[var(--c-white)] px-page pb-8">
           <div className="relative flex h-14 items-center justify-between">
             <button type="button" onClick={() => setOpen(false)} className="icon-btn" aria-label="메뉴 닫기">
               {Icon.close}
@@ -265,7 +305,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             <li key={p.id}>
               <Link to={`/product/${p.id}`} className="group block">
                 <div className="aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white">
-                  <img src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
+                  <img {...responsive(p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0], '(max-width: 639px) 50vw, 33vw')} src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
                 </div>
                 <p className="t-value kr mt-3">{p.name.value}</p>
                 <p className="t-caption kr tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</p>
@@ -283,8 +323,30 @@ function HelpButton() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
+  // Phones: the button steps aside while the page is scrolling, so it never sits on what is being read.
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const on = () => {
+      if (window.innerWidth >= 768) return;
+      setMoving(true);
+      window.clearTimeout(t);
+      t = window.setTimeout(() => setMoving(false), 700);
+    };
+    window.addEventListener('scroll', on, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', on);
+      window.clearTimeout(t);
+    };
+  }, []);
+  const away = moving && !open;
   return (
-    <div className="fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+    // On a product page on phones, lifted above the buy bar (--buybar-h is 0 elsewhere).
+    <div
+      className={`fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 transition-opacity duration-200 md:bottom-6 md:right-6 ${away ? 'pointer-events-none opacity-0' : ''}`}
+      style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}
+      data-testid="help-float"
+    >
       {open && (
         <div className="t-caption kr w-52 overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_8px_28px_rgba(0,0,0,0.14)]" role="menu" aria-label="도움말">
           <a role="menuitem" href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="block px-4 py-3 hover:bg-[var(--c-gray)]">
@@ -315,10 +377,51 @@ function HelpButton() {
   );
 }
 
+/**
+ * Business details and legal links (전자상거래법 제10조 표시사항, 개인정보처리방침). Renders nothing until the
+ * owner fills in src/content/legal.ts — no placeholder ever reaches the published site.
+ */
+function LegalFooter() {
+  if (!BUSINESS && !PRIVACY_POLICY && !TERMS) return null;
+  const b = BUSINESS;
+  return (
+    <div className="t-caption kr mt-4 space-y-2 text-white/70" data-testid="legal-footer">
+      {(TERMS || PRIVACY_POLICY) && (
+        <p className="flex flex-wrap gap-x-4 gap-y-1">
+          {TERMS && (
+            <Link to="/terms" className="hit hover:text-white">
+              이용약관
+            </Link>
+          )}
+          {PRIVACY_POLICY && (
+            <Link to="/privacy" className="hit font-bold text-white">
+              개인정보처리방침
+            </Link>
+          )}
+        </p>
+      )}
+      {b && (
+        <p className="leading-relaxed">
+          상호 {b.companyName} · 대표 {b.representative} · 사업자등록번호 {b.businessNumber}{' '}
+          <a href={`https://www.ftc.go.kr/bizCommPop.do?wrkr_no=${b.businessNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
+            사업자정보 확인
+          </a>
+          <br />
+          통신판매업 신고번호 {b.mailOrderNumber} · 주소 {b.address}
+          <br />
+          전화 {b.phone} · 이메일 {b.email} · 호스팅 제공 {b.hostingProvider}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
   return (
     <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]">
-      <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32">
+      {/* Lifted above the phone buy bar on product pages. A transform, not padding: it does not
+          re-lay out the page when the bar appears (no layout shift). */}
+      <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
         <div className="text-center">
           <p className="t-h1 t-mark">LAGI in AGAIN</p>
           <p className="t-caption kr mt-3 text-white/80">디자인과 완성도, 소재의 새로운 가능성을 발견하고 소개합니다.</p>
@@ -350,14 +453,15 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
           <div className="t-caption kr mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-4 text-white/70">
             <p className="t-mark font-bold text-white">© LAGI</p>
             <p className="flex gap-4">
-              <Link to="/contact" className="hover:text-white">
+              <Link to="/contact" className="hit hover:text-white">
                 문의
               </Link>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
+              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
                 Instagram
               </a>
             </p>
           </div>
+          <LegalFooter />
         </div>
       </div>
     </footer>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The site uses #/ addresses, which search engines treat as one page, so only the home page is listed.
+     Product pages get their own entries once the site moves to path addresses (see the remediation report). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ewq122334455-tech.github.io/lagi-ar/</loc>
+  </url>
+</urlset>

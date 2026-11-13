@@ -1,0 +1,19 @@
+# Local-only test config (never deployed): the real Worker source in real workerd, a local MOCK Gemini, a real Durable Object.
+name = "cost-meter-test"
+main = "../../../../server/tryon-worker/src/index.ts"
+compatibility_date = "2025-01-01"
+[vars]
+GEMINI_MODEL = "m"
+GEMINI_API_KEY = "dummy-not-a-real-key"
+GEMINI_BASE_URL = "http://127.0.0.1:9911"
+ALLOWED_ORIGINS = "http://127.0.0.1:9911"
+TRYON_DAILY_UNITS_SITE = "5"
+TRYON_DAILY_UNITS_PER_IP = "99"
+[[kv_namespaces]]
+binding = "MEDIA"
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "QuotaCounter"
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["QuotaCounter"]

@@ -1,0 +1,194 @@
+[
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.3,
+  "rendered": 92,
+  "gain": 0.72
+ },
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.6,
+  "rendered": 101,
+  "gain": 0.79
+ },
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.9,
+  "rendered": 109,
+  "gain": 0.85
+ },
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.3,
+  "rendered": 88,
+  "gain": 0.69
+ },
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.6,
+  "rendered": 98,
+  "gain": 0.76
+ },
+ {
+  "grey": 128,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.9,
+  "rendered": 105,
+  "gain": 0.82
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.3,
+  "rendered": 117,
+  "gain": 0.91
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.6,
+  "rendered": 126,
+  "gain": 0.98
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.9,
+  "rendered": 135,
+  "gain": 1.05
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.3,
+  "rendered": 109,
+  "gain": 0.85
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.6,
+  "rendered": 118,
+  "gain": 0.92
+ },
+ {
+  "grey": 128,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.9,
+  "rendered": 125,
+  "gain": 0.98
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.3,
+  "rendered": 158,
+  "gain": 0.72
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.6,
+  "rendered": 173,
+  "gain": 0.79
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0,
+  "b": 0.9,
+  "rendered": 187,
+  "gain": 0.85
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.3,
+  "rendered": 148,
+  "gain": 0.67
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.6,
+  "rendered": 162,
+  "gain": 0.74
+ },
+ {
+  "grey": 220,
+  "engine": "v2",
+  "yaw": 0.6,
+  "b": 0.9,
+  "rendered": 174,
+  "gain": 0.79
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.3,
+  "rendered": 198,
+  "gain": 0.9
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.6,
+  "rendered": 213,
+  "gain": 0.97
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0,
+  "b": 0.9,
+  "rendered": 226,
+  "gain": 1.03
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.3,
+  "rendered": 180,
+  "gain": 0.82
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.6,
+  "rendered": 194,
+  "gain": 0.88
+ },
+ {
+  "grey": 220,
+  "engine": "v3",
+  "yaw": 0.6,
+  "b": 0.9,
+  "rendered": 206,
+  "gain": 0.94
+ }
+]

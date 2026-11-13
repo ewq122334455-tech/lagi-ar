@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { deleteReview, fetchReviews, myReviewedProducts, photoForReview, postReview, reviewPhotoUrl, type ReviewItem, type ReviewPage } from './reviews';
+import { deleteReview, fetchReviews, myReviewedProducts, photoForReview, postReview, reviewPhotoUrl, type ReviewItem, type ReviewPage } from './reviewsApi';
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
@@ -26,7 +26,7 @@ function ReviewRow({ r, showProduct, mine, onDelete }: { r: ReviewItem; showProd
           {r.verified && <span className="t-label kr rounded-full bg-[var(--c-gray)] px-2 py-0.5">구매 확인</span>}
         </div>
         {showProduct && (
-          <Link to={`/product/${r.productId}`} className="t-caption kr mt-2 block font-semibold underline-offset-2 hover:underline">
+          <Link to={`/product/${r.productId}`} className="t-caption kr -mb-1 mt-1 block py-1 font-semibold underline-offset-2 hover:underline">
             {r.productName}
           </Link>
         )}
@@ -34,7 +34,7 @@ function ReviewRow({ r, showProduct, mine, onDelete }: { r: ReviewItem; showProd
         <p className="t-caption kr mt-2 text-[var(--c-mute)]">
           {r.author} · {date(r.createdAt)}
           {mine && (
-            <button type="button" onClick={onDelete} className="ml-3 underline underline-offset-2 hover:text-[var(--c-ink)]">
+            <button type="button" onClick={onDelete} className="-my-1 ml-3 py-1 underline underline-offset-2 hover:text-[var(--c-ink)]">
               삭제
             </button>
           )}

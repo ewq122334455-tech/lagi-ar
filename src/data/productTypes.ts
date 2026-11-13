@@ -205,6 +205,8 @@ export interface Product {
     heightCm: number;
     depthCm: number;
     handleCm: number;
+    /** Optional (V3): how far above the bottom of the fist the handle's top sits, in cm. Default 3. Only set from a real-photo check of that product. */
+    gripCm?: number;
     handleColor?: string;
     rimColor?: string;
     textures?: { front: string; back: string; side: string; bottom: string };

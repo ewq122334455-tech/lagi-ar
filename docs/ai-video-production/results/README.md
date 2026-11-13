@@ -1,0 +1,1 @@
+Run output of the paid smoke test goes here (git-ignored except this file): `smoke-run.json` (balances before/after), the recorded `lagi-live-daily-tote.webm|mp4` clip and `lagi-live-measure-*.json` from the page. They contain your face and account balances: keep them local.

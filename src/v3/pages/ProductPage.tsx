@@ -1,17 +1,90 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
+import { paymentsEnabled } from '@/commerce/payments';
 import { WHY_LAGI, WHY_LAGI_RULE } from '@/content/whyLagi';
 import { isPublished } from '@/utils/contentStatus';
 import { ProductViews } from '../ProductViews';
 import { ProductCard } from '../ProductCard';
 import { Point } from '../Point';
 import { Reviews } from '../Reviews';
-import { fetchReviews } from '../reviews';
+import { fetchReviews } from '../reviewsApi';
 import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
+import { responsive } from '../img';
+import { usePageMeta } from '../usePageMeta';
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Phones: the buy bar fixed to the bottom of the screen.
+ *
+ * It is rendered at the page root (a portal): the page wrapper keeps a transform from its entry
+ * animation, and a `position: fixed` element inside a transformed parent is fixed to that parent
+ * (the far end of a long page) instead of the screen. Its height is published as `--buybar-h` so the
+ * floating help button and the footer stay clear of it. While a text field is focused (on-screen
+ * keyboard) it steps aside so it never covers what is being typed.
+ */
+function MobileBuyBar({ children }: { children: React.ReactNode }) {
+  const bar = useRef<HTMLDivElement>(null);
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--buybar-h', `${typing ? 0 : el.offsetHeight}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty('--buybar-h');
+    };
+  }, [typing]);
+  useEffect(() => {
+    const isField = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      !bar.current?.contains(t) &&
+      (t.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), textarea, select') || t.isContentEditable);
+    // Coming back is delayed: leaving a field by tapping a button (e.g. "구매평 등록") must not put the
+    // bar under that same tap, and the on-screen keyboard needs a moment to close.
+    let back = 0;
+    const onIn = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      window.clearTimeout(back);
+      setTyping(true);
+    };
+    const onOut = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      window.clearTimeout(back);
+      back = window.setTimeout(() => !isField(document.activeElement) && setTyping(false), 400);
+    };
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      window.clearTimeout(back);
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+  // The wrapper carries the site's tokens and fonts (.v3) without drawing a box: `.v3` itself also
+  // paints the dark page background, which must not reach the bar.
+  return createPortal(
+    <div className="v3" style={{ display: 'contents' }}>
+      <div
+        ref={bar}
+        // Inline style: the `flex` utility would otherwise win over the `hidden` attribute.
+        style={typing ? { display: 'none' } : undefined}
+        data-testid="mobile-buy-bar"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-black/10 bg-[var(--c-white)] px-page py-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden"
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 /** True once, right after the home gallery zoomed into this product. */
 function useArrivedFromGallery(id: string | undefined) {
@@ -65,6 +138,8 @@ export default function ProductPage() {
   const [tab, setTab] = useState<Tab>('detail');
   const [reviewCount, setReviewCount] = useState<number | null>(null);
   const arrived = useArrivedFromGallery(id);
+  const metaProduct = products.find((x) => x.id === id);
+  usePageMeta(metaProduct ? metaProduct.name.value : products.length ? '제품을 찾을 수 없습니다' : null, metaProduct?.shortDescription.value);
   useEffect(() => {
     setShot(0);
     setTab('detail');
@@ -134,6 +209,12 @@ export default function ProductPage() {
     ] as [string, string | null][]
   ).filter(([, v]) => v);
 
+  // Without online payment, "바로 구매" goes straight to the official store instead of an order form.
+  const online = paymentsEnabled();
+  const buyNow = online
+    ? { onClick: () => addToCart(true) }
+    : { href: storeUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': '스마트스토어에서 바로 구매 (새 창)' };
+
   function addToCart(go?: boolean) {
     add({ productId: p.id, variantId: null, size: null, color: null, quantity: qty, unitPrice: p.price.value, name: p.name.value, image: hero ?? null });
     setAdded(true);
@@ -152,17 +233,17 @@ export default function ProductPage() {
       <div className="grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <nav aria-label="현재 위치" className="t-caption kr mb-3 flex gap-2 text-[var(--c-mute)]">
-            <Link to="/" className="hover:text-[var(--c-ink)]">
+            <Link to="/" className="hit hover:text-[var(--c-ink)]">
               홈
             </Link>
             <span aria-hidden="true">/</span>
-            <Link to="/discover" className="hover:text-[var(--c-ink)]">
+            <Link to="/discover" className="hit hover:text-[var(--c-ink)]">
               제품
             </Link>
             {category && (
               <>
                 <span aria-hidden="true">/</span>
-                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hover:text-[var(--c-ink)]">
+                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hit hover:text-[var(--c-ink)]">
                   {category}
                 </Link>
               </>
@@ -173,6 +254,7 @@ export default function ProductPage() {
               <div className={`relative aspect-square overflow-hidden rounded-[var(--radius-card)] ${current.fit === 'contain' ? 'bg-white ring-1 ring-black/5' : 'bg-[var(--c-gray)]'}`}>
                 <img
                   key={current.src}
+                  {...responsive(current.src, '(max-width: 1023px) 100vw, 50vw')}
                   src={current.src}
                   alt={`${p.name.value ?? ''} — ${current.label}`}
                   data-testid="product-hero"
@@ -195,7 +277,7 @@ export default function ProductPage() {
                   onClick={() => setShot(i)}
                   className={`aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${i === shot ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 hover:ring-black/40'}`}
                 >
-                  <img src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
+                  <img {...responsive(s.src, '96px')} src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
                 </button>
               ))}
             </div>
@@ -271,9 +353,15 @@ export default function ProductPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <button type="button" className="btn btn-primary" onClick={() => addToCart(true)}>
-                바로 구매
-              </button>
+              {online ? (
+                <button type="button" className="btn btn-primary" {...buyNow}>
+                  바로 구매
+                </button>
+              ) : (
+                <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
+                  바로 구매 ↗
+                </a>
+              )}
               <button type="button" className="btn btn-line" onClick={() => addToCart()}>
                 {added ? '담았습니다 ✓' : '장바구니'}
               </button>
@@ -288,7 +376,7 @@ export default function ProductPage() {
               )}
             </div>
             <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
-              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-[var(--c-blue)]">
+              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
                 스마트스토어에서 구매 ↗
               </a>
               {added && (
@@ -345,7 +433,7 @@ export default function ProductPage() {
               <div className="mt-6 grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
                 {p.styledImages.map((src) => (
                   <figure key={src} className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]" data-testid="styled-image">
-                    <img src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
+                    <img {...responsive(src, '(max-width: 767px) 100vw, 50vw')} src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
                     <figcaption className="t-label kr absolute left-2 top-2 rounded-full bg-[var(--c-ink)] px-2.5 py-1 text-[var(--c-white)]">AI 연출 이미지 · 실제와 다를 수 있음</figcaption>
                   </figure>
                 ))}
@@ -445,7 +533,7 @@ export default function ProductPage() {
               {usesCopy && (
                 <p className="t-caption kr mt-4 text-[var(--c-mute)]">
                   제품 소개 문구는 라기가 제품 기본 정보와 사진을 바탕으로 작성했습니다. 소재와 제작의 세부 사항은 제작사 기준을 따르며, 정확한 정보는{' '}
-                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2">
                     스마트스토어
                   </a>
                   에서 확인할 수 있습니다.
@@ -486,7 +574,7 @@ export default function ProductPage() {
             <h2 id="more-title" className="t-h3 kr">
               함께 보면 좋은 제품
             </h2>
-            <Link to="/discover" className="t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
+            <Link to="/discover" className="hit t-caption kr underline underline-offset-4 hover:text-[var(--c-blue)]">
               전체 보기
             </Link>
           </div>
@@ -509,14 +597,14 @@ export default function ProductPage() {
           </span>
           {next.images[0] && (
             <span className="block w-24 overflow-hidden rounded-[6px] sm:w-32" style={{ aspectRatio: 1 }}>
-              <img src={next.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
+              <img {...responsive(next.images[0], '128px')} src={next.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
             </span>
           )}
         </Link>
       )}
 
       {/* Mobile buy bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-black/10 bg-[var(--c-white)] px-page py-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden">
+      <MobileBuyBar>
         <span className="min-w-0 flex-1">
           <span className="t-caption kr block truncate text-[var(--c-mute)]">{p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
@@ -524,10 +612,16 @@ export default function ProductPage() {
         <button type="button" className="btn btn-line !min-h-[44px] !px-4" onClick={() => addToCart()} aria-label="장바구니 담기">
           {added ? '✓' : '담기'}
         </button>
-        <button type="button" className="btn btn-primary !min-h-[44px]" onClick={() => addToCart(true)}>
-          바로 구매
-        </button>
-      </div>
+        {online ? (
+          <button type="button" className="btn btn-primary !min-h-[44px]" {...buyNow}>
+            바로 구매
+          </button>
+        ) : (
+          <a className="btn btn-primary !min-h-[44px]" data-testid="bar-buy-now-store" {...buyNow}>
+            바로 구매 ↗
+          </a>
+        )}
+      </MobileBuyBar>
     </article>
   );
 }

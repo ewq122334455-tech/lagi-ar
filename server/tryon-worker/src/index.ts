@@ -32,9 +32,40 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   /** Decart API key (dct_…) for the realtime try-on — `wrangler secret put DECART_API_KEY`. Never sent to browsers. */
   DECART_API_KEY?: string;
+  /**
+   * Gemini cost budget, in UNITS. One unit = one paid image-generation ATTEMPT to Gemini (every HTTP call, retries and
+   * product cut-outs included; a text call costs TRYON_TEXT_UNIT). Per day, whole site. Default 400 (about USD 16 at 0.04).
+   */
+  TRYON_DAILY_UNITS_SITE?: string;
+  /** Units per visitor address per day. Default 24. */
+  TRYON_DAILY_UNITS_PER_IP?: string;
+  /** Units a text-model call counts as. Default 0.1. */
+  TRYON_TEXT_UNIT?: string;
+  /** Price of one unit in USD — only used to report the estimated spend. Default 0.04 (check the current price). */
+  TRYON_USD_PER_UNIT?: string;
+  /** "unmetered" turns the meter off (local tests ONLY). Anything else: a missing/broken counter BLOCKS paid calls. */
+  TRYON_QUOTA?: string;
+  /** Overrides the Gemini host (local mock server in tests only). */
+  GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
+  /** "1" = stop issuing realtime tokens at once (kill switch; sessions already open end at their own cap). */
+  REALTIME_DISABLED?: string;
+  /** Realtime sessions per visitor per day, 1 to 10 (default 3). */
+  REALTIME_PER_IP_DAILY?: string;
+  /** Session length in seconds, 10 to 20 (default 20). Lower it for smoke tests. */
+  REALTIME_SESSION_SECONDS?: string;
+  /** Realtime model for new sessions. Default lucy-2.6. Only models listed in REALTIME_MODELS are accepted. */
+  REALTIME_MODEL?: string;
+  /** USD per realtime second used for the estimate in /admin/usage (default 0.02, standard mode). */
+  DECART_USD_PER_SEC?: string;
+  /** Base URL of the Decart API (tests point this at a local mock). Default https://api.decart.ai */
+  DECART_BASE_URL?: string;
+  /** Realtime sessions that may be open at once, whole site. Default 3. */
+  REALTIME_MAX_CONCURRENT?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
+  /** Atomic daily counters for the AI-photo cost caps (Durable Object `QuotaCounter`). Without it the caps fall back to KV, which is NOT atomic. */
+  QUOTA?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   RELAY?: { idFromName(name: string): unknown; get(id: unknown, opts?: { locationHint?: string }): { fetch(input: string, init?: RequestInit): Promise<Response> } };
   /** Product cut-outs (product alone on white), made once per product photo. Optional. */
   MEDIA?: KV;
@@ -46,11 +77,21 @@ export interface Env {
   TOSS_SECRET_KEY?: string;
   /** Override for tests only. Defaults to https://api.tosspayments.com. */
   TOSS_API_BASE?: string;
+  /**
+   * What happens to a member's reviews when they delete their account: "keep-anonymous" (the review
+   * stays, without name or email) or "delete". Until the owner sets it, account deletion answers 503
+   * and points to the help channel — the policy is the owner's decision, not the code's.
+   */
+  WITHDRAW_REVIEW_POLICY?: string;
+  /** Which photo-fitting prompt to use: "v2" for the improved one. Unset = v1 (the prompt used so far). */
+  PROMPT_VERSION?: string;
+  /** Optional Cloudflare Rate Limiting binding for log-in attempts ([[ratelimits]] in wrangler.toml). */
+  LOGIN_LIMIT?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   /** Token for reading orders (GET /admin/orders) — `npx wrangler secret put ADMIN_TOKEN`. */
   ADMIN_TOKEN?: string;
 }
 
-interface TryOnRequest {
+export interface TryOnRequest {
   /** Visitor photo as a data URL (image/jpeg or image/png). */
   person: string;
   /** Absolute URL of the product image; must be on an allowed origin. */
@@ -61,6 +102,16 @@ interface TryOnRequest {
   size?: string;
   /** How to wear it: shoulder, hand, crossbody, … (free text, short). */
   style?: string;
+  /** Plain facts about the product from the site's own data (kind, handle drop …), short. Used by prompt v2. */
+  facts?: string;
+  /**
+   * Absolute URLs of up to 3 flat, unretouched photos of the product's real surfaces (the ones the 3D model is
+   * textured with). Sent as extra references so printed lettering and graphics can be copied from the real thing
+   * instead of from the AI-redrawn cut-out. Only used with prompt v2; same-origin only.
+   */
+  faces?: string[];
+  /** "v2" asks for the improved prompt on this request (otherwise the PROMPT_VERSION setting decides; default v1). */
+  promptVersion?: string;
 }
 
 const MAX_PERSON_BYTES = 4 * 1024 * 1024;
@@ -104,7 +155,44 @@ function toBase64(buf: ArrayBuffer) {
   return btoa(bin);
 }
 
-function buildPrompt(r: TryOnRequest, cutout: boolean) {
+/**
+ * Prompt v2 — same job, stricter and more specific. Adds: the product's own facts, a list of what must
+ * not change in the product and in the person, exactly one product, the physical way each carry style
+ * hangs, and "keep the framing". It is only used when asked for (`promptVersion: "v2"` in the request or
+ * PROMPT_VERSION="v2"); whether it is better than v1 has to be judged on real generations
+ * (scripts/ai-fitting-ab.mjs) — it was not measured with paid calls.
+ */
+export function buildPromptV2(r: TryOnRequest, cutout: boolean, faceCount = 0) {
+  const style = (r.style ?? '').slice(0, 200);
+  const facts = (r.facts ?? '').slice(0, 300);
+  const name = [r.productName?.slice(0, 120), r.category?.slice(0, 40)].filter(Boolean).join(', ');
+  const carry = /shoulder/i.test(style)
+    ? 'The handles or strap rest on the shoulder and the bag hangs down the same side of the body at about hip height, the strap taut where it carries the weight.'
+    : /cross/i.test(style)
+      ? 'The strap runs diagonally across the chest from one shoulder to the opposite hip, and the bag sits against the hip.'
+      : /hand|hold/i.test(style)
+        ? "The person's own hand grips the handle at the top; the bag hangs straight down below the fist under gravity, fingers wrapped around the handle (never through the bag), the bag body in front of the leg and not floating."
+        : '';
+  return [
+    'You are a virtual fitting room for a bag brand. Image 1 is a photo of a person. Image 2 shows ONLY the product' + (name ? ` (${name})` : '') + (cutout ? ' on a plain background' : '') + ' — it is the exact design to reproduce.',
+    `Create one photorealistic photo of the SAME person from image 1 carrying exactly ONE of that product${style ? `, ${style}` : ''}.`,
+    facts ? `Product facts: ${facts}.` : '',
+    r.size ? `Real size ${r.size}: scale it to the person's body accordingly (do not make it larger or smaller than that).` : "Scale the product realistically to the person's body.",
+    carry,
+    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, clothing, pose and background as in image 1. Only the arm and hand that hold or wear the product may move, and only as far as needed. No extra people.',
+    'ANATOMY: exactly two arms and two hands with five fingers each, all belonging to this person; never add a hand, arm or finger, and take no hands, arms, bodies or background from image 2.',
+    'KEEP THE PRODUCT: the same shape, proportions, colours, materials, hardware (zippers, buckles, clips, rings), handles and straps, and the same prints and lettering — letters must keep their spelling, orientation and position; do not redraw, translate, simplify or add logos. Do not add other bags or accessories.',
+    faceCount > 0
+      ? `Image${faceCount > 1 ? 's' : ''} 3${faceCount > 1 ? `–${2 + faceCount}` : ''} ${faceCount > 1 ? 'are' : 'is a'} flat, unretouched photo${faceCount > 1 ? 's' : ''} of the product's real surface${faceCount > 1 ? 's' : ''}: copy printed lettering, graphics, colours and material texture exactly from ${faceCount > 1 ? 'them' : 'it'} (they show surface only, not the product's outline — take the outline from image 2).`
+      : '',
+    'LIGHT AND CONTACT: match the light direction, colour and shadows of image 1; give the product a soft contact shadow and let the body or hand overlap it where it naturally would.',
+    'FRAMING: output the same framing and aspect ratio as image 1, without cropping or zooming. Return only the edited photo.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export function buildPrompt(r: TryOnRequest, cutout: boolean) {
   r = { ...r, style: r.style?.slice(0, 200), productName: r.productName?.slice(0, 120) };
   const what = [r.productName, r.category].filter(Boolean).join(', ');
   return [
@@ -133,11 +221,12 @@ const CUTOUT_PROMPT = [
  * the AI tends to copy that person's hand into the result (the "third hand"). So the product is
  * first isolated on white — once per photo, kept in KV — and the fitting uses that cut-out.
  */
-async function productCutout(env: Env, url: string, product: { mime: string; data: string }): Promise<{ cut?: { mime: string; data: string }; busy?: boolean }> {
+async function productCutout(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ cut?: { mime: string; data: string }; busy?: boolean; quota?: QuotaFail }> {
   const key = `cutout:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return { cut: JSON.parse(cached) as { mime: string; data: string } };
-  const out = await geminiImage(env, [{ text: CUTOUT_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  const out = await geminiImage(env, [{ text: CUTOUT_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }], budget);
+  if (out.quota) return { quota: out.quota };
   if (!out.image) return { busy: out.reason === 'busy' };
   const m = /^data:([^;]+);base64,(.+)$/.exec(out.image);
   if (!m) return {};
@@ -152,7 +241,7 @@ const DESCRIBE_PROMPT =
   'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
 
 /** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
-async function productDescription(env: Env, url: string, product: { mime: string; data: string }): Promise<{ text?: string; note?: string }> {
+async function productDescription(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ text?: string; note?: string }> {
   const key = `desc:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return { text: cached };
@@ -165,6 +254,8 @@ async function productDescription(env: Env, url: string, product: { mime: string
         generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
       env.GEMINI_TEXT_MODEL ?? 'gemini-3.8-flash',
+      budget,
+      Number(env.TRYON_TEXT_UNIT ?? 0.1),
     );
     if (!res.ok) return { note: `HTTP ${res.status} ${(await res.text()).replace(/\s+/g, ' ').slice(0, 200)}` };
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[] };
@@ -186,11 +277,11 @@ const MATTE_PROMPT = [
 ].join(' ');
 
 /** The product on pure green, for the browser to key out and lay over the live video. Cached per product. */
-async function productMatte(env: Env, url: string, product: { mime: string; data: string }): Promise<{ mime: string; data: string } | undefined> {
+async function productMatte(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ mime: string; data: string } | undefined> {
   const key = `matte:v1:${url}`;
   const cached = await env.MEDIA?.get(key);
   if (cached) return JSON.parse(cached) as { mime: string; data: string };
-  const out = await geminiImage(env, [{ text: MATTE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }]);
+  const out = await geminiImage(env, [{ text: MATTE_PROMPT }, { inline_data: { mime_type: product.mime, data: product.data } }], budget);
   const m = out.image && /^data:([^;]+);base64,(.+)$/.exec(out.image);
   if (!m) return undefined;
   const matte = { mime: m[1], data: m[2] };
@@ -239,6 +330,56 @@ async function newSession(kv: KV, email: string) {
   return token;
 }
 
+/**
+ * Removes a member: their reviews (deleted or kept without name/email, per the owner's policy), the
+ * links from their account to their orders (the order records themselves are kept, untouched — how long
+ * paid orders must be kept is a legal question for the owner), every login session, and the account.
+ */
+async function deleteMember(env: Env, user: StoredUser, policy: 'keep-anonymous' | 'delete') {
+  const users = env.USERS!;
+  const email = user.email.toLowerCase();
+  const orders = env.ORDERS;
+  let reviews = 0;
+  let orderLinks = 0;
+  if (orders) {
+    const mine = await orders.list({ prefix: `reviewby:${email}:`, limit: 1000 });
+    for (const k of mine.keys) {
+      const productId = k.name.split(':').pop()!;
+      const id = await orders.get(k.name);
+      const key = `review:${productId}:${id}`;
+      const raw = id ? await orders.get(key) : null;
+      if (raw) {
+        if (policy === 'delete') {
+          await Promise.all([orders.delete(key), orders.delete(`reviewall:${id}`), env.MEDIA?.delete(`review-img:${id}`)]);
+        } else {
+          const r = JSON.parse(raw) as Review;
+          await orders.put(key, JSON.stringify({ ...r, author: '탈퇴 회원', email: '' }));
+        }
+        reviews++;
+      }
+      await orders.delete(k.name);
+    }
+    const links = await orders.list({ prefix: `byemail:${email}:`, limit: 1000 });
+    for (const k of links.keys) await orders.delete(k.name);
+    orderLinks = links.keys.length;
+  }
+  // Sessions are keyed by token; drop every one that points at this account.
+  let cursor: string | undefined;
+  let scanned = 0;
+  do {
+    const page = await users.list({ prefix: 'session:', cursor, limit: 1000 });
+    for (const k of page.keys) if ((await users.get(k.name)) === email) await users.delete(k.name);
+    scanned += page.keys.length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && scanned < 20_000);
+  await Promise.all([users.delete(`user:${email}`), users.delete(`loginfail:${email}`)]);
+  return { reviews, orderLinks };
+}
+
+/** Failed log-ins per email: after LOGIN_MAX_FAILS the address is locked for LOGIN_LOCK_SECONDS. */
+const LOGIN_MAX_FAILS = 10;
+const LOGIN_LOCK_SECONDS = 15 * 60;
+
 async function sessionUser(kv: KV, request: Request): Promise<{ token: string; user: StoredUser } | null> {
   const token = /^Bearer ([0-9a-f]{64})$/.exec(request.headers.get('Authorization') ?? '')?.[1];
   if (!token) return null;
@@ -247,7 +388,8 @@ async function sessionUser(kv: KV, request: Request): Promise<{ token: string; u
   return raw ? { token, user: JSON.parse(raw) as StoredUser } : null;
 }
 
-async function handleAuth(path: string, request: Request, kv: KV, headers: Record<string, string>): Promise<Response> {
+async function handleAuth(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const kv = env.USERS!;
   if (path === '/auth/me' && request.method === 'GET') {
     const s = await sessionUser(kv, request);
     return s ? json({ user: publicUser(s.user) }, 200, headers) : json({ error: '로그인이 필요합니다.' }, 401, headers);
@@ -291,12 +433,41 @@ async function handleAuth(path: string, request: Request, kv: KV, headers: Recor
   }
 
   if (path === '/auth/login') {
+    const locked = { error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.', reason: 'locked' };
+    // Cloudflare's rate limiter (if bound) per address + IP; then the per-email lock kept in KV.
+    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+    if (env.LOGIN_LIMIT && !(await env.LOGIN_LIMIT.limit({ key: `${email}|${ip}` })).success) return json(locked, 429, headers);
+    const failKey = `loginfail:${email}`;
+    const failRaw = await kv.get(failKey);
+    const fail = failRaw ? (JSON.parse(failRaw) as { n: number; until?: number }) : { n: 0 };
+    if (fail.until && fail.until > Date.now()) return json(locked, 429, headers);
     const raw = await kv.get(`user:${email}`);
     const user = raw ? (JSON.parse(raw) as StoredUser) : null;
     // Hash even for unknown emails so response time does not reveal which emails exist.
     const hash = await hashPassword(password, user?.salt ?? '00'.repeat(16));
-    if (!user || !sameString(hash, user.hash)) return json({ error: '이메일 또는 비밀번호가 맞지 않습니다.' }, 401, headers);
+    if (!user || !sameString(hash, user.hash)) {
+      const n = (fail.until ? 0 : fail.n) + 1; // a lock that ran out starts a fresh count
+      const next = n >= LOGIN_MAX_FAILS ? { n, until: Date.now() + LOGIN_LOCK_SECONDS * 1000 } : { n };
+      await kv.put(failKey, JSON.stringify(next), { expirationTtl: LOGIN_LOCK_SECONDS });
+      return json(n >= LOGIN_MAX_FAILS ? locked : { error: '이메일 또는 비밀번호가 맞지 않습니다.' }, n >= LOGIN_MAX_FAILS ? 429 : 401, headers);
+    }
+    if (failRaw) await kv.delete(failKey);
     return json({ token: await newSession(kv, email), user: publicUser(user) }, 200, headers);
+  }
+
+  // Account deletion: the member proves it is them (session + password, typed confirmation).
+  if (path === '/auth/delete') {
+    const me = await sessionUser(kv, request);
+    if (!me) return json({ error: '로그인이 필요합니다.' }, 401, headers);
+    if (me.user.email.toLowerCase() !== email) return json({ error: '로그인한 계정의 이메일을 입력해 주세요.' }, 403, headers);
+    const check = await hashPassword(password, me.user.salt);
+    if (!sameString(check, me.user.hash)) return json({ error: '비밀번호가 맞지 않습니다.' }, 403, headers);
+    if ((body as { confirm?: string }).confirm !== '탈퇴') return json({ error: '확인 문구를 정확히 입력해 주세요.' }, 400, headers);
+    const policy = env.WITHDRAW_REVIEW_POLICY;
+    if (policy !== 'keep-anonymous' && policy !== 'delete')
+      return json({ error: '온라인 회원 탈퇴는 준비 중입니다. 인스타그램 DM으로 요청해 주시면 처리해 드립니다.', reason: 'not_configured' }, 503, headers);
+    const result = await deleteMember(env, me.user, policy);
+    return json({ ok: true, ...result, reviewPolicy: policy }, 200, headers);
   }
 
   return json({ error: 'not found' }, 404, headers);
@@ -331,9 +502,25 @@ interface Order {
   customer: { name: string; phone: string; email: string };
   shipping: { recipient: string; phone: string; zonecode: string; address: string; addressDetail: string; memo: string };
   payment?: { paymentKey: string; method?: string; approvedAt?: string; receiptUrl?: string };
+  /** The member account that placed the order (from its login session, set by the server). Guest orders have none. */
+  memberEmail?: string;
 }
 
 const PENDING_TTL = 60 * 60 * 24; // unpaid orders vanish after a day
+
+/**
+ * Paid orders that belong to this member account. An order belongs to an account only if it was placed
+ * while logged in to it (memberEmail, set by the server) — never because the checkout form had the same
+ * email, which anyone can type or register without proving they own it.
+ */
+async function memberOrders(kv: KV, email: string, limit: number): Promise<Order[]> {
+  const listed = await kv.list({ prefix: `byemail:${email}:`, limit });
+  const raws = await Promise.all(listed.keys.map((k) => kv.get(`order:${k.name.split(':').pop()}`)));
+  return raws
+    .filter(Boolean)
+    .map((r) => JSON.parse(r!) as Order)
+    .filter((o) => o.status === 'PAID' && o.memberEmail === email);
+}
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 /** The figures a visitor may see about their own order. */
@@ -391,8 +578,7 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
   if (path === '/orders/mine' && request.method === 'GET') {
     const me = env.USERS ? await sessionUser(env.USERS, request) : null;
     if (!me) return json({ error: '로그인이 필요합니다.' }, 401, headers);
-    const listed = await kv.list({ prefix: `byemail:${me.user.email.toLowerCase()}:`, limit: 50 });
-    const orders = (await Promise.all(listed.keys.map((k) => kv.get(`order:${k.name.split(':').pop()}`)))).filter(Boolean).map((r) => orderSummary(JSON.parse(r!) as Order));
+    const orders = (await memberOrders(kv, me.user.email.toLowerCase(), 50)).map(orderSummary);
     orders.sort((a, b) => (a.orderId < b.orderId ? 1 : -1));
     return json({ orders }, 200, headers);
   }
@@ -455,6 +641,9 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
       customer,
       shipping,
     };
+    // Logged in: the order belongs to that account (the server decides, not the form's email field).
+    const member = env.USERS ? await sessionUser(env.USERS, request) : null;
+    if (member) order.memberEmail = member.user.email.toLowerCase();
     await kv.put(`order:${order.orderId}`, JSON.stringify(order), { expirationTtl: PENDING_TTL });
     return json(orderSummary(order), 201, headers);
   }
@@ -498,8 +687,9 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     order.status = 'PAID';
     order.payment = { paymentKey, method: toss.method, approvedAt: toss.approvedAt, receiptUrl: toss.receipt?.url };
     await kv.put(`order:${order.orderId}`, JSON.stringify(order)); // paid orders are kept
-    // Index by buyer email: members see their orders, and reviews of bought products are marked.
-    await kv.put(`byemail:${order.customer.email.toLowerCase()}:${order.orderId}`, order.lines.map((l) => l.productId).join(','));
+    // Index member orders by their account: members see their orders, and reviews of bought products are marked.
+    // Guest orders are not linked to any account; they are found with order number + phone (/orders/lookup).
+    if (order.memberEmail) await kv.put(`byemail:${order.memberEmail}:${order.orderId}`, order.lines.map((l) => l.productId).join(','));
     return json(orderSummary(order), 200, headers);
   }
 
@@ -511,7 +701,6 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
     const order = raw ? (JSON.parse(raw) as Order) : null;
     if (!order || !phone || (order.customer.phone !== phone && order.shipping.phone !== phone))
       return json({ error: '주문 번호와 휴대폰 번호를 확인해 주세요.' }, 404, headers);
-    return json(orderSummary(order), 200, headers);
     return json(orderSummary(order), 200, headers);
   }
 
@@ -601,9 +790,7 @@ async function handleReviews(path: string, request: Request, env: Env, headers: 
     if (body.photo && !photo) return json({ error: '사진은 JPEG로 올려 주세요.' }, 400, headers);
     if (photo && photo.length > MAX_REVIEW_PHOTO) return json({ error: '사진 용량이 너무 큽니다.' }, 413, headers);
 
-    const bought = await kv.list({ prefix: `byemail:${email}:`, limit: 100 });
-    const lines = await Promise.all(bought.keys.map((k) => kv.get(k.name)));
-    const verified = lines.some((l) => (l ?? '').split(',').includes(productId));
+    const verified = (await memberOrders(kv, email, 100)).some((o) => o.lines.some((l) => l.productId === productId));
     const now = Date.now();
     const id = `${(9_999_999_999_999 - now).toString().padStart(13, '0')}-${randomHex(4)}`;
     const review: Review = {
@@ -648,8 +835,22 @@ async function handleReviews(path: string, request: Request, env: Env, headers: 
 
 /** Seconds one realtime session may run — enforced by Decart through the token, not only the page. */
 const REALTIME_SECONDS = 20;
+/** Session length for this request: the default 20 s, or REALTIME_SESSION_SECONDS lowered (10 to 20) for a cheaper smoke test. Never raised. */
+const sessionSeconds = (env: Env) => {
+  const n = Number(env.REALTIME_SESSION_SECONDS ?? REALTIME_SECONDS);
+  return Number.isFinite(n) ? Math.min(REALTIME_SECONDS, Math.max(10, Math.round(n))) : REALTIME_SECONDS;
+};
 /** Realtime sessions per visitor (IP) per day. */
 const REALTIME_PER_IP = 3;
+/** Per-visitor realtime sessions per day: the default above, or REALTIME_PER_IP_DAILY (1 to 10) for a deliberate test. */
+const perIp = (env: Env) => {
+  const n = Number(env.REALTIME_PER_IP_DAILY ?? REALTIME_PER_IP);
+  return Number.isFinite(n) ? Math.min(10, Math.max(1, Math.round(n))) : REALTIME_PER_IP;
+};
+/** Sessions that may be open at the same moment, whole site (Decart bills open session-seconds). */
+const REALTIME_MAX_CONCURRENT = 3;
+/** The only realtime models a token can be scoped to (a model is never switched automatically). */
+const REALTIME_MODELS = ['lucy-2.6', 'lucy-vton-3.6', 'lucy-vton-3.5'];
 
 /**
  * POST /realtime/token — a short-lived Decart client token for one 20-second session.
@@ -659,6 +860,23 @@ const REALTIME_PER_IP = 3;
 async function realtime(path: string, request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405, headers);
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+
+  // The page tells us how long a session really ran. ADVISORY ONLY: the browser can lie, so it never frees a lease or a
+  // quota unit; it just lets the owner compare "what pages say" with Decart's own usage page. Each report counts at most
+  // the session cap, and the endpoint is rate-limited.
+  if (path === '/realtime/report') {
+    if (throttled(`rtrep:${ip}`, 10)) return json({ error: 'slow down' }, 429, headers);
+    let r: { seconds?: number; ok?: boolean };
+    try {
+      r = await request.json();
+    } catch {
+      return json({ error: 'invalid JSON' }, 400, headers);
+    }
+    const sec = Math.min(Math.max(Number.isFinite(r.seconds) ? Number(r.seconds) : 0, 0), sessionSeconds(env));
+    void recordOutcome(env, 'rt', r.ok === false ? 'report_fail' : 'report_ok');
+    if (sec > 0) void recordOutcome(env, 'rt', 'reported_ms', Math.round(sec * 1000));
+    return json({ ok: true }, 200, headers);
+  }
 
   if (path === '/cutout') {
     if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
@@ -672,56 +890,72 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     const product = await fetchProductImage(body.productImage ?? '', allowed);
     if ('error' in product) return json({ error: product.error }, product.status, headers);
     if (body.matte) {
-      const matte = env.GEMINI_API_KEY ? await productMatte(env, body.productImage!, product) : undefined;
+      const matte = env.GEMINI_API_KEY ? await productMatte(env, body.productImage!, product, { ip }) : undefined;
       if (!matte) return json({ error: '제품 이미지를 준비하지 못했습니다.' }, 502, headers);
       return json({ matte: `data:${matte.mime};base64,${matte.data}` }, 200, headers);
     }
-    const [{ cut }, desc] = env.GEMINI_API_KEY
-      ? await Promise.all([productCutout(env, body.productImage!, product), productDescription(env, body.productImage!, product)])
-      : [{}, {}];
+    const [{ cut, quota }, desc] = env.GEMINI_API_KEY
+      ? await Promise.all([productCutout(env, body.productImage!, product, { ip }), productDescription(env, body.productImage!, product, { ip })])
+      : [{} as { cut?: { mime: string; data: string }; quota?: QuotaFail }, {} as { text?: string; note?: string }];
+    if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
     const img = cut ?? product;
     // descriptionNote: why there is no description (shown only in the response, for diagnosis).
     return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description: desc.text, descriptionNote: desc.note }, 200, headers);
   }
 
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
+  if (env.REALTIME_DISABLED === '1') return json({ error: '실시간 착용을 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
   if (throttled(`rt:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
 
-  // Daily caps: per visitor, and for the whole site (the bill is per second).
-  const day = new Date().toISOString().slice(0, 10);
-  const kv = env.MEDIA;
-  const ipKey = `rt:${day}:${ip}`;
-  const allKey = `rt:${day}:all`;
-  const used = Number((await kv?.get(ipKey)) ?? 0);
-  const usedAll = Number((await kv?.get(allKey)) ?? 0);
+  // Daily caps: per visitor, and for the whole site (the bill is per second). Reserved atomically BEFORE the paid token is
+  // minted (same meter as the photo fitting; a missing or broken counter blocks: no token). No refunds, as for photos.
   const dailyAll = Number(env.REALTIME_DAILY_SESSIONS ?? 100);
   const unlimited = (env.REALTIME_UNLIMITED ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   const member = unlimited.length && env.USERS ? await sessionUser(env.USERS, request) : null;
   const vip = !!member && unlimited.includes(member.user.email.toLowerCase());
-  if (!vip && used >= REALTIME_PER_IP) return json({ error: `실시간 착용은 하루 ${REALTIME_PER_IP}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
-  if (!vip && usedAll >= dailyAll) return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+  let usedToday = 0;
+  // One open session per visitor and a site-wide ceiling, BEFORE a unit is spent or a token is minted. The lease outlives the
+  // session by a margin (connect time) and expires on its own; the owner's own account is exempt only from the daily cap.
+  const maxOpen = Number(env.REALTIME_MAX_CONCURRENT ?? REALTIME_MAX_CONCURRENT);
+  const busy = await leaseRealtime(env, ip, (sessionSeconds(env) + 15) * 1000, maxOpen);
+  if (busy === 'busy_ip') return json({ error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' }, 429, headers);
+  if (busy === 'busy_site') return json({ error: '지금 실시간 착용을 이용하는 분이 많습니다. 잠시 후 다시 시도해 주세요.', reason: 'busy_site' }, 429, headers);
+  if (busy) return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
+  if (!vip) {
+    try {
+      usedToday = (await meter(env, 'rt', ip, 1, dailyAll, perIp(env))).ipSpent;
+    } catch (e) {
+      await releaseRealtime(env, ip);
+      if (!(e instanceof QuotaError)) throw e;
+      if (e.reason === 'daily_limit') return json({ error: `실시간 착용은 하루 ${perIp(env)}번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.`, reason: 'daily_limit' }, 429, headers);
+      if (e.reason === 'site_limit') return json({ error: '오늘 실시간 착용 체험이 모두 소진되었습니다. 사진 합성을 이용해 주세요.', reason: 'site_limit' }, 429, headers);
+      return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
+    }
+  }
 
   const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
-  const res = await fetch('https://api.decart.ai/v1/client/tokens', {
+  const model = REALTIME_MODELS.includes(env.REALTIME_MODEL ?? '') ? (env.REALTIME_MODEL as string) : 'lucy-2.6';
+  const res = await fetch(`${env.DECART_BASE_URL ?? 'https://api.decart.ai'}/v1/client/tokens`, {
     method: 'POST',
     headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      expiresIn: 60, // enough to connect; an open session is capped by maxSessionDuration
-      allowedModels: ['lucy-2.6'],
+      expiresIn: 20, // enough to connect (the camera is already on); an open session is capped by maxSessionDuration
+      allowedModels: [model],
       allowedOrigins: origins,
-      constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
+      constraints: { realtime: { maxSessionDuration: sessionSeconds(env) } },
     }),
   });
   if (!res.ok) {
     console.log('decart token error', res.status, (await res.text()).slice(0, 300));
+    await releaseRealtime(env, ip);
     return json({ error: '실시간 착용 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.', reason: 'provider' }, 502, headers);
   }
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
   if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
-  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: null }, 200, headers);
-  await kv?.put(ipKey, String(used + 1), { expirationTtl: 60 * 60 * 26 });
-  await kv?.put(allKey, String(usedAll + 1), { expirationTtl: 60 * 60 * 26 });
-  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, remainingToday: REALTIME_PER_IP - used - 1 }, 200, headers);
+  void recordOutcome(env, 'rt', vip ? 'token_vip' : 'token');
+  void recordOutcome(env, 'rt', 'reserved_ms', sessionSeconds(env) * 1000);
+  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: null }, 200, headers);
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, perIp(env) - usedToday) }, 200, headers);
 }
 
 // ---- Router ----------------------------------------------------------------------------------
@@ -751,16 +985,188 @@ export default {
       if (throttled(`order:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
       return handleOrders(path, request, env, headers);
     }
-    if (path === '/realtime/token' || path === '/cutout') return realtime(path, request, env, headers);
+    if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
+    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
       if (throttled(`auth:${ip}`, 20)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
-      return handleAuth(path, request, env.USERS, headers);
+      return handleAuth(path, request, env, headers);
     }
     return tryOn(request, env, headers);
   },
 };
+
+const UNITS_SITE_DEFAULT = 400;
+const UNITS_PER_IP_DEFAULT = 24;
+
+/** Who is being charged for a Gemini call. */
+interface Budget {
+  ip: string;
+}
+
+type QuotaFail = 'site_limit' | 'daily_limit' | 'quota_unavailable';
+
+/** Thrown instead of making a paid call when the budget is used up or the meter cannot be trusted. */
+class QuotaError extends Error {
+  constructor(readonly reason: QuotaFail) {
+    super(reason);
+  }
+}
+
+const QUOTA_MESSAGE: Record<QuotaFail, string> = {
+  daily_limit: 'AI 사진 합성 이용 한도(하루)에 도달했습니다. 내일 다시 이용해 주세요.',
+  site_limit: '오늘 AI 사진 합성 이용량이 모두 소진되었습니다. 내일 다시 이용해 주세요.',
+  quota_unavailable: 'AI 사진 합성을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+};
+
+const centi = (units: number) => Math.round(units * 100);
+
+/**
+ * The cost meter. Called before EVERY paid Gemini HTTP attempt (see callGemini) — not once per visitor request, because
+ * one request can make several attempts: a first-time product cut-out, the fitting, and up to 3 tries of each.
+ *
+ * Reserve-before-call: the units are taken first (atomically, in the QuotaCounter Durable Object); a refusal means no call.
+ * FAIL CLOSED: if the counter is missing, errors, times out or answers nonsense, the call is refused (`quota_unavailable`)
+ * — never "allowed because the meter is broken". The only way around is TRYON_QUOTA="unmetered", for local tests.
+ */
+async function takeUnits(env: Env, budget: Budget, units: number): Promise<void> {
+  const siteCap = Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT);
+  const ipCap = Number(env.TRYON_DAILY_UNITS_PER_IP ?? UNITS_PER_IP_DEFAULT);
+  await meter(env, 'tryon', budget.ip, units, siteCap, ipCap);
+}
+
+/**
+ * Concurrent-session guard for realtime (Decart bills per second of an OPEN session, not per token). One open session per
+ * visitor address and at most `max` across the site. Fails closed like the meter. Returns a refusal reason or null.
+ */
+async function leaseRealtime(env: Env, ip: string, ttlMs: number, max: number): Promise<'busy_ip' | 'busy_site' | 'quota_unavailable' | null> {
+  if (env.TRYON_QUOTA === 'unmetered' && localOnly(env)) return null;
+  if (!env.QUOTA) return 'quota_unavailable';
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const res = await env.QUOTA.get(env.QUOTA.idFromName(`rt:${day}`)).fetch('https://quota/lease', { method: 'POST', body: JSON.stringify({ ip, ttlMs, max, now: Date.now() }) });
+    if (!res.ok) return 'quota_unavailable';
+    const out = (await res.json()) as { ok?: boolean; reason?: string };
+    if (out.ok === true) return null;
+    return out.reason === 'busy_ip' || out.reason === 'busy_site' ? out.reason : 'quota_unavailable';
+  } catch {
+    return 'quota_unavailable';
+  }
+}
+
+async function releaseRealtime(env: Env, ip: string): Promise<void> {
+  if (!env.QUOTA) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.QUOTA.get(env.QUOTA.idFromName(`rt:${day}`)).fetch('https://quota/release', { method: 'POST', body: JSON.stringify({ ip }) });
+  } catch {
+    /* the lease expires by itself */
+  }
+}
+
+/** Only localhost origins may run unmetered: a production origin with the meter switched off is a misconfiguration, so it blocks. */
+function localOnly(env: Env): boolean {
+  return env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean).every((o) => {
+    try {
+      return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(o).hostname);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * The shared meter (also used for the realtime/Decart sessions): reserve `units` for this visitor address and for the
+ * whole site, atomically, in the day's counter object for `scope`. Throws QuotaError when over a cap or when the meter
+ * cannot be trusted. Returns how many units this address has used so far today (for "N left" messages).
+ */
+async function meter(env: Env, scope: 'tryon' | 'rt', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
+  if (env.TRYON_QUOTA === 'unmetered') {
+    if (localOnly(env)) return { ipSpent: 0 };
+    throw new QuotaError('quota_unavailable'); // "unmetered" next to a real origin is never allowed
+  }
+  if (!env.QUOTA) throw new QuotaError('quota_unavailable');
+  const day = new Date().toISOString().slice(0, 10);
+  const siteCap = centi(siteCapUnits);
+  const ipCap = centi(ipCapUnits);
+  if (!Number.isFinite(siteCap) || !Number.isFinite(ipCap) || !Number.isFinite(units) || units <= 0) throw new QuotaError('quota_unavailable');
+  let out: { ok?: unknown; reason?: unknown; ipSpentCenti?: unknown };
+  try {
+    const stub = env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`));
+    const res = await stub.fetch('https://quota/take', { method: 'POST', body: JSON.stringify({ ip, cost: centi(units), siteCap, ipCap }) });
+    if (!res.ok) throw new Error(`counter ${res.status}`);
+    out = (await res.json()) as typeof out;
+  } catch {
+    throw new QuotaError('quota_unavailable');
+  }
+  if (out.ok === true && typeof out.ipSpentCenti === 'number') return { ipSpent: out.ipSpentCenti / 100 };
+  if (out.ok === false && (out.reason === 'daily_limit' || out.reason === 'site_limit')) throw new QuotaError(out.reason);
+  throw new QuotaError('quota_unavailable');
+}
+
+/*
+ * NO REFUNDS, by design. A reserved unit stays spent whatever happens to the call. A request that threw or timed out may
+ * still have reached Google (and been billed), and a refund path is also a way around the cap (induce failures → get units
+ * back → call again). So the daily budget is a spending CEILING, not an entitlement: a visitor whose attempt failed has
+ * lost that unit. Every attempt that leaves the Worker was reserved first, exactly once — nothing is ever returned.
+ */
+
+/**
+ * Durable Object: the day's cost counters, in centi-units (integers, no float drift). It handles one request at a time
+ * between storage operations (input gates), and writes both counters in ONE put, so check-and-take cannot interleave
+ * or half-apply: N simultaneous requests can never get past the cap. One instance per day (`tryon:<date>`).
+ */
+export class QuotaCounter {
+  constructor(private state: { storage: { get(k: string): Promise<unknown>; put(entries: Record<string, unknown>): Promise<void> } }) {}
+
+  async fetch(request: Request): Promise<Response> {
+    const route = new URL(request.url).pathname;
+    if (route === '/record') {
+      const { outcome, n: add } = (await request.json()) as { outcome?: string; n?: number };
+      const name = String(outcome ?? 'unknown').replace(/[^a-z0-9_]/gi, '').slice(0, 32) || 'unknown';
+      const inc = Number.isFinite(add) ? Math.min(Math.max(Math.trunc(add as number), 0), 60_000) : 1;
+      const n = Number((await this.state.storage.get(`out:${name}`)) ?? 0);
+      await this.state.storage.put({ [`out:${name}`]: n + inc });
+      return Response.json({ ok: true });
+    }
+    if (route === '/lease') {
+      // Concurrent realtime sessions: one lease per visitor address, and a site-wide ceiling. Leases expire by themselves,
+      // so a crashed page can never block the site for long. Decided in one request (no interleaving).
+      const { ip, ttlMs, max, now } = (await request.json()) as { ip: string; ttlMs: number; max: number; now: number };
+      const raw = ((await this.state.storage.get('leases')) as Record<string, number> | undefined) ?? {};
+      const live: Record<string, number> = {};
+      for (const [k, v] of Object.entries(raw)) if (v > now) live[k] = v;
+      if (live[ip]) return Response.json({ ok: false, reason: 'busy_ip', retryInMs: live[ip] - now });
+      if (Object.keys(live).length >= max) return Response.json({ ok: false, reason: 'busy_site' });
+      live[ip] = now + ttlMs;
+      await this.state.storage.put({ leases: live });
+      return Response.json({ ok: true });
+    }
+    if (route === '/release') {
+      const { ip } = (await request.json()) as { ip: string };
+      const raw = ((await this.state.storage.get('leases')) as Record<string, number> | undefined) ?? {};
+      delete raw[ip];
+      await this.state.storage.put({ leases: raw });
+      return Response.json({ ok: true });
+    }
+    if (route === '/usage') {
+      const all = Number((await this.state.storage.get('all')) ?? 0);
+      const outcomes: Record<string, number> = {};
+      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms'])
+        outcomes[k] = Number((await this.state.storage.get(`out:${k}`)) ?? 0);
+      return Response.json({ spentCenti: all, outcomes });
+    }
+    const body = (await request.json()) as { ip: string; cost: number; siteCap?: number; ipCap?: number };
+    const site = Number((await this.state.storage.get('all')) ?? 0);
+    const mine = Number((await this.state.storage.get(`ip:${body.ip}`)) ?? 0);
+    if (!Number.isFinite(body.cost) || body.cost <= 0) return Response.json({ ok: false, reason: 'bad_request' }, { status: 400 });
+    if (mine + body.cost > (body.ipCap ?? 0)) return Response.json({ ok: false, reason: 'daily_limit' });
+    if (site + body.cost > (body.siteCap ?? 0)) return Response.json({ ok: false, reason: 'site_limit' });
+    await this.state.storage.put({ all: site + body.cost, [`ip:${body.ip}`]: mine + body.cost });
+    return Response.json({ ok: true, spentCenti: site + body.cost, ipSpentCenti: mine + body.cost });
+  }
+}
 
 /** POST / — compose the visitor photo with the product via Gemini. */
 async function tryOn(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
@@ -786,15 +1192,31 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if ('error' in product) return json({ error: product.error }, product.status, headers);
 
   // Falls back to the original photo if the cut-out could not be made this time.
-  const { cut: cutout, busy } = await productCutout(env, body.productImage, product);
+  const budget: Budget = { ip };
+  const { cut: cutout, busy, quota } = await productCutout(env, body.productImage, product, budget);
+  if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
   const ref = cutout ?? product;
-  const out = await geminiImage(env, [
-    { text: buildPrompt(body, !!cutout) },
-    { inline_data: { mime_type: person.mime, data: person.data } },
-    { inline_data: { mime_type: ref.mime, data: ref.data } },
-  ]);
+  const v2 = body.promptVersion === 'v2' || env.PROMPT_VERSION === 'v2';
+  // Real surface photos as extra references (prompt v2 only; same-origin only; a failed fetch just skips that one).
+  const faces: { mime: string; data: string }[] = [];
+  if (v2 && Array.isArray(body.faces))
+    for (const u of body.faces.slice(0, 3)) {
+      const f = typeof u === 'string' ? await fetchProductImage(u, allowed) : null;
+      if (f && !('error' in f)) faces.push(f);
+    }
+  const out = await geminiImage(
+    env,
+    [
+      { text: v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
+      { inline_data: { mime_type: person.mime, data: person.data } },
+      { inline_data: { mime_type: ref.mime, data: ref.data } },
+      ...faces.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
+    ],
+    budget,
+  );
+  if (out.quota) return json({ error: QUOTA_MESSAGE[out.quota], reason: out.quota }, out.quota === 'quota_unavailable' ? 503 : 429, headers);
   if (!out.image) {
     const message =
       out.reason === 'busy'
@@ -842,16 +1264,44 @@ type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: s
  * US: wherever the visitor is, the request to Google leaves from there. Without the binding (e.g.
  * local tests) the call is made directly.
  */
-async function callGemini(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
+async function callGemini(env: Env, body: string, model: string, budget: Budget, units = 1): Promise<Response> {
+  await takeUnits(env, budget, units); // throws QuotaError: no unit, no call (and the unit is never given back)
+  try {
+    const res = await callGeminiUnmetered(env, body, model);
+    void recordOutcome(env, 'tryon', res.ok ? 'http_ok' : `http_${res.status}`);
+    return res;
+  } catch (e) {
+    void recordOutcome(env, 'tryon', 'network_error');
+    throw e;
+  }
+}
+
+/**
+ * The attempt-vs-bill ledger. Units are reserved BEFORE a call (attempts); this notes what each attempt turned into
+ * (http_ok, http_429, no_image, blocked, network_error…). It is bookkeeping only: a failure here never changes whether
+ * a call is allowed, and nothing is refunded. Compare the totals with Google's own billing page — they will differ
+ * (failed or blocked attempts may or may not be billed), and that difference is what this ledger exists to show.
+ */
+async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string, n = 1): Promise<void> {
+  if (!env.QUOTA) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await env.QUOTA.get(env.QUOTA.idFromName(`${scope}:${day}`)).fetch('https://quota/record', { method: 'POST', body: JSON.stringify({ outcome, n }) });
+  } catch {
+    /* bookkeeping only */
+  }
+}
+
+async function callGeminiUnmetered(env: Env, body: string, model = env.GEMINI_MODEL): Promise<Response> {
   if (env.RELAY) {
     const stub = env.RELAY.get(env.RELAY.idFromName('gemini-us-west'), { locationHint: 'wnam' });
     return stub.fetch('https://relay/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-model': model }, body });
   }
-  return geminiFetch(env.GEMINI_API_KEY, model, body);
+  return geminiFetch(env.GEMINI_API_KEY, model, body, env.GEMINI_BASE_URL);
 }
 
-function geminiFetch(key: string, model: string, body: string) {
-  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+function geminiFetch(key: string, model: string, body: string, base = 'https://generativelanguage.googleapis.com') {
+  return fetch(`${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body,
@@ -876,7 +1326,7 @@ export class GeminiRelay {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
-    const res = await geminiFetch(this.env.GEMINI_API_KEY, request.headers.get('x-model') || this.env.GEMINI_MODEL, await request.text());
+    const res = await geminiFetch(this.env.GEMINI_API_KEY, request.headers.get('x-model') || this.env.GEMINI_MODEL, await request.text(), this.env.GEMINI_BASE_URL);
     const headers = new Headers(res.headers);
     // On a refusal, say where the call left from — the visible clue when location is the problem.
     if (!res.ok) headers.set('x-lagi-egress', `relay ${await egress()}`);
@@ -884,7 +1334,7 @@ export class GeminiRelay {
   }
 }
 
-type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string };
+type GeminiResult = { image?: string; reason?: 'busy' | 'blocked' | 'no_image' | 'error'; detail?: string; quota?: QuotaFail };
 
 // People photos trip the general filters more often than they should; only clearly harmful content is blocked.
 const SAFETY = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'].map((category) => ({
@@ -892,7 +1342,7 @@ const SAFETY = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_C
   threshold: 'BLOCK_ONLY_HIGH',
 }));
 
-async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult> {
+async function geminiImage(env: Env, parts: GeminiPart[], budget: Budget): Promise<GeminiResult> {
   let reason: GeminiResult['reason'] = 'no_image';
   let detail = '';
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -902,14 +1352,24 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult>
       attempt > 0 && reason === 'no_image'
         ? [...parts, { text: 'Respond with the edited image only. Do not reply with text; always return an image.' }]
         : parts;
-    const res = await callGemini(
-      env,
-      JSON.stringify({
-        contents: [{ role: 'user', parts: askParts }],
-        generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
-        safetySettings: SAFETY,
-      }),
-    );
+    let res: Response;
+    try {
+      res = await callGemini(
+        env,
+        JSON.stringify({
+          contents: [{ role: 'user', parts: askParts }],
+          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+          safetySettings: SAFETY,
+        }),
+        env.GEMINI_MODEL,
+        budget,
+      );
+    } catch (e) {
+      if (e instanceof QuotaError) return { quota: e.reason };
+      reason = 'error';
+      detail = (e as Error).message.slice(0, 120);
+      continue;
+    }
     if (!res.ok) {
       const text = (await res.text()).slice(0, 300);
       console.log('gemini error', attempt, res.status, text);
@@ -929,16 +1389,55 @@ async function geminiImage(env: Env, parts: GeminiPart[]): Promise<GeminiResult>
     const got = result.candidates?.[0]?.content?.parts ?? [];
     for (const part of got) {
       const img = part.inlineData ?? (part.inline_data && { mimeType: part.inline_data.mime_type, data: part.inline_data.data });
-      if (img?.data) return { image: `data:${img.mimeType};base64,${img.data}` };
+      if (img?.data) {
+        void recordOutcome(env, 'tryon', 'image');
+        return { image: `data:${img.mimeType};base64,${img.data}` };
+      }
     }
     const finish = result.candidates?.[0]?.finishReason ?? '';
     const said = got.map((p) => p.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
     const blocked = !!result.promptFeedback?.blockReason || /SAFETY|PROHIBITED|BLOCKLIST|RECITATION/.test(finish);
     console.log('gemini no image', attempt, finish, result.promptFeedback?.blockReason, said.slice(0, 200));
     reason = blocked ? 'blocked' : 'no_image';
+    void recordOutcome(env, 'tryon', reason);
     detail = [finish || result.promptFeedback?.blockReason || 'NO_IMAGE', said.slice(0, 140)].filter(Boolean).join(' · ');
     // The same photo will be blocked again; stop early.
     if (blocked && attempt >= 1) return { reason, detail };
   }
   return { reason, detail };
+}
+
+/** GET /admin/usage — today's units (attempts) by scope, outcome counts, and the ESTIMATED spend. Not a bill: compare with Google/Decart billing. */
+async function adminUsage(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  const token = /^Bearer (.+)$/.exec(request.headers.get('Authorization') ?? '')?.[1] ?? '';
+  if (!env.ADMIN_TOKEN || !sameString(token, env.ADMIN_TOKEN)) return json({ error: 'unauthorized' }, 401, headers);
+  if (!env.QUOTA) return json({ error: 'no counter bound' }, 503, headers);
+  const day = new Date().toISOString().slice(0, 10);
+  const perUnit = Number(env.TRYON_USD_PER_UNIT ?? 0.04);
+  const read = async (scope: 'tryon' | 'rt') => {
+    const r = await env.QUOTA!.get(env.QUOTA!.idFromName(`${scope}:${day}`)).fetch('https://quota/usage');
+    const u = (await r.json()) as { spentCenti: number; outcomes: Record<string, number> };
+    return { unitsReserved: u.spentCenti / 100, outcomes: u.outcomes };
+  };
+  const gemini = await read('tryon');
+  const realtime = await read('rt');
+  return json(
+    {
+      day,
+      gemini: { ...gemini, estimatedUsd: Number((gemini.unitsReserved * perUnit).toFixed(2)), siteCapUnits: Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT) },
+      realtime: {
+        sessionsReserved: realtime.unitsReserved,
+        siteCapSessions: Number(env.REALTIME_DAILY_SESSIONS ?? 100),
+        tokens: (realtime.outcomes.token ?? 0) + (realtime.outcomes.token_vip ?? 0),
+        reservedSeconds: (realtime.outcomes.reserved_ms ?? 0) / 1000,
+        reportedByPagesSeconds: (realtime.outcomes.reported_ms ?? 0) / 1000,
+        reports: { ok: realtime.outcomes.report_ok ?? 0, failed: realtime.outcomes.report_fail ?? 0 },
+        estimatedUsdIfAllReserved: Number((((realtime.outcomes.reserved_ms ?? 0) / 1000) * Number(env.DECART_USD_PER_SEC ?? 0.02)).toFixed(2)),
+        caveat: 'Reserved seconds assume ONE connection per token that runs to the cap. The server cannot see the real WebRTC connection (it goes browser to Decart), and page reports can be wrong. Compare with the Decart usage page; Decart bills per active generation second, at 2x in fast mode.',
+      },
+      note: 'Units are attempts reserved before each call, never refunded. Estimated USD = units × TRYON_USD_PER_UNIT. The real bill is on the provider billing pages; failed/blocked attempts may or may not be billed.',
+    },
+    200,
+    headers,
+  );
 }

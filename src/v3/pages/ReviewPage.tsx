@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Reviews } from '../Reviews';
 import { useRealProducts } from '../data';
 import { cleanImage } from '../ProductCard';
+import { responsive } from '../img';
 
 /** All reviews, newest first. Members write one per product from the product page. */
 export default function ReviewPage() {
@@ -22,7 +23,7 @@ export default function ReviewPage() {
             {products.map((p) => (
               <Link key={p.id} to={`/product/${p.id}`} className="w-24 shrink-0 text-center" aria-label={`${p.name.value} 구매평 쓰기`}>
                 <span className="block aspect-square overflow-hidden rounded-[6px] bg-white">
-                  <img src={cleanImage(p)} alt="" loading="lazy" className="h-full w-full object-contain p-2" />
+                  <img {...responsive(cleanImage(p), '160px')} src={cleanImage(p)} alt="" loading="lazy" className="h-full w-full object-contain p-2" />
                 </span>
                 <span className="t-label kr mt-1.5 block truncate">{p.name.value}</span>
               </Link>

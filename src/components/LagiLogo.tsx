@@ -9,7 +9,8 @@ export function LagiLogo({ className, title = 'LAGI' }: { className?: string; ti
   const mask = `lagi-cut-${useId().replace(/:/g, '')}`;
   const [x, y, w, h] = EMBLEM_VIEWBOX.split(' ');
   return (
-    <svg viewBox={EMBLEM_VIEWBOX} className={className} role="img" aria-label={title} fill="currentColor">
+    // A logo with no title is decoration inside something already named (e.g. the help button).
+    <svg viewBox={EMBLEM_VIEWBOX} className={className} fill="currentColor" {...(title ? { role: 'img', 'aria-label': title } : { 'aria-hidden': true })}>
       <mask id={mask} maskUnits="userSpaceOnUse" x={x} y={y} width={w} height={h}>
         <rect x={x} y={y} width={w} height={h} fill="#fff" />
         {EMBLEM_CUTOUT.map((d) => (

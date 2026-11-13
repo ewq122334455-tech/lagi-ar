@@ -1,4 +1,5 @@
 import type { Product } from '@/data/productTypes';
+import { largeCopy, responsive } from './img';
 
 type Drawing = NonNullable<Product['drawings']>[number];
 
@@ -8,7 +9,7 @@ function PhotoDetail({ src, x, y, label, zoom = 2.4 }: { src: string; x: number;
     <figure data-testid="product-detail-crop">
       <div
         className="aspect-square w-full bg-[var(--c-gray)] bg-no-repeat"
-        style={{ backgroundImage: `url(${src})`, backgroundSize: `${zoom * 100}%`, backgroundPosition: `${x}% ${y}%` }}
+        style={{ backgroundImage: `url(${largeCopy(src)})`, backgroundSize: `${zoom * 100}%`, backgroundPosition: `${x}% ${y}%` }}
         role="img"
         aria-label={`확대 · ${label}`}
       />
@@ -21,7 +22,7 @@ function Tile({ d, name, fit = 'contain' }: { d: Drawing; name: string; fit?: 'c
   return (
     <figure data-testid="product-drawing">
       <div className={`flex items-center justify-center overflow-hidden bg-white ${fit === 'contain' ? 'aspect-[4/5] p-4' : 'aspect-square'}`}>
-        <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className={fit === 'contain' ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-cover'} />
+        <img {...responsive(d.src, '(max-width: 767px) 50vw, 25vw')} src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className={fit === 'contain' ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-cover'} />
       </div>
       <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
     </figure>
@@ -79,7 +80,7 @@ export function ProductViews({ src, name, product }: { src: string; name: string
             {forms.map((d) => (
               <figure key={d.src} data-testid="product-drawing">
                 <div className="flex aspect-[3/2] items-center justify-center overflow-hidden bg-white p-4">
-                  <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="max-h-full max-w-full object-contain" />
+                  <img {...responsive(d.src, '(max-width: 767px) 50vw, 25vw')} src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="max-h-full max-w-full object-contain" />
                 </div>
                 <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
               </figure>
@@ -97,7 +98,7 @@ export function ProductViews({ src, name, product }: { src: string; name: string
           </div>
           {strips.map((d) => (
             <figure key={d.src} className="mt-[var(--gap)]" data-testid="product-drawing">
-              <img src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="block h-auto w-full bg-white" />
+              <img {...responsive(d.src, '(max-width: 1023px) 100vw, 50vw')} src={d.src} alt={`${name} — ${d.label}`} loading="lazy" className="block h-auto w-full bg-white" />
               <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{d.label}</figcaption>
             </figure>
           ))}
@@ -108,7 +109,7 @@ export function ProductViews({ src, name, product }: { src: string; name: string
         <Block title="실제 사진 · 착용" en="Real photo, worn & in use" note="실제 제품 사진">
           <div className="grid grid-cols-2 gap-[var(--gap)] lg:grid-cols-4">
             <figure className="col-span-2 row-span-2" data-testid="product-view-main">
-              <img src={src} alt={`${name} — ${photo.main}`} loading="lazy" className="block aspect-square w-full bg-[var(--c-gray)] object-cover" />
+              <img {...responsive(src, '(max-width: 767px) 50vw, 25vw')} src={src} alt={`${name} — ${photo.main}`} loading="lazy" className="block aspect-square w-full bg-[var(--c-gray)] object-cover" />
               <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{photo.main}</figcaption>
             </figure>
             {photo.details.slice(0, 2).map((d) => (
