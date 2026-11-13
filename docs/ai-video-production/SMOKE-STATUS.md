@@ -29,3 +29,13 @@ VITE_TRYON_API_URL=http://localhost:8787 npm run dev                     # 터�
 node scripts/rt-smoke-balance.mjs after                                  # 종료 30초 뒤
 curl -s -H "Authorization: Bearer $ADMIN_TOKEN" -H "Origin: http://localhost:5173" http://localhost:8787/admin/usage | jq .realtime
 ```
+
+## 계정 조회 방법과 공식 문서 확인 (2026-11-13)
+읽기 전용 조회 2개 (`scripts/rt-smoke-balance.mjs`가 호출, 세션·토큰·생성 없음, 키는 출력·저장 안 함):
+| 조회 | 알려 주는 것 | 공식 문서 |
+|---|---|---|
+| `GET /v1/credits` | 이 키가 지금 쓸 수 있는 크레딧(개인 키는 개인 잔액, 조직 키는 조직 잔액). **크레딧 상한이 걸린 키**면 남은 상한과 `key_quota`(limit, used, remaining, resets_at). 이미 청구된 실시간 사용분이 반영됨 | api-reference/get-credits |
+| `GET /v1/realtime/quota` | 계정의 **동시 세션 상한**(`limit`, `null`이면 제한 없음), 현재 `active`, `remaining` | api-reference/get-realtime-quota |
+- **조회 자체의 과금**: 공식 가격 페이지는 과금 대상을 "실시간(초당) · 비디오(생성 초당) · 이미지(생성당)"으로만 정의하고 두 조회 API에는 과금 언급이 없다. 분당 1회(credits)·초당 1회(quota) 호출 제한만 명시. 따라서 **과금 없음으로 보이나 "무료"라는 명시 문구는 문서에 없다(확인 불가)**.
+- **월 사용 한도·예산**: 공식 문서에서 **API로 조회·설정하는 방법을 찾지 못했다(미확인)**. 문서에서 확인되는 비용 상한 수단은 **크레딧 상한이 걸린 API 키**(`key_quota`)뿐이다. 키에 상한을 거는 화면 위치는 읽은 문서에 없어 **미확인**이며, 대시보드의 API Keys 화면에서 확인해야 한다.
+- 권장: 시험용 키에 **$1(100크레딧) 상한**이 있는 키를 쓰면 1회 시험($0.20)의 5배에서 하드 스톱이 된다(공급자 쪽 강제).
