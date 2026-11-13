@@ -9,3 +9,4 @@ dist-ssr
 
 # wrangler local dev scratch (real-workerd test harness)
 .wrangler/
+.dev.vars

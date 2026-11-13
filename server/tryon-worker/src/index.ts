@@ -49,6 +49,8 @@ export interface Env {
   GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
+  /** Session length in seconds, 10 to 20 (default 20). Lower it for smoke tests. */
+  REALTIME_SESSION_SECONDS?: string;
   /** Realtime model for new sessions. Default lucy-2.6. Only models listed in REALTIME_MODELS are accepted. */
   REALTIME_MODEL?: string;
   /** USD per realtime second used for the estimate in /admin/usage (default 0.02, standard mode). */
@@ -829,6 +831,11 @@ async function handleReviews(path: string, request: Request, env: Env, headers: 
 
 /** Seconds one realtime session may run — enforced by Decart through the token, not only the page. */
 const REALTIME_SECONDS = 20;
+/** Session length for this request: the default 20 s, or REALTIME_SESSION_SECONDS lowered (10 to 20) for a cheaper smoke test. Never raised. */
+const sessionSeconds = (env: Env) => {
+  const n = Number(env.REALTIME_SESSION_SECONDS ?? REALTIME_SECONDS);
+  return Number.isFinite(n) ? Math.min(REALTIME_SECONDS, Math.max(10, Math.round(n))) : REALTIME_SECONDS;
+};
 /** Realtime sessions per visitor (IP) per day. */
 const REALTIME_PER_IP = 3;
 /** Sessions that may be open at the same moment, whole site (Decart bills open session-seconds). */
@@ -856,7 +863,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     } catch {
       return json({ error: 'invalid JSON' }, 400, headers);
     }
-    const sec = Math.min(Math.max(Number.isFinite(r.seconds) ? Number(r.seconds) : 0, 0), REALTIME_SECONDS);
+    const sec = Math.min(Math.max(Number.isFinite(r.seconds) ? Number(r.seconds) : 0, 0), sessionSeconds(env));
     void recordOutcome(env, 'rt', r.ok === false ? 'report_fail' : 'report_ok');
     if (sec > 0) void recordOutcome(env, 'rt', 'reported_ms', Math.round(sec * 1000));
     return json({ ok: true }, 200, headers);
@@ -900,7 +907,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   // One open session per visitor and a site-wide ceiling, BEFORE a unit is spent or a token is minted. The lease outlives the
   // session by a margin (connect time) and expires on its own; the owner's own account is exempt only from the daily cap.
   const maxOpen = Number(env.REALTIME_MAX_CONCURRENT ?? REALTIME_MAX_CONCURRENT);
-  const busy = await leaseRealtime(env, ip, (REALTIME_SECONDS + 15) * 1000, maxOpen);
+  const busy = await leaseRealtime(env, ip, (sessionSeconds(env) + 15) * 1000, maxOpen);
   if (busy === 'busy_ip') return json({ error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' }, 429, headers);
   if (busy === 'busy_site') return json({ error: '지금 실시간 착용을 이용하는 분이 많습니다. 잠시 후 다시 시도해 주세요.', reason: 'busy_site' }, 429, headers);
   if (busy) return json({ error: '실시간 착용을 지금은 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', reason: 'quota_unavailable' }, 503, headers);
@@ -925,7 +932,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
       expiresIn: 20, // enough to connect (the camera is already on); an open session is capped by maxSessionDuration
       allowedModels: [model],
       allowedOrigins: origins,
-      constraints: { realtime: { maxSessionDuration: REALTIME_SECONDS } },
+      constraints: { realtime: { maxSessionDuration: sessionSeconds(env) } },
     }),
   });
   if (!res.ok) {
@@ -936,9 +943,9 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   const token = (await res.json()) as { apiKey?: string; expiresAt?: string };
   if (!token.apiKey) return json({ error: '실시간 착용 서버에 연결하지 못했습니다.', reason: 'provider' }, 502, headers);
   void recordOutcome(env, 'rt', vip ? 'token_vip' : 'token');
-  void recordOutcome(env, 'rt', 'reserved_ms', REALTIME_SECONDS * 1000);
-  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, model, remainingToday: null }, 200, headers);
-  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: REALTIME_SECONDS, model, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
+  void recordOutcome(env, 'rt', 'reserved_ms', sessionSeconds(env) * 1000);
+  if (vip) return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: null }, 200, headers);
+  return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, REALTIME_PER_IP - usedToday) }, 200, headers);
 }
 
 // ---- Router ----------------------------------------------------------------------------------
