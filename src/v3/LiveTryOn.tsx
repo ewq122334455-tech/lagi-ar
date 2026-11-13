@@ -227,11 +227,12 @@ export function LiveTryOn({
         c.width = v.videoWidth;
         c.height = v.videoHeight;
       }
-      m.draw(c.getContext('2d', { willReadFrequently: true })!, v, c.width, c.height);
+      const cam = local.current;
+      m.draw(c.getContext('2d', { willReadFrequently: true })!, v, c.width, c.height, cam && cam.videoWidth > 0 && cam.readyState >= 2 ? { source: cam, mirror: facing === 'user', width: cam.videoWidth, height: cam.videoHeight } : undefined);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [phase, waiting, mapOn]);
+  }, [phase, waiting, mapOn, facing]);
 
   async function garmentBlob(p: Product) {
     if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;

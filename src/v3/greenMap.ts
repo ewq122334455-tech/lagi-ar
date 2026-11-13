@@ -53,9 +53,18 @@ function skinLike(r: number, g: number, b: number) {
   return sat > 0.12 && sat < 0.62 && r - g > 8;
 }
 
+/** The visitor's own camera, the same view the AI was given: used to show what is really behind green the real shape does not cover. */
+export interface CameraSource {
+  source: CanvasImageSource;
+  /** The AI sees the front camera mirrored (selfie view), so the camera frame is flipped to line up with it. */
+  mirror: boolean;
+  width: number;
+  height: number;
+}
+
 export interface DesignMapper {
   /** Draw `src` (the AI video) into `ctx` with the product mapped onto the green bag. Returns whether green was found. */
-  draw(ctx: CanvasRenderingContext2D, src: CanvasImageSource, W: number, H: number): boolean;
+  draw(ctx: CanvasRenderingContext2D, src: CanvasImageSource, W: number, H: number, camera?: CameraSource): boolean;
 }
 
 /**
@@ -69,12 +78,14 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
   const sctx = small.getContext('2d', { willReadFrequently: true })!;
   const fit = document.createElement('canvas');
   const fctx = fit.getContext('2d', { willReadFrequently: true })!;
+  const camC = document.createElement('canvas');
+  const camCtx = camC.getContext('2d', { willReadFrequently: true })!;
   const aspect = product.width / product.height;
   let box: { x: number; y: number; w: number; h: number } | null = null;
   let miss = 0;
 
   return {
-    draw(ctx, src, W, H) {
+    draw(ctx, src, W, H, camera) {
       ctx.drawImage(src, 0, 0, W, H);
       // 1 · Find the green on a small copy (fast), as a box around its bulk.
       const sw = 160;
@@ -139,6 +150,25 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
       fctx.clearRect(0, 0, bw, bh);
       fctx.drawImage(product, px - x0, py - y0, pw, ph);
       const pp = fctx.getImageData(0, 0, bw, bh).data;
+      // The camera's own pixels for this box, lined up with the AI frame (flipped when the AI got a mirrored view).
+      // Used only when the camera has the same shape as the AI frame, otherwise the soft fill below is used.
+      let cam: Uint8ClampedArray | null = null;
+      if (camera && camera.width > 0 && camera.height > 0 && Math.abs(camera.width / camera.height - W / H) < 0.03) {
+        camC.width = bw;
+        camC.height = bh;
+        camCtx.save();
+        if (camera.mirror) {
+          camCtx.translate(bw, 0);
+          camCtx.scale(-1, 1);
+          camCtx.drawImage(camera.source, W - x0 - bw, y0, bw, bh, 0, 0, bw, bh);
+        } else camCtx.drawImage(camera.source, x0, y0, bw, bh, 0, 0, bw, bh);
+        camCtx.restore();
+        try {
+          cam = camCtx.getImageData(0, 0, bw, bh).data;
+        } catch {
+          cam = null;
+        }
+      }
 
       // Light and shadow from the green, and per row the span the AI's bag covers.
       let gs = 0;
@@ -233,8 +263,14 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
               const m = Math.max(fp[i], fp[i + 2]);
               if (fp[i + 1] > m + 3) fp[i + 1] = m + 3;
             }
+          } else if (a > 0 && cam) {
+            // Green outside the real shape: show what the camera really sees there.
+            const aa = Math.min(1, a * 1.4);
+            fp[i] = orig[i] * (1 - aa) + cam[i] * aa;
+            fp[i + 1] = Math.max(orig[i], orig[i + 2]) * (1 - aa) + cam[i + 1] * aa;
+            fp[i + 2] = orig[i + 2] * (1 - aa) + cam[i + 2] * aa;
           } else if (a > 0) {
-            // Green outside the real shape: fill with the soft colours of both sides of the bag, blended by position.
+            // Green outside the real shape (no camera view): fill with the soft colours of both sides of the bag, blended by position.
             let fr = 200, fg = 200, fb = 200;
             if (hasL || hasR) {
               const t = hasL && hasR ? (x - l) / Math.max(1, r - l) : hasL ? 0 : 1;
@@ -251,6 +287,15 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
             fp[i] = orig[i] * (1 - aa) + fr * aa;
             fp[i + 1] = Math.max(orig[i], orig[i + 2]) * (1 - aa) + fg * aa;
             fp[i + 2] = orig[i + 2] * (1 - aa) + fb * aa;
+          } else if (cam && ((inSpan && a === 0) || near[j]) && !skinLike(orig[i], orig[i + 1], orig[i + 2])) {
+            // The AI's own non-green parts outside the real shape, and the soft edge around its green: show the real camera view
+            // (a hand in front of the bag, being skin, keeps the AI's own pixels).
+            const w = inSpan && a === 0 ? 0.95 : 0.7;
+            const m = Math.max(orig[i], orig[i + 2]);
+            const dg = Math.min(orig[i + 1], m + 3);
+            fp[i] = orig[i] * (1 - w) + cam[i] * w;
+            fp[i + 1] = dg * (1 - w) + cam[i + 1] * w;
+            fp[i + 2] = orig[i + 2] * (1 - w) + cam[i + 2] * w;
           } else {
             // Edges and hands: remove green spill. Right next to the green any green lead is removed; elsewhere only a clear one.
             const m = Math.max(orig[i], orig[i + 2]);
