@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { keyMatte } from './productOverlay';
@@ -6,7 +7,7 @@ import { createDesignMapper, greenReference, type DesignMapper } from './greenMa
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 /** What the visitor sees as the current step (11 states). */
-type Step = 'before' | 'ready' | 'permission' | 'checking' | 'connecting' | 'processing' | 'live' | 'failed' | 'disconnected' | 'limited' | 'ended';
+type Step = 'before' | 'ready' | 'permission' | 'checking' | 'connecting' | 'processing' | 'live' | 'failed' | 'disconnected' | 'limited' | 'unsupported' | 'ended';
 const STEP_LABEL: Record<Step, string> = {
   before: '제품을 고르고 동의하면 시작할 수 있어요',
   ready: '준비 완료 · 시작을 누르세요',
@@ -17,7 +18,8 @@ const STEP_LABEL: Record<Step, string> = {
   live: '실시간 AI 영상 출력 중',
   failed: '시작하지 못했어요',
   disconnected: '연결이 끊겼어요',
-  limited: '오늘 사용량을 모두 썼어요',
+  limited: '지금은 사용할 수 없어요 (사용량 제한)',
+  unsupported: '이 브라우저에서는 쓸 수 없어요',
   ended: '체험이 끝났어요',
 };
 const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'connecting', 'processing', 'live', 'ended'];
@@ -30,6 +32,13 @@ type Evidence = {
 };
 class ApiError extends Error {
   reason?: string;
+}
+
+/** What the browser lacks for a live AI session (null = nothing missing). Checked before anything paid can happen. */
+function missingSupport(): string | null {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return '카메라를 쓸 수 없는 환경입니다. 주소가 https:// 이거나 localhost 인지, 최신 Chrome·Safari 인지 확인해 주세요.';
+  if (typeof RTCPeerConnection === 'undefined') return '이 브라우저는 실시간 영상 연결(WebRTC)을 지원하지 않습니다. 최신 Chrome 또는 Safari로 열어 주세요.';
+  return null;
 }
 
 /** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
@@ -117,11 +126,18 @@ function sessionToken() {
 async function post<T>(path: string, body: unknown): Promise<T> {
   // The member session goes along so the owner's account can skip the daily limit.
   const token = sessionToken();
-  const res = await fetch(`${AI_TRYON_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${AI_TRYON_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    const err = new ApiError('AI 서버에 닿지 못했습니다. 인터넷 연결을 확인해 주세요. 계속되면 서버가 점검 중일 수 있어요.');
+    err.reason = 'network';
+    throw err;
+  }
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) {
     const err = new ApiError(data.error ?? `요청에 실패했습니다 (${res.status}).`);
@@ -156,6 +172,8 @@ export function LiveTryOn({
   const [waiting, setWaiting] = useState<string | null>(null);
   const [stage, setStage] = useState<'permission' | 'checking' | 'connecting' | null>(null);
   const [fail, setFail] = useState<'failed' | 'disconnected' | 'limited' | null>(null);
+  const [unsupported, setUnsupported] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
   // Optional local recording of the output video (never uploaded).
   const [recOn, setRecOn] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -231,7 +249,10 @@ export function LiveTryOn({
   /** The output video as a recordable stream: the design-mapped canvas when mapping is on, else the AI's own video. */
   function startRecording() {
     try {
-      if (typeof MediaRecorder === 'undefined') return;
+      if (typeof MediaRecorder === 'undefined') {
+        setRecError('이 브라우저는 영상 녹화를 지원하지 않아요. 영상은 보이지만 저장되지 않습니다.');
+        return;
+      }
       const src: MediaStream | null = mapOn && mapped.current ? mapped.current.captureStream(30) : ((out.current?.srcObject as MediaStream | null) ?? null);
       if (!src) return;
       const type = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
@@ -240,18 +261,23 @@ export function LiveTryOn({
       rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       rec.onstop = () => {
         setRecording(false);
-        if (!chunks.length) return;
+        if (!chunks.length) {
+          setRecError('녹화된 영상이 비어 있어 저장할 수 없어요.');
+          return;
+        }
         const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
         setClip((old) => {
           if (old) URL.revokeObjectURL(old.url);
           return { url: URL.createObjectURL(blob), ext: blob.type.includes('mp4') ? 'mp4' : 'webm', size: blob.size };
         });
       };
+      rec.onerror = () => setRecError('녹화 중 오류가 발생해 저장하지 못했어요.');
       rec.start(1000);
       recorder.current = rec;
       setRecording(true);
     } catch {
       setRecording(false);
+      setRecError('녹화를 시작하지 못했어요. 영상은 계속 보이지만 저장되지 않습니다.');
     }
   }
 
@@ -259,6 +285,20 @@ export function LiveTryOn({
     if (!product || phase === 'starting' || phase === 'live' || !consent) return;
     setError(null);
     setFail(null);
+    setRecError(null);
+    setUnsupported(false);
+    const lacking = missingSupport();
+    if (lacking) {
+      setFail('failed');
+      setUnsupported(true);
+      setError(lacking);
+      return;
+    }
+    if (!product.images?.[0]) {
+      setFail('failed');
+      setError('이 상품의 사진을 찾지 못해 AI 영상을 시작할 수 없어요. 다른 상품을 골라 주세요.');
+      return;
+    }
     setEvidence(null);
     setExact({ busy: false });
     if (clip) URL.revokeObjectURL(clip.url);
@@ -301,7 +341,11 @@ export function LiveTryOn({
         /* already stopped */
       }
       recorder.current = null;
-      rt?.disconnect();
+      try {
+        rt?.disconnect();
+      } catch {
+        /* a failed disconnect must not leave the camera on: the tracks are stopped just below */
+      }
       stream?.getTracks().forEach((t) => t.stop());
       if (out.current) out.current.srcObject = null;
       if (local.current) local.current.srcObject = null;
@@ -485,10 +529,14 @@ export function LiveTryOn({
       setFail(limited ? 'limited' : 'failed');
       setError(
         name === 'NotAllowedError'
-          ? '카메라 권한이 꺼져 있습니다. 주소창의 카메라 설정에서 허용한 뒤 다시 시도해 주세요.'
-          : name === 'NotFoundError'
-            ? '사용할 수 있는 카메라를 찾지 못했습니다.'
-            : (e as Error).message || '실시간 착용을 시작하지 못했습니다.',
+          ? '카메라 권한이 꺼져 있습니다. 주소창의 카메라 설정에서 허용한 뒤 다시 시작해 주세요.'
+          : name === 'NotFoundError' || name === 'OverconstrainedError'
+            ? '사용할 수 있는 카메라를 찾지 못했습니다. 카메라가 연결되어 있는지 확인해 주세요.'
+            : name === 'NotReadableError' || name === 'AbortError'
+              ? '카메라를 열지 못했습니다. 다른 앱이나 탭이 카메라를 쓰고 있다면 닫은 뒤 다시 시작해 주세요.'
+              : reason === 'network'
+                ? (e as Error).message
+                : (e as Error).message || '실시간 착용을 시작하지 못했습니다. 잠시 뒤에 다시 시작해 주세요.',
       );
     }
   }
@@ -579,6 +627,7 @@ export function LiveTryOn({
   const step: Step =
     phase === 'live' ? (waiting ? 'processing' : 'live')
     : phase === 'starting' ? (stage ?? 'connecting')
+    : unsupported ? 'unsupported'
     : fail ? fail
     : phase === 'ended' ? 'ended'
     : product && consent ? 'ready' : 'before';
@@ -661,6 +710,18 @@ export function LiveTryOn({
               측정 기록 저장 (JSON)
             </button>
           </div>
+        )}
+        {recError && (
+          <p className="t-caption kr mt-2 text-[var(--c-blue)]" role="alert" data-testid="rec-error">
+            {recError}
+          </p>
+        )}
+        {phase === 'ended' && product && (
+          <p className="mt-4">
+            <Link to={`/product/${product.id}`} className="t-caption kr font-semibold underline underline-offset-2" data-testid="to-product">
+              {product.name.value ?? '이 상품'} 상품 상세 보기
+            </Link>
+          </p>
         )}
         {recording && (
           <p className="t-caption kr mt-2 text-[var(--c-ink)]" data-testid="rec-on">
