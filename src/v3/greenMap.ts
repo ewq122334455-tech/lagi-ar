@@ -44,6 +44,15 @@ function greenness(r: number, g: number, b: number) {
   return Math.min(1, Math.max(0, (sat - 0.22) / 0.18)) * Math.min(1, Math.max(0, (val - 0.14) / 0.14));
 }
 
+/** Skin-like (a hand in front of the bag): red-led, moderately saturated, not dark. */
+function skinLike(r: number, g: number, b: number) {
+  if (r < 90 || r < g || g < b) return false;
+  const mx = r;
+  const mn = Math.min(g, b);
+  const sat = (mx - mn) / mx;
+  return sat > 0.12 && sat < 0.62 && r - g > 8;
+}
+
 export interface DesignMapper {
   /** Draw `src` (the AI video) into `ctx` with the product mapped onto the green bag. Returns whether green was found. */
   draw(ctx: CanvasRenderingContext2D, src: CanvasImageSource, W: number, H: number): boolean;
@@ -150,57 +159,103 @@ export function createDesignMapper(product: HTMLCanvasElement): DesignMapper {
           }
         }
       const gMean = gn ? gs / gn : 200;
-      // Fill colours are eased down each column so the patch reads as background, not streaks.
-      const prev = new Float32Array(bw * 3).fill(-1);
-
+      // Pixels within 3 px of the green: where a thin green edge or spill can survive.
+      const near = new Uint8Array(bw * bh);
+      {
+        const tmp = new Uint8Array(bw * bh);
+        for (let y = 0; y < bh; y++)
+          for (let x = 0; x < bw; x++) {
+            if (gmask[y * bw + x] <= 0.25) continue;
+            const a0 = Math.max(0, x - 3);
+            const a1 = Math.min(bw - 1, x + 3);
+            for (let xx = a0; xx <= a1; xx++) tmp[y * bw + xx] = 1;
+          }
+        for (let y = 0; y < bh; y++)
+          for (let x = 0; x < bw; x++) {
+            if (!tmp[y * bw + x]) continue;
+            const b0 = Math.max(0, y - 3);
+            const b1 = Math.min(bh - 1, y + 3);
+            for (let yy = b0; yy <= b1; yy++) near[yy * bw + x] = 1;
+          }
+      }
+      // Colours just outside the green, per row, then averaged over +-12 rows so the fill reads as soft background
+      // (no vertical or horizontal streaks).
+      const sideL = new Float32Array(bh * 3).fill(-1);
+      const sideR = new Float32Array(bh * 3).fill(-1);
       for (let y = 0; y < bh; y++) {
-        // Colours just outside the green on this row, to fill green the real shape does not cover.
         const l = spanL[y];
         const r = spanR[y];
-        const li = l > 3 ? (y * bw + l - 4) * 4 : -1;
-        const ri = r >= 0 && r < bw - 4 ? (y * bw + r + 4) * 4 : -1;
+        if (l > 3) for (let ch = 0; ch < 3; ch++) sideL[y * 3 + ch] = orig[(y * bw + l - 4) * 4 + ch];
+        if (r >= 0 && r < bw - 4) for (let ch = 0; ch < 3; ch++) sideR[y * 3 + ch] = orig[(y * bw + r + 4) * 4 + ch];
+      }
+      const smoothSide = (src: Float32Array) => {
+        const out = new Float32Array(bh * 3).fill(-1);
+        for (let y = 0; y < bh; y++) {
+          const acc = [0, 0, 0];
+          let n = 0;
+          for (let yy = Math.max(0, y - 12); yy <= Math.min(bh - 1, y + 12); yy++) {
+            if (src[yy * 3] < 0) continue;
+            acc[0] += src[yy * 3];
+            acc[1] += src[yy * 3 + 1];
+            acc[2] += src[yy * 3 + 2];
+            n++;
+          }
+          if (n) for (let ch = 0; ch < 3; ch++) out[y * 3 + ch] = acc[ch] / n;
+        }
+        return out;
+      };
+      const fillL = smoothSide(sideL);
+      const fillR = smoothSide(sideR);
+
+      for (let y = 0; y < bh; y++) {
+        const l = spanL[y];
+        const r = spanR[y];
+        const hasL = fillL[y * 3] >= 0;
+        const hasR = fillR[y * 3] >= 0;
         for (let x = 0; x < bw; x++) {
           const j = y * bw + x;
           const i = j * 4;
           const a = gmask[j];
           const pa = pp[i + 3] / 255;
           const inSpan = l >= 0 && x >= l && x <= r;
-          if (pa > 0.02 && (a > 0 || !inSpan)) {
-            // Product pixel: over the green it takes the green's light; outside the AI bag it is drawn as is.
+          // Inside the AI's bag the AI sometimes draws its own dark or white parts instead of flat green. Those are still
+          // the bag: paint the real product over them. Only skin (a hand in front of the bag) is left alone.
+          const aiBag = inSpan && a === 0 && !skinLike(orig[i], orig[i + 1], orig[i + 2]);
+          if (pa > 0.02 && (a > 0 || !inSpan || aiBag)) {
+            // Product pixel: over the green it takes the green's light; elsewhere it is drawn as is.
             const shade = a > 0 ? Math.max(0.5, Math.min(1.3, orig[i + 1] / gMean)) : 1;
-            const k = a > 0 ? pa * Math.max(a, 0.6) : pa;
+            // Thin parts (straps, edges) come out of the keying half transparent: make them solid so the AI's own
+            // drawing does not show through.
+            const solid = Math.min(1, Math.max(0, (pa - 0.08) / 0.5));
+            const k = a > 0 ? solid * Math.max(a, 0.85) : aiBag ? solid : pa;
             for (let ch = 0; ch < 3; ch++) fp[i + ch] = Math.min(255, orig[i + ch] * (1 - k) + pp[i + ch] * shade * k);
-            if (a > 0 && k < 1) {
+            if (k < 1) {
               const m = Math.max(fp[i], fp[i + 2]);
-              if (fp[i + 1] > m + 8) fp[i + 1] = m + 8;
+              if (fp[i + 1] > m + 3) fp[i + 1] = m + 3;
             }
           } else if (a > 0) {
-            // Green outside the real shape: fill from beside it (blend left/right by position).
+            // Green outside the real shape: fill with the soft colours of both sides of the bag, blended by position.
             let fr = 200, fg = 200, fb = 200;
-            if (li >= 0 || ri >= 0) {
-              const t = li >= 0 && ri >= 0 ? (x - l) / Math.max(1, r - l) : li >= 0 ? 0 : 1;
-              const A = li >= 0 ? li : ri;
-              const B = ri >= 0 ? ri : li;
-              fr = orig[A] * (1 - t) + orig[B] * t;
-              fg = Math.min(orig[A + 1] * (1 - t) + orig[B + 1] * t, Math.max(fr, orig[A + 2]) + 10);
-              fb = orig[A + 2] * (1 - t) + orig[B + 2] * t;
+            if (hasL || hasR) {
+              const t = hasL && hasR ? (x - l) / Math.max(1, r - l) : hasL ? 0 : 1;
+              const A = hasL ? y * 3 : y * 3 + 0;
+              const FA = hasL ? fillL : fillR;
+              const FB = hasR ? fillR : fillL;
+              const tt = Math.min(1, Math.max(0, t));
+              fr = FA[A] * (1 - tt) + FB[A] * tt;
+              fg = FA[A + 1] * (1 - tt) + FB[A + 1] * tt;
+              fb = FA[A + 2] * (1 - tt) + FB[A + 2] * tt;
+              fg = Math.min(fg, Math.max(fr, fb) + 4);
             }
-            const c = x * 3;
-            if (prev[c] >= 0) {
-              fr = prev[c] * 0.85 + fr * 0.15;
-              fg = prev[c + 1] * 0.85 + fg * 0.15;
-              fb = prev[c + 2] * 0.85 + fb * 0.15;
-            }
-            prev[c] = fr;
-            prev[c + 1] = fg;
-            prev[c + 2] = fb;
-            fp[i] = orig[i] * (1 - a) + fr * a;
-            fp[i + 1] = Math.max(orig[i], orig[i + 2]) * (1 - a) + fg * a;
-            fp[i + 2] = orig[i + 2] * (1 - a) + fb * a;
+            const aa = Math.min(1, a * 1.4);
+            fp[i] = orig[i] * (1 - aa) + fr * aa;
+            fp[i + 1] = Math.max(orig[i], orig[i + 2]) * (1 - aa) + fg * aa;
+            fp[i + 2] = orig[i + 2] * (1 - aa) + fb * aa;
           } else {
-            // Edges and hands: remove green spill.
+            // Edges and hands: remove green spill. Right next to the green any green lead is removed; elsewhere only a clear one.
             const m = Math.max(orig[i], orig[i + 2]);
-            if (orig[i + 1] > m + 14 && greenness(orig[i], orig[i + 1], orig[i + 2]) === 0 && orig[i + 1] - m < 40) fp[i + 1] = m + 14;
+            const lim = near[j] ? 3 : 14;
+            if (orig[i + 1] > m + lim && (near[j] || (greenness(orig[i], orig[i + 1], orig[i + 2]) === 0 && orig[i + 1] - m < 40))) fp[i + 1] = m + lim;
           }
         }
       }
