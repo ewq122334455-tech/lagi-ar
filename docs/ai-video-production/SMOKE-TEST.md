@@ -32,16 +32,13 @@ LAGI **daily-tote**로 **10초 실시간 AI 영상 1회**를 만들어, 실제 D
 
 ## 3. 누락된 설정 (소유자 작업)
 1. Decart 시험용 프로젝트와 API 키, 계정 동시 세션 한도(1~2로), 월 예산/크레딧 한도 설정, 잔액 확인.
-2. `server/tryon-worker/.dev.vars` 작성(git 무시됨, 키는 채팅에 붙이지 말고 파일에만):
+2. `.dev.vars`는 **본인 터미널(테스트를 실행할 Mac)** 에서 스크립트로 만든다. 키를 입력하면 화면에 보이지 않고, 파일 권한은 600, git 무시이며, 키와 관리자 토큰은 어디에도 출력되지 않는다:
 ```
-DECART_API_KEY=<시험용 키>
-ALLOWED_ORIGINS=http://localhost:5173
-REALTIME_SESSION_SECONDS=10
-REALTIME_DAILY_SESSIONS=2
-REALTIME_MAX_CONCURRENT=1
-ADMIN_TOKEN=<16자 이상 임의 문자열>
+node scripts/rt-smoke-setup.mjs
 ```
-(`GEMINI_API_KEY`, `REALTIME_MODEL`, `TRYON_QUOTA`는 넣지 않는다.)
+스크립트가 쓰는 값: `ALLOWED_ORIGINS=http://localhost:5173`, `REALTIME_SESSION_SECONDS=10`, `REALTIME_DAILY_SESSIONS=2`, `REALTIME_MAX_CONCURRENT=1`, 무작위 `ADMIN_TOKEN`(48자). 쓰지 않는 값: `GEMINI_API_KEY`, `REALTIME_MODEL`, `TRYON_QUOTA`, `REALTIME_DISABLED`. 이미 파일이 있으면 키·토큰을 유지한다. 키를 나중에 넣으려면 `--no-key`로 먼저 만들고 다시 실행한다.
+   - 이 세션(클라우드 컨테이너)에서 만든 `.dev.vars`는 컨테이너가 사라지면 없어지고 Mac에는 없다. **Mac에서 위 명령을 직접 실행해야 한다.**
+   - 관리자 토큰을 쓸 때: `export ADMIN_TOKEN=$(grep '^ADMIN_TOKEN=' server/tryon-worker/.dev.vars | cut -d= -f2-)`
 3. 호출 승인(별도).
 
 ## 4. 예상 비용

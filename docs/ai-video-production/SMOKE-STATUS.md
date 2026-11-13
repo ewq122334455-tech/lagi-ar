@@ -4,8 +4,8 @@
 
 | 조건 | 상태 |
 |---|---|
-| Decart 시험용 키 | **없음** — 세션 환경에 `DECART_*` 변수 0개, `.dev.vars` 없음 |
-| `server/tryon-worker/.dev.vars` | **없음** (preflight FIX 7건: 파일, 키, ALLOWED_ORIGINS, REALTIME_SESSION_SECONDS, REALTIME_DAILY_SESSIONS, REALTIME_MAX_CONCURRENT, ADMIN_TOKEN) |
+| Decart 시험용 키 | **없음** — 세션 환경에 `DECART_*` 변수 0개. 이 컨테이너의 `.dev.vars`에는 키 칸이 비어 있음(키 길이 0) |
+| `server/tryon-worker/.dev.vars` | 컨테이너에서 `rt-smoke-setup.mjs --no-key`로 생성(권한 600, git 무시): 세션 10초·일 2·동시 1·localhost:5173·난수 ADMIN_TOKEN·Gemini 없음. preflight **FIX 1건: DECART_API_KEY** 만 남음. 이 파일은 컨테이너에만 있고 Mac에는 없으므로 Mac에서 `node scripts/rt-smoke-setup.mjs`를 직접 실행해야 한다 |
 | 계정 동시 세션 한도 | **BLOCKED** (미확인) |
 | 월 예산·사용량 제한 | **BLOCKED** (미확인) |
 | 계정 과금 조건(무료 크레딧 등) | **BLOCKED** (미확인) |
