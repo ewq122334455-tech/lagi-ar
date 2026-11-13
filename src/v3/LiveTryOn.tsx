@@ -308,7 +308,7 @@ export function LiveTryOn({
       tokenAt = Date.now();
       // The model is chosen by the Worker (default lucy-2.6); the page never switches it by itself. Standard speed: no `speed` option (fast mode bills 2x).
       const rtModel = sdk.models.realtime((token.model ?? 'lucy-2.6') as Parameters<typeof sdk.models.realtime>[0]);
-      vtonRef.current = rtModel.name.startsWith('lucy-vton');
+      vtonRef.current = String(rtModel.name ?? token.model ?? '').startsWith('lucy-vton');
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       const conn = await client.realtime.connect(stream, {
         model: rtModel,
