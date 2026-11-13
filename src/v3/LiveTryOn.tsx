@@ -29,6 +29,8 @@ type Evidence = {
   msTokenReceived: number | null; msConnected: number | null; msFirstGenerationTick: number | null; msFirstVideoFrame: number | null;
   generationTicks: number; firstFrameCameFromTick: boolean; outputResolution: string | null; framesSeen: number; fps: number | null; maxFrameGapMs: number | null; stalls200ms: number;
   meanDiffFromInput: number | null; diffSamples: number; sessionEndedReason: string | null; error: string | null; actualSessionSeconds: number | null;
+  // What the SDK itself reported, so a missing AI output can be explained (state changes, connection phases, queue, generation end).
+  connectionStates: { state: string; ms: number }[]; diagnostics: { name: string; ms: number; data: string }[]; queuePositions: { position: number; ms: number }[]; generationEnded: { ms: number; data: string }[];
 };
 class ApiError extends Error {
   reason?: string;
@@ -317,6 +319,7 @@ export function LiveTryOn({
       at: new Date().toISOString(), model: '', sdkIsMock: false, speed: 'standard', requestedSeconds: 0, product: product.id, designMapping: mapOn,
       msTokenReceived: null, msConnected: null, msFirstGenerationTick: null, msFirstVideoFrame: null, generationTicks: 0, firstFrameCameFromTick: false,
       outputResolution: null, framesSeen: 0, fps: null, maxFrameGapMs: null, stalls200ms: 0, meanDiffFromInput: null, diffSamples: 0, sessionEndedReason: null, error: null, actualSessionSeconds: null,
+      connectionStates: [], diagnostics: [], queuePositions: [], generationEnded: [],
     };
     let lastFrameAt = 0;
     let firstFrameAt = 0;
@@ -410,6 +413,26 @@ export function LiveTryOn({
       } catch (e) {
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
+      const short = (v: unknown) => {
+        try {
+          return JSON.stringify(v).slice(0, 500);
+        } catch {
+          return String(v).slice(0, 500);
+        }
+      };
+      const stamp = () => Date.now() - t0;
+      conn.on('connectionChange', (st) => {
+        if (ev.connectionStates.length < 40) ev.connectionStates.push({ state: String(st), ms: stamp() });
+      });
+      conn.on('diagnostic', (d) => {
+        if (ev.diagnostics.length < 30) ev.diagnostics.push({ name: String((d as { name?: string }).name ?? 'diagnostic'), ms: stamp(), data: short((d as { data?: unknown }).data ?? d) });
+      });
+      conn.on('queuePosition', (q) => {
+        if (ev.queuePositions.length < 30) ev.queuePositions.push({ position: Number((q as { position?: number }).position ?? -1), ms: stamp() });
+      });
+      conn.on('generationEnded', (g) => {
+        if (ev.generationEnded.length < 10) ev.generationEnded.push({ ms: stamp(), data: short(g) });
+      });
       conn.on('sessionEnded', (e: { reason?: string }) => {
         ev.sessionEndedReason = e?.reason ?? 'ended';
         if (!gotFrames && e?.reason) {
@@ -704,6 +727,8 @@ export function LiveTryOn({
               <dt>끊김(200ms 이상)</dt><dd>{evidence.stalls200ms}회 (최대 {evidence.maxFrameGapMs ?? '-'} ms)</dd>
               <dt>입력과 다른 정도</dt><dd>{evidence.meanDiffFromInput ?? '-'} / 255 ({evidence.diffSamples}회 표본)</dd>
               <dt>실제 세션 시간</dt><dd>{evidence.actualSessionSeconds ?? '-'} 초 (요청 {evidence.requestedSeconds}초)</dd>
+              <dt>연결 상태 변화(SDK)</dt><dd>{evidence.connectionStates.length ? evidence.connectionStates.map((c) => `${c.state}@${c.ms}`).join(' → ') : '기록 없음'}</dd>
+              <dt>진단(SDK)</dt><dd>{evidence.diagnostics.length ? evidence.diagnostics.map((d) => d.name).join(', ') : '없음'}</dd>
               <dt>종료 사유 · 오류</dt><dd>{evidence.sessionEndedReason ?? '-'} · {evidence.error ?? '없음'}</dd>
             </dl>
             <button type="button" className="btn btn-line mt-3" onClick={saveEvidence} data-testid="save-evidence">

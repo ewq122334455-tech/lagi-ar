@@ -51,6 +51,9 @@ export function createDecartClient(opts: { apiKey: string }) {
         };
         draw();
         if (mode !== 'noframes') o.onRemoteStream(c.captureStream(30)); // 'noframes': connected but the model never sends video
+        window.setTimeout(() => handlers.get('connectionChange')?.('connected'), 50);
+        if (mode === 'ok') window.setTimeout(() => handlers.get('connectionChange')?.('generating'), 600);
+        window.setTimeout(() => handlers.get('diagnostic')?.({ name: 'client-session-connection-breakdown', data: { attempt: 1, success: true, totalDurationMs: 40, phases: [] } }), 60);
         if (mode === 'ok') for (const t of [700, 1200, 1700]) window.setTimeout(() => handlers.get('generationTick')?.({}), t);
         if (mode === 'drop') window.setTimeout(() => handlers.get('error')?.({ message: 'mock drop' }), 2500);
         return {
