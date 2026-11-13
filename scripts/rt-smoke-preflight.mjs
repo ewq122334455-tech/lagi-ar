@@ -6,6 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const seconds = Math.min(20, Math.max(10, Number(arg('seconds', '10'))));
 const fast = process.argv.includes('--fast');
@@ -24,6 +25,16 @@ ok('REALTIME_DAILY_SESSIONS is 2 or less for the smoke test', Number(v.REALTIME_
 ok('REALTIME_MAX_CONCURRENT is 1', v.REALTIME_MAX_CONCURRENT === '1', v.REALTIME_MAX_CONCURRENT ?? 'not set (default 3)');
 ok('TRYON_QUOTA is not "unmetered" next to a real key', v.TRYON_QUOTA !== 'unmetered', 'the Worker refuses unmetered unless every origin is localhost');
 ok('REALTIME_MODEL is empty (default lucy-2.6) or one of lucy-vton-3.6 / lucy-vton-3.5', !v.REALTIME_MODEL || ['lucy-vton-3.6', 'lucy-vton-3.5', 'lucy-2.6'].includes(v.REALTIME_MODEL), v.REALTIME_MODEL ?? 'default lucy-2.6');
+ok('REALTIME_DISABLED is not "1" (kill switch off for the test)', v.REALTIME_DISABLED !== '1');
+ok('ADMIN_TOKEN set (needed to read /admin/usage after the run)', (v.ADMIN_TOKEN ?? '').length >= 16, 'at least 16 characters');
+// The reference product photo: real LAGI Daily Tote, big enough, plain background (Decart: clean garment shot, white/plain background, at least 512x512).
+const tote = path.join(root, 'public', 'products', 'daily-tote', 'images', 'main.jpg');
+if (fs.existsSync(tote)) {
+  const m = await sharp(tote).metadata();
+  const { data } = await sharp(tote).resize(64, 64, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const px = (x, y) => Math.min(data[(y * 64 + x) * 3], data[(y * 64 + x) * 3 + 1], data[(y * 64 + x) * 3 + 2]);
+  ok('reference photo public/products/daily-tote/images/main.jpg: at least 512 px and plain white background', Math.min(m.width, m.height) >= 512 && [px(1, 1), px(62, 1), px(1, 62), px(62, 62)].every((c) => c > 215), `${m.width}x${m.height}`);
+} else ok('reference photo public/products/daily-tote/images/main.jpg exists', false);
 console.log('--- PREFLIGHT (nothing was sent) ---');
 console.log(out.join('\n'));
 const per = seconds * rate;

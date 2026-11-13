@@ -21,6 +21,13 @@ const STEP_LABEL: Record<Step, string> = {
   ended: '체험이 끝났어요',
 };
 const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'connecting', 'processing', 'live', 'ended'];
+/** Measurements of one session. They exist so a person can tell a REAL Decart output from a mock or from the camera passed through. */
+type Evidence = {
+  at: string; model: string; sdkIsMock: boolean; speed: 'standard'; requestedSeconds: number; product: string; designMapping: boolean;
+  msTokenReceived: number | null; msConnected: number | null; msFirstGenerationTick: number | null; msFirstVideoFrame: number | null;
+  generationTicks: number; firstFrameCameFromTick: boolean; outputResolution: string | null; framesSeen: number; fps: number | null; maxFrameGapMs: number | null; stalls200ms: number;
+  meanDiffFromInput: number | null; diffSamples: number; sessionEndedReason: string | null; error: string | null; actualSessionSeconds: number | null;
+};
 class ApiError extends Error {
   reason?: string;
 }
@@ -154,6 +161,7 @@ export function LiveTryOn({
   const [recording, setRecording] = useState(false);
   const [clip, setClip] = useState<{ url: string; ext: string; size: number } | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
+  const [evidence, setEvidence] = useState<Evidence | null>(null);
   // "정확한 사진": the live pose re-made by the photo compositor, which keeps the real product design.
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const out = useRef<HTMLVideoElement>(null);
@@ -251,6 +259,7 @@ export function LiveTryOn({
     if (!product || phase === 'starting' || phase === 'live' || !consent) return;
     setError(null);
     setFail(null);
+    setEvidence(null);
     setExact({ busy: false });
     if (clip) URL.revokeObjectURL(clip.url);
     setClip(null);
@@ -263,9 +272,26 @@ export function LiveTryOn({
     let rt: { disconnect: () => void } | null = null;
     let tokenAt = 0;
     let connectedAt = 0;
+    const t0 = Date.now();
+    const ev: Evidence = {
+      at: new Date().toISOString(), model: '', sdkIsMock: false, speed: 'standard', requestedSeconds: 0, product: product.id, designMapping: mapOn,
+      msTokenReceived: null, msConnected: null, msFirstGenerationTick: null, msFirstVideoFrame: null, generationTicks: 0, firstFrameCameFromTick: false,
+      outputResolution: null, framesSeen: 0, fps: null, maxFrameGapMs: null, stalls200ms: 0, meanDiffFromInput: null, diffSamples: 0, sessionEndedReason: null, error: null, actualSessionSeconds: null,
+    };
+    let lastFrameAt = 0;
+    let firstFrameAt = 0;
+    let diffSum = 0;
+    let stopFrames: (() => void) | null = null;
     const stop = () => {
       if (stopped) return;
       stopped = true;
+      stopFrames?.();
+      if (tokenAt) {
+        ev.actualSessionSeconds = connectedAt ? Math.round((Date.now() - connectedAt) / 100) / 10 : null;
+        ev.fps = firstFrameAt && ev.framesSeen > 1 ? Math.round((ev.framesSeen / ((lastFrameAt - firstFrameAt) / 1000)) * 10) / 10 : null;
+        ev.meanDiffFromInput = ev.diffSamples ? Math.round((diffSum / ev.diffSamples) * 10) / 10 : null;
+        setEvidence({ ...ev });
+      }
       // Tell the Worker how long it really ran. Advisory bookkeeping only (the Worker never trusts it for limits).
       if (tokenAt) void report(connectedAt ? (Date.now() - connectedAt) / 1000 : 0, !!connectedAt && gotFrames);
       window.clearInterval(timer);
@@ -306,9 +332,13 @@ export function LiveTryOn({
       const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', {});
       setRemaining(token.remainingToday ?? 'unlimited');
       tokenAt = Date.now();
+      ev.msTokenReceived = tokenAt - t0;
+      ev.requestedSeconds = token.seconds;
+      ev.sdkIsMock = !!(sdk as { isMock?: boolean }).isMock;
       // The model is chosen by the Worker (default lucy-2.6); the page never switches it by itself. Standard speed: no `speed` option (fast mode bills 2x).
       const rtModel = sdk.models.realtime((token.model ?? 'lucy-2.6') as Parameters<typeof sdk.models.realtime>[0]);
-      vtonRef.current = String(rtModel.name ?? token.model ?? '').startsWith('lucy-vton');
+      ev.model = String(rtModel.name ?? token.model ?? '');
+      vtonRef.current = ev.model.startsWith('lucy-vton');
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       const conn = await client.realtime.connect(stream, {
         model: rtModel,
@@ -324,6 +354,7 @@ export function LiveTryOn({
       });
       rt = conn;
       connectedAt = Date.now();
+      ev.msConnected = connectedAt - t0;
       setStage(null);
       setWaiting('AI가 영상을 만들고 있습니다…');
       // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
@@ -336,6 +367,7 @@ export function LiveTryOn({
         throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
       }
       conn.on('sessionEnded', (e: { reason?: string }) => {
+        ev.sessionEndedReason = e?.reason ?? 'ended';
         if (!gotFrames && e?.reason) {
           setFail('failed');
           setError(`AI 영상이 시작되기 전에 세션이 끝났습니다 (${e.reason}).`);
@@ -343,6 +375,7 @@ export function LiveTryOn({
         stop();
       });
       conn.on('error', (e: { message?: string }) => {
+        ev.error = e?.message ?? 'error';
         setFail('disconnected');
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
@@ -359,7 +392,76 @@ export function LiveTryOn({
         setWaiting(null);
         if (recOn) window.setTimeout(startRecording, 200);
       };
-      conn.on('generationTick', onFrames);
+      conn.on('generationTick', () => {
+        ev.generationTicks++;
+        if (ev.msFirstGenerationTick === null) {
+          ev.msFirstGenerationTick = Date.now() - t0;
+          if (!gotFrames) ev.firstFrameCameFromTick = true;
+        }
+        onFrames();
+      });
+      // Frame statistics of the output element: count, gaps (stalls) and how different it is from the camera input.
+      const outV = out.current as (HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number; cancelVideoFrameCallback?: (id: number) => void }) | null;
+      if (outV?.requestVideoFrameCallback) {
+        let id = 0;
+        let on = true;
+        const probe = document.createElement('canvas');
+        probe.width = 32;
+        probe.height = 18;
+        const pg = probe.getContext('2d', { willReadFrequently: true });
+        const probe2 = document.createElement('canvas');
+        probe2.width = 32;
+        probe2.height = 18;
+        const pg2 = probe2.getContext('2d', { willReadFrequently: true });
+        let lastDiffAt = 0;
+        const tick = () => {
+          if (!on) return;
+          const now = performance.now();
+          if (!firstFrameAt) {
+            firstFrameAt = now;
+            ev.msFirstVideoFrame = Date.now() - t0;
+            ev.outputResolution = `${outV.videoWidth}x${outV.videoHeight}`;
+          } else {
+            const gap = now - lastFrameAt;
+            ev.maxFrameGapMs = Math.max(ev.maxFrameGapMs ?? 0, Math.round(gap));
+            if (gap > 200) ev.stalls200ms++;
+          }
+          lastFrameAt = now;
+          ev.framesSeen++;
+          const lv = local.current;
+          if (pg && pg2 && lv && lv.videoWidth && now - lastDiffAt > 500) {
+            lastDiffAt = now;
+            try {
+              pg.drawImage(outV, 0, 0, 32, 18);
+              pg2.drawImage(lv, 0, 0, 32, 18);
+              const a = pg.getImageData(0, 0, 32, 18).data;
+              const b = pg2.getImageData(0, 0, 32, 18).data;
+              // the AI output may be mirrored relative to the camera: take the smaller of the two differences
+              let d1 = 0;
+              let d2 = 0;
+              for (let y = 0; y < 18; y++)
+                for (let x = 0; x < 32; x++) {
+                  const i = (y * 32 + x) * 4;
+                  const j = (y * 32 + (31 - x)) * 4;
+                  for (let c = 0; c < 3; c++) {
+                    d1 += Math.abs(a[i + c] - b[i + c]);
+                    d2 += Math.abs(a[i + c] - b[j + c]);
+                  }
+                }
+              diffSum += Math.min(d1, d2) / (32 * 18 * 3);
+              ev.diffSamples++;
+            } catch {
+              /* a frame that cannot be read is simply not counted */
+            }
+          }
+          id = outV.requestVideoFrameCallback!(tick);
+        };
+        id = outV.requestVideoFrameCallback(tick);
+        stopFrames = () => {
+          on = false;
+          outV.cancelVideoFrameCallback?.(id);
+        };
+      }
       setLeft(token.seconds);
       wentLive = true;
       setPhase('live');
@@ -375,6 +477,7 @@ export function LiveTryOn({
         } else if (s <= 0) stop();
       }, 250);
     } catch (e) {
+      ev.error = (e as Error)?.message ?? String(e);
       stop();
       const name = (e as DOMException)?.name;
       const reason = (e as ApiError).reason;
@@ -388,6 +491,16 @@ export function LiveTryOn({
             : (e as Error).message || '실시간 착용을 시작하지 못했습니다.',
       );
     }
+  }
+
+  function saveEvidence() {
+    if (!evidence) return;
+    const blob = new Blob([JSON.stringify(evidence, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `lagi-live-measure-${evidence.product}-${evidence.at.replace(/[:.]/g, '-')}.json`;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
   function saveClip() {
@@ -524,6 +637,31 @@ export function LiveTryOn({
           </div>
         )}
         {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
+        {evidence && (
+          <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 p-4" data-testid="evidence">
+            <h3 className="t-h3 kr">이번 세션 측정 기록</h3>
+            {evidence.sdkIsMock && (
+              <p className="t-caption kr mt-2 font-bold text-[var(--c-blue)]" data-testid="evidence-mock">
+                모의 SDK 화면입니다. 실제 AI가 만든 영상이 아닙니다.
+              </p>
+            )}
+            <dl className="t-caption kr mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              <dt>모델 · 속도</dt><dd>{evidence.model || '-'} · 표준</dd>
+              <dt>토큰까지</dt><dd>{evidence.msTokenReceived ?? '-'} ms</dd>
+              <dt>연결까지</dt><dd>{evidence.msConnected ?? '-'} ms</dd>
+              <dt>첫 AI 생성 신호(generationTick)</dt><dd>{evidence.msFirstGenerationTick ?? '없음'} ms · {evidence.generationTicks}회</dd>
+              <dt>첫 영상 프레임</dt><dd>{evidence.msFirstVideoFrame ?? '없음'} ms{evidence.msFirstVideoFrame !== null && !evidence.firstFrameCameFromTick ? ' (생성 신호보다 먼저 화면이 재생됨)' : ''}</dd>
+              <dt>출력 해상도 · FPS</dt><dd>{evidence.outputResolution ?? '-'} · {evidence.fps ?? '-'}</dd>
+              <dt>끊김(200ms 이상)</dt><dd>{evidence.stalls200ms}회 (최대 {evidence.maxFrameGapMs ?? '-'} ms)</dd>
+              <dt>입력과 다른 정도</dt><dd>{evidence.meanDiffFromInput ?? '-'} / 255 ({evidence.diffSamples}회 표본)</dd>
+              <dt>실제 세션 시간</dt><dd>{evidence.actualSessionSeconds ?? '-'} 초 (요청 {evidence.requestedSeconds}초)</dd>
+              <dt>종료 사유 · 오류</dt><dd>{evidence.sessionEndedReason ?? '-'} · {evidence.error ?? '없음'}</dd>
+            </dl>
+            <button type="button" className="btn btn-line mt-3" onClick={saveEvidence} data-testid="save-evidence">
+              측정 기록 저장 (JSON)
+            </button>
+          </div>
+        )}
         {recording && (
           <p className="t-caption kr mt-2 text-[var(--c-ink)]" data-testid="rec-on">
             ● 이 기기에 녹화 중입니다 (서버로 보내지 않습니다)

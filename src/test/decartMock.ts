@@ -12,6 +12,9 @@ declare global {
 }
 const log = (m: string) => (window.__rtLog ??= []).push(m);
 
+/** Real SDK has no such export, so the page can say plainly that this is not Decart. */
+export const isMock = true;
+
 export const models = {
   realtime: (name: string) => ({ name, fps: 30, width: 1280, height: 720 }),
 };
@@ -48,7 +51,7 @@ export function createDecartClient(opts: { apiKey: string }) {
         };
         draw();
         if (mode !== 'noframes') o.onRemoteStream(c.captureStream(30)); // 'noframes': connected but the model never sends video
-        if (mode === 'ok') window.setTimeout(() => handlers.get('generationTick')?.({}), 700);
+        if (mode === 'ok') for (const t of [700, 1200, 1700]) window.setTimeout(() => handlers.get('generationTick')?.({}), t);
         if (mode === 'drop') window.setTimeout(() => handlers.get('error')?.({ message: 'mock drop' }), 2500);
         return {
           on: (ev: string, h: Handler) => void handlers.set(ev, h),

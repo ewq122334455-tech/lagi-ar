@@ -49,6 +49,8 @@ export interface Env {
   GEMINI_BASE_URL?: string;
   /** Realtime sessions allowed per day across the whole site (cost cap). Default 100. */
   REALTIME_DAILY_SESSIONS?: string;
+  /** "1" = stop issuing realtime tokens at once (kill switch; sessions already open end at their own cap). */
+  REALTIME_DISABLED?: string;
   /** Session length in seconds, 10 to 20 (default 20). Lower it for smoke tests. */
   REALTIME_SESSION_SECONDS?: string;
   /** Realtime model for new sessions. Default lucy-2.6. Only models listed in REALTIME_MODELS are accepted. */
@@ -895,6 +897,7 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   }
 
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
+  if (env.REALTIME_DISABLED === '1') return json({ error: '실시간 착용을 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
   if (throttled(`rt:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
 
   // Daily caps: per visitor, and for the whole site (the bill is per second). Reserved atomically BEFORE the paid token is

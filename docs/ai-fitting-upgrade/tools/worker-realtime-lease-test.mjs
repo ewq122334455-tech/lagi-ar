@@ -31,4 +31,6 @@ const realNow = Date.now; let offset = 0; Date.now = () => realNow() + offset;
   ok('7 counter down → no token (fail closed)', (await code(await w.fetch(req('5.1.1.1'), env))) === '503/quota_unavailable' && minted.length === 0); }
 { const env = mk(); minted = []; await w.fetch(req('6.1.1.1'), env); const t = minted[0];
   ok('8 token request: 20 s session cap, single model, our origins only, short expiry', t.constraints.realtime.maxSessionDuration === 20 && t.allowedModels.length === 1 && t.allowedModels[0] === 'lucy-2.6' && t.allowedOrigins.every((o) => o.startsWith('https://')) && t.expiresIn <= 30, JSON.stringify({ exp: t.expiresIn, max: t.constraints.realtime.maxSessionDuration })); }
+{ const env = mk({ REALTIME_DISABLED: '1' }); minted = [];
+  ok('9 kill switch REALTIME_DISABLED=1: no token, reason "disabled"', (await code(await w.fetch(req('7.1.1.1'), env))) === '503/disabled' && minted.length === 0); }
 Date.now = realNow;

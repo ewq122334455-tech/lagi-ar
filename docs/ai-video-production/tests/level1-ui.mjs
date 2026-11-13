@@ -62,6 +62,12 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
   const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /영상 저장/ }).click()]); const f = '/tmp/rtclip-' + dl.suggestedFilename(); await dl.saveAs(f);
   ok('C9 clip downloads and is not empty', fs.statSync(f).size > 2000, `${dl.suggestedFilename()} ${fs.statSync(f).size} bytes`);
   ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report'), p.calls.join(','));
+  await p.waitForSelector('[data-testid=evidence]', { timeout: 5000 });
+  ok('C12 measurement record appears after the session', true);
+  ok('C13 a mock SDK run is labelled "not real AI" on screen', /실제 AI가 만든 영상이 아닙니다/.test(await p.getByTestId('evidence-mock').innerText()));
+  const [ed] = await Promise.all([p.waitForEvent('download'), p.getByTestId('save-evidence').click()]); const ef = '/tmp/rtev-' + ed.suggestedFilename(); await ed.saveAs(ef); const E = JSON.parse(fs.readFileSync(ef, 'utf8'));
+  ok('C14 record has model, standard speed, sdkIsMock=true, ticks, first-frame times, resolution, fps, session seconds', E.model === 'lucy-2.6' && E.speed === 'standard' && E.sdkIsMock === true && E.generationTicks >= 1 && E.msFirstGenerationTick > 0 && E.msFirstVideoFrame > 0 && /^\d+x\d+$/.test(E.outputResolution) && E.fps > 0 && E.actualSessionSeconds > 0 && E.requestedSeconds === 9, JSON.stringify({ tick: E.msFirstGenerationTick, frame: E.msFirstVideoFrame, fps: E.fps, res: E.outputResolution, secs: E.actualSessionSeconds, diff: E.meanDiffFromInput }));
+  ok('C15 measured difference from the camera input is a number (mock overlay is visibly different)', typeof E.meanDiffFromInput === 'number' && E.meanDiffFromInput > 5, String(E.meanDiffFromInput));
   ok('C11 no page errors', p.errs.length === 0, p.errs.join('|')); await p.context().close(); }
 
 ok_(); function ok_() {}
