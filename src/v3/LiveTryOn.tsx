@@ -37,6 +37,9 @@ type Evidence = {
   // Try-on reference photo (Decart's step for bags): did we make one for this visitor, how long it took, why not.
   prefit: { used: boolean; ms: number | null; note: string | null; checks?: string | null };
   network?: string;
+  // Exactly what was sent to the model, so a wrong result can be explained: the instruction text and which picture was the reference.
+  prompt?: string;
+  referenceUsed?: string;
   connectionStates: { state: string; ms: number }[]; diagnostics: { name: string; ms: number; data: string }[]; queuePositions: { position: number; ms: number }[]; generationEnded: { ms: number; data: string }[];
 };
 class ApiError extends Error {
@@ -573,6 +576,8 @@ export function LiveTryOn({
       if (useGreen) mapper.current = createDesignMapper(ref.product!);
       const initImage = useGreen ? ref.green! : (prefitBlob ?? ref.blob);
       const initPrompt = useGreen ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, ref.description, liveModel.current, !!prefitBlob);
+      ev.prompt = initPrompt;
+      ev.referenceUsed = useGreen ? '초록 실루엣(디자인 입히기)' : prefitBlob ? '내가 입은 참조 사진(검사 통과)' : cleanRef(product);
       let conn: Awaited<ReturnType<typeof client.realtime.connect>>;
       try {
         conn = await client.realtime.connect(stream, {
@@ -921,6 +926,8 @@ export function LiveTryOn({
             <dl className="t-caption kr mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               <dt>파이프라인</dt><dd>{evidence.pipeline}</dd>
               <dt>네트워크 사전 검사</dt><dd>{evidence.network ?? '-'}</dd>
+              <dt>기준 사진</dt><dd>{evidence.referenceUsed ?? '-'}</dd>
+              <dt>AI에게 보낸 지시문</dt><dd className="break-words">{evidence.prompt ?? '-'}</dd>
               <dt>모델 · 속도</dt><dd>{evidence.model || '-'} · 표준</dd>
               <dt>토큰까지</dt><dd>{evidence.msTokenReceived ?? '-'} ms</dd>
               <dt>연결까지</dt><dd>{evidence.msConnected ?? '-'} ms</dd>
