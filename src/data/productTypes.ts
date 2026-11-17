@@ -243,6 +243,11 @@ export interface Product {
   hotspots: Hotspot[];
   imageAnalysis?: ImageAnalysis;
 
+  /** false = only on this website, not on the smart store: the page shows no store links and no buy buttons yet. Default true. */
+  storeListed?: boolean;
+  /** Set products only: the exact names of the pieces the set contains. */
+  setItems?: string[];
+
   shopUrl: VerifiableField<string>;
   instagramUrl: string;
 

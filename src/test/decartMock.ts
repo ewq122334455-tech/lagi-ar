@@ -6,7 +6,7 @@
 type Handler = (e: unknown) => void;
 declare global {
   interface Window {
-    __rtMock?: { mode?: 'ok' | 'noframes' | 'refuse-image' | 'drop' };
+    __rtMock?: { mode?: 'ok' | 'noframes' | 'refuse-image' | 'drop' | 'reconnect' | 'netfail' };
     __rtLog?: string[];
   }
 }
@@ -23,10 +23,17 @@ export function createDecartClient(opts: { apiKey: string }) {
   log(`client:${opts.apiKey ? 'key' : 'nokey'}`);
   return {
     realtime: {
+      // The real one only gathers ICE candidates (free, no session). 'netfail' = a network that cannot carry realtime video.
+      async checkConnectivity() {
+        log('preflight');
+        return window.__rtMock?.mode === 'netfail' ? { quality: 'critical', metrics: { transport: 'failed', rttMs: null }, reasons: [] } : { quality: 'good', metrics: { transport: 'udp', rttMs: 30 }, reasons: [] };
+      },
       async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string; initialState?: { image?: Blob; prompt?: { text: string } } }) {
         const mode = window.__rtMock?.mode ?? 'ok';
         log(`connect:${mode}`);
         log(`model:${o.model?.name}`);
+        log(`retries:${(o as { retries?: number }).retries}`);
+        log(`prompt:${o.initialState?.prompt?.text ?? ''}`);
         log(`speed:${o.speed ?? 'standard'}`);
         // The product photo and instruction arrive WITH the connection (initialState), as Decart's own examples do.
         if (o.initialState?.image) {
@@ -61,6 +68,7 @@ export function createDecartClient(opts: { apiKey: string }) {
         if (mode === 'ok') window.setTimeout(() => handlers.get('connectionChange')?.('generating'), 600);
         window.setTimeout(() => handlers.get('diagnostic')?.({ name: 'client-session-connection-breakdown', data: { attempt: 1, success: true, totalDurationMs: 40, phases: [] } }), 60);
         if (mode === 'ok') for (const t of [700, 1200, 1700]) window.setTimeout(() => handlers.get('generationTick')?.({}), t);
+        if (mode === 'reconnect') window.setTimeout(() => handlers.get('connectionChange')?.('reconnecting'), 2500);
         if (mode === 'drop') window.setTimeout(() => handlers.get('error')?.({ message: 'mock drop' }), 2500);
         return {
           on: (ev: string, h: Handler) => void handlers.set(ev, h),

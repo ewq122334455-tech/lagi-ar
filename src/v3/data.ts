@@ -35,7 +35,11 @@ export function useImageRatios(products: Product[]) {
 }
 
 /** Display names for the store's category values. */
-export const CATEGORY_LABEL: Record<string, string> = { Bag: '가방', 'Acc.': '소품', Acc: '소품' };
+export const CATEGORY_LABEL: Record<string, string> = { Bag: '가방', 'Acc.': '소품', Acc: '소품', Top: '상의', Bottom: '하의', Set: '세트', Outer: '아우터', Dress: '원피스' };
+
+/** Clothing categories. The realtime AI fitting (video) works for these only; bags and small goods keep the 3D try-on and the photo compositing. */
+export const CLOTHING_CATEGORIES = ['Top', 'Bottom', 'Set', 'Outer', 'Dress'];
+export const isClothing = (p: Pick<Product, 'category'> | undefined) => !!p && CLOTHING_CATEGORIES.includes(p.category.value ?? '');
 
 export const OFFICIAL_LINKS = {
   store: 'https://smartstore.naver.com/lagi_official',

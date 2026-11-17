@@ -174,6 +174,8 @@ export default function ProductPage() {
   const category = CATEGORY_LABEL[catKey] ?? catKey;
   const hero = p.images[0];
   const storeUrl = p.shopUrl.value ?? OFFICIAL_LINKS.store;
+  // Products that are only on this website (not on the smart store yet): nothing on the page sends the visitor to the store, and there is nothing to buy yet.
+  const onStore = p.storeListed !== false;
   const highlights = isPublished(p.highlights) ? p.highlights.value : [];
   const intro = isPublished(p.description) ? p.description.value : null;
   const story = isPublished(p.story) ? p.story.value : null;
@@ -200,6 +202,7 @@ export default function ProductPage() {
       ['브랜드 표기', p.brandLabel ?? 'LAGI'],
       ['제작', maker ? `${maker} (라기는 발견하고 선별해 소개합니다)` : null],
       ['분류', category || null],
+      ['세트 구성', p.setItems?.length ? p.setItems.join(' + ') : null],
       ['크기', size ? `가로 × 높이 × 폭 ${size}` : null],
       ['주요 소재', materialText],
       ['가격', price(p.price.value)],
@@ -294,6 +297,11 @@ export default function ProductPage() {
             </div>
             <h1 className="t-h1 kr mt-2 !font-bold">{p.name.value}</h1>
             {p.shortDescription.value && <p className="t-kr-sub mt-1.5">{p.shortDescription.value}</p>}
+            {p.setItems && p.setItems.length > 0 && (
+              <p className="t-caption kr mt-3" data-testid="set-items">
+                <b>세트 구성</b> · {p.setItems.join(' + ')}
+              </p>
+            )}
             <p className="t-h2 kr mt-5 tabular-nums">{price(p.price.value)}</p>
             {highlights.length > 0 && (
               <ul className="t-caption kr mt-4 grid gap-1.5" data-testid="product-highlights">
@@ -353,18 +361,26 @@ export default function ProductPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
-              {online ? (
-                <button type="button" className="btn btn-primary" {...buyNow}>
-                  바로 구매
+              {!onStore ? (
+                <button type="button" className="btn btn-line col-span-2 cursor-not-allowed opacity-60" disabled data-testid="not-for-sale">
+                  구매 준비 중
                 </button>
               ) : (
-                <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
-                  바로 구매 ↗
-                </a>
+                <>
+              {online ? (
+                  <button type="button" className="btn btn-primary" {...buyNow}>
+                    바로 구매
+                  </button>
+                ) : (
+                  <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
+                    바로 구매 ↗
+                  </a>
+                )}
+                <button type="button" className="btn btn-line" onClick={() => addToCart()}>
+                  {added ? '담았습니다 ✓' : '장바구니'}
+                </button>
+                  </>
               )}
-              <button type="button" className="btn btn-line" onClick={() => addToCart()}>
-                {added ? '담았습니다 ✓' : '장바구니'}
-              </button>
               {aiTryOnEnabled(p) && (
                 <Link to={`/again?p=${p.id}`} className="btn btn-blue col-span-2" data-testid="fit-button">
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -376,9 +392,13 @@ export default function ProductPage() {
               )}
             </div>
             <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
-              <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
-                스마트스토어에서 구매 ↗
-              </a>
+              {onStore ? (
+                <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
+                  스마트스토어에서 구매 ↗
+                </a>
+              ) : (
+                <span className="text-[var(--c-mute)]">온라인 판매를 준비하고 있어요.</span>
+              )}
               {added && (
                 <Link to="/cart" className="font-semibold underline underline-offset-4">
                   장바구니 보기 →
@@ -530,7 +550,7 @@ export default function ProductPage() {
                   </div>
                 ))}
               </dl>
-              {usesCopy && (
+              {usesCopy && onStore && (
                 <p className="t-caption kr mt-4 text-[var(--c-mute)]">
                   제품 소개 문구는 라기가 제품 기본 정보와 사진을 바탕으로 작성했습니다. 소재와 제작의 세부 사항은 제작사 기준을 따르며, 정확한 정보는{' '}
                   <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2">
@@ -559,10 +579,12 @@ export default function ProductPage() {
               <p className="t-value kr">인스타그램 DM ↗</p>
               <p className="t-caption kr mt-1 text-[var(--c-mute)]">@lagi.official 로 메시지를 보내 주세요.</p>
             </a>
+            {onStore && (
             <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-card)] border border-black/15 p-5 transition-colors hover:border-[var(--c-ink)]">
-              <p className="t-value kr">스마트스토어 Q&A ↗</p>
-              <p className="t-caption kr mt-1 text-[var(--c-mute)]">상품 문의 게시판에 남겨 주세요.</p>
-            </a>
+                <p className="t-value kr">스마트스토어 Q&A ↗</p>
+                <p className="t-caption kr mt-1 text-[var(--c-mute)]">상품 문의 게시판에 남겨 주세요.</p>
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -609,17 +631,25 @@ export default function ProductPage() {
           <span className="t-caption kr block truncate text-[var(--c-mute)]">{p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
         </span>
-        <button type="button" className="btn btn-line !min-h-[44px] !px-4" onClick={() => addToCart()} aria-label="장바구니 담기">
-          {added ? '✓' : '담기'}
-        </button>
-        {online ? (
-          <button type="button" className="btn btn-primary !min-h-[44px]" {...buyNow}>
-            바로 구매
+        {!onStore ? (
+          <button type="button" className="btn btn-line !min-h-[44px] cursor-not-allowed opacity-60" disabled data-testid="bar-not-for-sale">
+            구매 준비 중
           </button>
         ) : (
-          <a className="btn btn-primary !min-h-[44px]" data-testid="bar-buy-now-store" {...buyNow}>
-            바로 구매 ↗
-          </a>
+          <>
+        <button type="button" className="btn btn-line !min-h-[44px] !px-4" onClick={() => addToCart()} aria-label="장바구니 담기">
+            {added ? '✓' : '담기'}
+          </button>
+          {online ? (
+            <button type="button" className="btn btn-primary !min-h-[44px]" {...buyNow}>
+              바로 구매
+            </button>
+          ) : (
+            <a className="btn btn-primary !min-h-[44px]" data-testid="bar-buy-now-store" {...buyNow}>
+              바로 구매 ↗
+            </a>
+          )}
+          </>
         )}
       </MobileBuyBar>
     </article>
