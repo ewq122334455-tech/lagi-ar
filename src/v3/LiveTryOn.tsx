@@ -189,7 +189,7 @@ export function LiveTryOn({
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
   const out = useRef<HTMLVideoElement>(null);
   const local = useRef<HTMLVideoElement>(null);
-  const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
+  const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void>; setImage: (b: Blob, p: string) => Promise<void> } | null>(null);
   const garment = useRef<{ id: string; blob: Blob; description?: string; green?: Blob; product?: HTMLCanvasElement } | null>(null);
   // Real design mapped onto the green bag the AI draws (on by default); off shows the AI's own drawing.
   // The default is the "Anywear" way: the Worker's model (Decart's virtual try-on, which draws the product itself from the reference
@@ -203,6 +203,7 @@ export function LiveTryOn({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flags]);
   const vtonRef = useRef(false);
+  const liveProductId = useRef<string | null>(null);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
 
@@ -219,10 +220,19 @@ export function LiveTryOn({
     };
   }, []);
 
-  // A new product or way of wearing it while live: send the new instruction without reconnecting.
+  // A new way of wearing it, or another product, while live: send it without reconnecting (Anywear's "switch without reconnecting").
   useEffect(() => {
-    if (phase === 'live' && product)
-      void session.current?.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, garment.current?.description, vtonRef.current)).catch(() => undefined);
+    const s = session.current;
+    if (phase !== 'live' || !product || !s) return;
+    if (!mapOn && liveProductId.current && liveProductId.current !== product.id) {
+      liveProductId.current = product.id;
+      void garmentBlob(product)
+        .then((r) => s.setImage(r.blob, promptFor(product, stylePrompt, r.description, vtonRef.current)))
+        .catch(() => undefined);
+      return;
+    }
+    void s.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, garment.current?.description, vtonRef.current)).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stylePrompt, product, phase, mapOn]);
 
   // Mapping loop: AI frame in, real design on the green bag out.
@@ -445,32 +455,35 @@ export function LiveTryOn({
       ev.model = String(rtModel.name ?? token.model ?? '');
       vtonRef.current = ev.model.startsWith('lucy-vton');
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
-      const conn = await client.realtime.connect(stream, {
-        model: rtModel,
-        mirror: 'auto',
-        onRemoteStream: (remote: MediaStream) => {
-          const v = out.current;
-          if (!v) return;
-          v.srcObject = remote;
-          // Mobile browsers do not always autoplay a stream attached while the element was off screen.
-          void v.play().catch(() => undefined);
-        },
-        onQueuePosition: (q: { position: number }) => setWaiting(q.position > 0 ? `대기 중입니다 · ${q.position}번째` : 'AI가 영상을 만들고 있습니다…'),
-      });
+      // The product photo and the instruction go in WITH the connection (Decart's initialState), so the session starts already
+      // applying them. Sending them after connecting made the AI wait several seconds before it began to generate.
+      const useGreen = !!(mapOn && ref.green && ref.product);
+      if (useGreen) mapper.current = createDesignMapper(ref.product!);
+      const initImage = useGreen ? ref.green! : ref.blob;
+      const initPrompt = useGreen ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, ref.description, vtonRef.current);
+      let conn: Awaited<ReturnType<typeof client.realtime.connect>>;
+      try {
+        conn = await client.realtime.connect(stream, {
+          model: rtModel,
+          mirror: 'auto',
+          initialState: { image: initImage, prompt: { text: initPrompt, enhance: false } },
+          onRemoteStream: (remote: MediaStream) => {
+            const v = out.current;
+            if (!v) return;
+            v.srcObject = remote;
+            // Mobile browsers do not always autoplay a stream attached while the element was off screen.
+            void v.play().catch(() => undefined);
+          },
+          onQueuePosition: (q: { position: number }) => setWaiting(q.position > 0 ? `대기 중입니다 · ${q.position}번째` : 'AI가 영상을 만들고 있습니다…'),
+        });
+      } catch (e) {
+        throw new Error(`AI 연결 또는 제품 이미지 전달에 실패했습니다: ${(e as Error).message}`);
+      }
       rt = conn;
       connectedAt = Date.now();
       ev.msConnected = connectedAt - t0;
       setStage(null);
       setWaiting('AI가 영상을 만들고 있습니다…');
-      // Sent after connecting so a refused image surfaces as an error instead of a silent video without the product.
-      try {
-        if (mapOn && ref.green && ref.product) {
-          mapper.current = createDesignMapper(ref.product);
-          await conn.setImage(ref.green, { prompt: greenPromptFor(product, stylePrompt, vtonRef.current), enhance: false });
-        } else await conn.setImage(ref.blob, { prompt: promptFor(product, stylePrompt, ref.description, vtonRef.current), enhance: false });
-      } catch (e) {
-        throw new Error(`제품 이미지를 AI에 전달하지 못했습니다: ${(e as Error).message}`);
-      }
       const short = (v: unknown) => {
         try {
           return JSON.stringify(v).slice(0, 500);
@@ -505,7 +518,8 @@ export function LiveTryOn({
         setError(e?.message ? `연결이 끊겼습니다: ${e.message}` : '연결이 끊겼습니다.');
         stop();
       });
-      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: false }) };
+      liveProductId.current = product.id;
+      session.current = { stop, setPrompt: (p: string) => conn.setPrompt(p, { enhance: false }), setImage: (b: Blob, p: string) => conn.setImage(b, { prompt: p, enhance: false }) };
       // The page counts down too, so the visitor sees the limit; Decart enforces it either way.
       // The clock starts at connect (that is what Decart bills), but the "waiting" overlay stays up until
       // the first generated frame, and a session that never produces one is stopped early.

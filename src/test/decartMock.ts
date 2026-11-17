@@ -23,11 +23,17 @@ export function createDecartClient(opts: { apiKey: string }) {
   log(`client:${opts.apiKey ? 'key' : 'nokey'}`);
   return {
     realtime: {
-      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string }) {
+      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string; initialState?: { image?: Blob; prompt?: { text: string } } }) {
         const mode = window.__rtMock?.mode ?? 'ok';
         log(`connect:${mode}`);
         log(`model:${o.model?.name}`);
         log(`speed:${o.speed ?? 'standard'}`);
+        // The product photo and instruction arrive WITH the connection (initialState), as Decart's own examples do.
+        if (o.initialState?.image) {
+          if (mode === 'refuse-image') throw new Error('mock refused');
+          log(`setImage:${(o.initialState.prompt?.text ?? '').slice(0, 40)}`);
+          log('initialState:with-connect');
+        }
         const handlers = new Map<string, Handler>();
         const v = document.createElement('video');
         v.muted = true;

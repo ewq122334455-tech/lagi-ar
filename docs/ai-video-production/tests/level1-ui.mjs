@@ -129,6 +129,16 @@ ok_(); function ok_() {}
   ok('J1 the flags are read again when the address changes (no reload needed)', await p.getByTestId('map-toggle').isChecked());
   await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.waitForTimeout(600);
   ok('J2 and back to the default: option off again', !(await p.getByTestId('map-toggle').isChecked())); await p.context().close(); }
+// K. Anywear's way: photo + instruction go in WITH the connection; another product while live is swapped without reconnecting
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  let log = await p.evaluate(() => window.__rtLog);
+  ok('K1 the product photo and instruction travel WITH the connection (initialState), not after it', log.includes('initialState:with-connect') && log.filter((l) => l.startsWith('setImage:')).length === 1, log.filter((l) => /initialState|setImage/.test(l)).join(' | '));
+  const before = p.calls.filter((c) => c === '/cutout').length;
+  await p.evaluate(() => { location.hash = '#/again?p=plano-bag&m=live'; }); await p.waitForTimeout(2500);
+  log = await p.evaluate(() => window.__rtLog);
+  ok('K2 choosing another product while live sends its photo on the same session (no reconnect)', log.filter((l) => l.startsWith('setImage:')).length === 2 && log.filter((l) => l === 'disconnect').length === 0 && p.calls.filter((c) => c === '/cutout').length === before + 1, `${log.filter((l) => l.startsWith('setImage:')).length} setImage, ${p.calls.filter((c) => c === '/cutout').length - before} new cut-out`);
+  await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
@@ -138,7 +148,7 @@ for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'lim
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'disconnected', null, { timeout: 40000 });
   ok('D4 connection drops mid-session → "disconnected" + message + resources released', /연결이 끊겼/.test(await p.getByTestId('live-error').innerText()) && (await p.evaluate(() => window.__rtLog)).includes('disconnect')); await p.context().close(); }
 { const p = await open({ mock: 'refuse-image', seconds: 20 }); await start(p); await p.waitForSelector('[data-testid=live-error]', { timeout: 40000 });
-  ok('D5 product image refused by the model → error says so (no silent video without the product)', /제품 이미지를 AI에 전달하지 못했습니다/.test(await p.getByTestId('live-error').innerText())); await p.context().close(); }
+  ok('D5 product image refused by the model → error says so (no silent video without the product)', /제품 이미지 전달에 실패/.test(await p.getByTestId('live-error').innerText())); await p.context().close(); }
 { const p = await open({ mock: 'noframes', seconds: 30 }); await start(p); await p.waitForSelector('[data-testid=live-error]', { timeout: 60000 });
   ok('D6 no generated frames within 12 s → stopped, with message', /오지 않아 중단/.test(await p.getByTestId('live-error').innerText()), await step(p)); await p.context().close(); }
 // E. leaving the page releases the session
