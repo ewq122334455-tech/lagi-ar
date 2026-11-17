@@ -1,3 +1,4 @@
+import { parsePipeline, carryOf, realtimePrompt, type RealtimeModel } from './pipelines';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
@@ -26,13 +27,14 @@ const STEP_LABEL: Record<Step, string> = {
 const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'prefit', 'connecting', 'processing', 'live', 'ended'];
 /** Measurements of one session. They exist so a person can tell a REAL Decart output from a mock or from the camera passed through. */
 type Evidence = {
-  at: string; model: string; sdkIsMock: boolean; speed: 'standard'; requestedSeconds: number; product: string; designMapping: boolean;
+  at: string; pipeline: string; model: string; sdkIsMock: boolean; speed: 'standard'; requestedSeconds: number; product: string; designMapping: boolean;
   msTokenReceived: number | null; msConnected: number | null; msFirstGenerationTick: number | null; msFirstVideoFrame: number | null;
   generationTicks: number; firstFrameCameFromTick: boolean; outputResolution: string | null; framesSeen: number; fps: number | null; maxFrameGapMs: number | null; stalls200ms: number;
   meanDiffFromInput: number | null; diffSamples: number; sessionEndedReason: string | null; error: string | null; actualSessionSeconds: number | null;
   // What the SDK itself reported, so a missing AI output can be explained (state changes, connection phases, queue, generation end).
   // Try-on reference photo (Decart's step for bags): did we make one for this visitor, how long it took, why not.
-  prefit: { used: boolean; ms: number | null; note: string | null };
+  prefit: { used: boolean; ms: number | null; note: string | null; checks?: string | null };
+  network?: string;
   connectionStates: { state: string; ms: number }[]; diagnostics: { name: string; ms: number; data: string }[]; queuePositions: { position: number; ms: number }[]; generationEnded: { ms: number; data: string }[];
 };
 class ApiError extends Error {
@@ -46,15 +48,10 @@ function missingSupport(): string | null {
   return null;
 }
 
-/** Edit instruction for the general realtime editor (lucy-2.6); the garment-only VTON model turned bags into clothes. */
-function promptFor(product: Product, stylePrompt: string, description?: string, vton = false) {
+/** The instruction for the realtime model: its own wording per model family and per carry style (see pipelines.ts). */
+function promptFor(product: Product, stylePrompt: string, description: string | undefined, model: string, prefit: boolean) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
-  // Lucy VTON (opt-in via the Worker): Decart's guide asks for one action, "Add <what it looks like> to the outfit", describing only what the reference shows (about 750 characters at most).
-  if (vton) return `Add ${description ? `the ${kind}: ${description.slice(0, 380)}` : `the ${kind} shown in the reference image`} to the outfit, ${stylePrompt}. Copy its exact shape, colours and prints; do not invent details.`;
-  // The written description (from the server, per product) pins colours and parts the image alone lets drift.
-  if (description)
-    return `Add the ${kind} from the reference image, ${stylePrompt}. The ${kind}: ${description} It is an accessory, not clothing: do not change the person's clothes. Copy its exact design, colours and prints; keep the person and background unchanged.`;
-  return `Add the ${kind} from the reference image, ${stylePrompt}. It is an accessory, not clothing: do not change the person's clothes. Keep the ${kind}'s exact shape, colours, prints and proportions, realistic size and natural shadows. Keep the person and background unchanged.`;
+  return realtimePrompt({ model: model as RealtimeModel, carry: carryOf(stylePrompt), kind, description, prefit });
 }
 
 /** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
@@ -96,10 +93,10 @@ function productBox(bmp: ImageBitmap) {
 }
 
 /** The model wants a small reference: crop to the product, shrink to 768 px on white, send as JPEG (the PNG cutout is ~1 MB). */
-async function smallReference(blob: Blob): Promise<Blob> {
+async function smallReference(blob: Blob, max = 768): Promise<Blob> {
   const bmp = await createImageBitmap(blob);
   const { sx, sy, sw, sh } = productBox(bmp);
-  const k = Math.min(1, 768 / Math.max(sw, sh));
+  const k = Math.min(1, max / Math.max(sw, sh));
   const c = document.createElement('canvas');
   c.width = Math.round(sw * k);
   c.height = Math.round(sh * k);
@@ -219,6 +216,7 @@ export function LiveTryOn({
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   // Diagnostic mode (add &debug=1 to the address): keeps one picture of the AI's raw frame, the camera and the result side by side.
   const debug = typeof window !== 'undefined' && /[?&]debug=1(&|$)/.test(window.location.hash);
+  // Developer settings and the measurement panel are for people comparing pipelines; visitors never see them. Any developer flag in the address turns them on.
   const [diag, setDiag] = useState<string | null>(null);
   // "정확한 사진": the live pose re-made by the photo compositor, which keeps the real product design.
   const [exact, setExact] = useState<{ busy: boolean; image?: string; error?: string }>({ busy: false });
@@ -230,10 +228,12 @@ export function LiveTryOn({
   // The default is the "Anywear" way: the Worker's model (Decart's virtual try-on, which draws the product itself from the reference
   // photo) and no green-screen overlay. Address flags go back to the old way: &model=lucy-2.6 and &map=1.
   const flags = typeof window !== 'undefined' ? window.location.hash : '';
-  const wantModel = /[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1];
+  const devMode = /[?&](debug|pipe|prefit|provider|map|model)=/.test(flags);
+  const pipe = parsePipeline(flags);
+  const wantModel = pipe.model;
   // Anywear's step for bags (Decart's examples): first make one still of THIS visitor holding THIS product and use it as the
   // reference, instead of the bare product photo. Opt-in with &prefit=1 until it has been checked on real runs.
-  const prefitOn = /[?&]prefit=1(&|$)/.test(flags);
+  const prefitOn = pipe.reference === 'prefit';
   const [mapOn, setMapOn] = useState(/[?&]map=1(&|$)/.test(flags));
   // The flags are read again when the address changes while no session is running (a pasted address does not rebuild the page).
   useEffect(() => {
@@ -241,6 +241,8 @@ export function LiveTryOn({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flags]);
   const vtonRef = useRef(false);
+  const liveModel = useRef<string>('lucy-vton-3.6');
+  const livePrefit = useRef(false);
   const liveProductId = useRef<string | null>(null);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
@@ -265,11 +267,11 @@ export function LiveTryOn({
     if (!mapOn && liveProductId.current && liveProductId.current !== product.id) {
       liveProductId.current = product.id;
       void garmentBlob(product)
-        .then((r) => s.setImage(r.blob, promptFor(product, stylePrompt, r.description, vtonRef.current)))
+        .then((r) => s.setImage(r.blob, promptFor(product, stylePrompt, r.description, liveModel.current, livePrefit.current)))
         .catch(() => undefined);
       return;
     }
-    void s.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, garment.current?.description, vtonRef.current)).catch(() => undefined);
+    void s.setPrompt(mapOn ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, garment.current?.description, liveModel.current, livePrefit.current)).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stylePrompt, product, phase, mapOn]);
 
@@ -339,12 +341,24 @@ export function LiveTryOn({
     return () => window.clearInterval(id);
   }, [debug, phase, waiting, mapOn, facing]);
 
+  /** The clean product photo of the product's own data (white background, front view): used as it is, never redrawn. */
+  const cleanRef = (p: Product) => p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0];
+
   async function garmentBlob(p: Product) {
     if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;
     const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-    const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
-    const blob = await smallReference(await (await fetch(image)).blob());
-    garment.current = { id: p.id, blob, description };
+    if (pipe.reference !== 'legacy') {
+      // The ORIGINAL photo, only trimmed to the product and padded on white (no AI redraw: colours, prints, logo, handles stay as they are).
+      const url = new URL(cleanRef(p), base).toString();
+      const [{ description }, photo] = await Promise.all([
+        post<{ description?: string }>('/cutout', { productImage: url, describeOnly: true }),
+        fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('제품 사진을 불러오지 못했습니다.')))),
+      ]);
+      garment.current = { id: p.id, blob: await smallReference(photo, 1024), description };
+    } else {
+      const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
+      garment.current = { id: p.id, blob: await smallReference(await (await fetch(image)).blob()), description };
+    }
     if (mapOn) {
       // The product on green (matte) → transparent product for mapping, and its green silhouette for the AI.
       const { matte } = await post<{ matte: string }>('/cutout', { productImage: new URL(p.images[0], base).toString(), matte: true });
@@ -422,7 +436,7 @@ export function LiveTryOn({
     let connectedAt = 0;
     const t0 = Date.now();
     const ev: Evidence = {
-      at: new Date().toISOString(), model: '', sdkIsMock: false, speed: 'standard', requestedSeconds: 0, product: product.id, designMapping: mapOn,
+      at: new Date().toISOString(), pipeline: pipe.id + (pipe.provider ? `/${pipe.provider}` : ''), model: '', sdkIsMock: false, speed: 'standard', requestedSeconds: 0, product: product.id, designMapping: mapOn,
       msTokenReceived: null, msConnected: null, msFirstGenerationTick: null, msFirstVideoFrame: null, generationTicks: 0, firstFrameCameFromTick: false,
       outputResolution: null, framesSeen: 0, fps: null, maxFrameGapMs: null, stalls200ms: 0, meanDiffFromInput: null, diffSamples: 0, sessionEndedReason: null, error: null, actualSessionSeconds: null,
       prefit: { used: false, ms: null, note: prefitOn ? null : '꺼짐' },
@@ -480,6 +494,20 @@ export function LiveTryOn({
       setStage('checking');
       const track = stream.getVideoTracks()[0];
       if (!track || track.readyState !== 'live') throw new Error('카메라 영상이 들어오지 않습니다. 다른 앱이 카메라를 쓰고 있지 않은지 확인해 주세요.');
+      // 2a. The network, before anything is paid for: gather ICE candidates (a free STUN probe, no Decart session is opened). A network
+      //     that cannot carry realtime video at all (transport "failed", e.g. a blocking mobile network or office firewall) stops here with a
+      //     clear message instead of spending a token, a reference picture and a session on a video that cannot arrive.
+      try {
+        const probe = (await Promise.race([
+          sdk.createDecartClient({ apiKey: 'preflight-only' }).realtime.checkConnectivity?.({ iceGatherTimeoutMs: 3000 }),
+          new Promise<undefined>((r) => window.setTimeout(() => r(undefined), 5000)),
+        ])) as { quality?: string; metrics?: { transport?: string; rttMs?: number | null } } | undefined;
+        ev.network = probe?.metrics ? `${probe.metrics.transport ?? '-'} · ${probe.quality ?? '-'}${probe.metrics.rttMs != null ? ` · RTT ${Math.round(probe.metrics.rttMs)} ms` : ''}` : '확인 못 함';
+        if (probe?.metrics?.transport === 'failed') throw new Error('이 네트워크에서는 실시간 영상 연결이 되지 않습니다. 와이파이나 다른 네트워크로 바꿔서 다시 시도해 주세요.');
+      } catch (e) {
+        if ((e as Error).message?.startsWith('이 네트워크')) throw e;
+        ev.network = '확인 못 함';
+      }
       const ref = await garmentBlob(product);
       // 2b. Anywear's step for bags (opt-in): one still of THIS visitor holding THIS product, made before the paid realtime
       //     session starts, used as the reference. If it cannot be made, the plain product photo is used and the record says so.
@@ -491,11 +519,11 @@ export function LiveTryOn({
           const still = await cameraStill(local.current, facing === 'user');
           if (!still) throw new Error('카메라 화면을 잡지 못했어요');
           const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-          const made = await post<{ image: string }>('/realtime/prefit', { person: still, productImage: new URL(product.images[0], base).toString(), variant: /[?&]variant=official(&|$)/.test(flags) ? 'official' : 'carry' });
+          const made = await post<{ image: string; verified?: boolean; provider?: string; checks?: Record<string, unknown> }>('/realtime/prefit', { person: still, productImage: new URL(cleanRef(product), base).toString(), productName: product.name.value ?? '', carry: carryOf(stylePrompt), ...(pipe.provider ? { provider: pipe.provider } : {}), ...(/[?&]variant=official(&|$)/.test(flags) ? { variant: 'official' } : {}) });
           prefitBlob = await scaledJpeg(await (await fetch(made.image)).blob(), 1024);
-          ev.prefit = { used: true, ms: Date.now() - p0, note: null };
+          ev.prefit = { used: true, ms: Date.now() - p0, note: made.verified ? '검사 통과' : null, checks: made.checks ? JSON.stringify(made.checks) : null };
         } catch (e) {
-          ev.prefit = { used: false, ms: Date.now() - p0, note: (e as Error).message || '실패' };
+          ev.prefit = { used: false, ms: Date.now() - p0, note: `${(e as Error).message || '실패'} → 원본 제품 사진으로 진행` };
         }
       }
       // 3. The token last, right before connecting (it is minted and metered only now).
@@ -510,18 +538,21 @@ export function LiveTryOn({
       const rtModel = sdk.models.realtime((token.model ?? 'lucy-2.6') as Parameters<typeof sdk.models.realtime>[0]);
       ev.model = String(rtModel.name ?? token.model ?? '');
       vtonRef.current = ev.model.startsWith('lucy-vton');
+      liveModel.current = ev.model || wantModel;
+      livePrefit.current = !!prefitBlob;
       const client = sdk.createDecartClient({ apiKey: token.apiKey });
       // The product photo and the instruction go in WITH the connection (Decart's initialState), so the session starts already
       // applying them. Sending them after connecting made the AI wait several seconds before it began to generate.
       const useGreen = !!(mapOn && ref.green && ref.product);
       if (useGreen) mapper.current = createDesignMapper(ref.product!);
       const initImage = useGreen ? ref.green! : (prefitBlob ?? ref.blob);
-      const initPrompt = useGreen ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, ref.description, vtonRef.current);
+      const initPrompt = useGreen ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, ref.description, liveModel.current, !!prefitBlob);
       let conn: Awaited<ReturnType<typeof client.realtime.connect>>;
       try {
         conn = await client.realtime.connect(stream, {
           model: rtModel,
           mirror: 'auto',
+          retries: 1, // a failed first dial is tried once more, not five times (every dial competes for a slot and may be billed)
           initialState: { image: initImage, prompt: { text: initPrompt, enhance: false } },
           onRemoteStream: (remote: MediaStream) => {
             const v = out.current;
@@ -550,6 +581,15 @@ export function LiveTryOn({
       const stamp = () => Date.now() - t0;
       conn.on('connectionChange', (st) => {
         if (ev.connectionStates.length < 40) ev.connectionStates.push({ state: String(st), ms: stamp() });
+        // The SDK would dial again by itself (up to 5 times) after a drop, and each new dial is another billed session that the
+        // 20-second cap of the first one does not cover. A dropped session is simply ended; the visitor can press start again
+        // (which goes through the Worker's limits).
+        if (String(st) === 'reconnecting' && !stopped) {
+          ev.error = '연결이 끊겨 자동 재연결 없이 종료했습니다';
+          setFail('disconnected');
+          setError('연결이 끊겼습니다. 비용 보호를 위해 자동으로 다시 연결하지 않습니다. 다시 시작해 주세요.');
+          stop();
+        }
       });
       conn.on('diagnostic', (d) => {
         if (ev.diagnostics.length < 30) ev.diagnostics.push({ name: String((d as { name?: string }).name ?? 'diagnostic'), ms: stamp(), data: short((d as { data?: unknown }).data ?? d) });
@@ -837,7 +877,7 @@ export function LiveTryOn({
           </div>
         )}
         {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
-        {evidence && (
+        {evidence && devMode && (
           <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 p-4" data-testid="evidence">
             <h3 className="t-h3 kr">이번 세션 측정 기록</h3>
             {evidence.sdkIsMock && (
@@ -846,10 +886,12 @@ export function LiveTryOn({
               </p>
             )}
             <dl className="t-caption kr mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              <dt>파이프라인</dt><dd>{evidence.pipeline}</dd>
+              <dt>네트워크 사전 검사</dt><dd>{evidence.network ?? '-'}</dd>
               <dt>모델 · 속도</dt><dd>{evidence.model || '-'} · 표준</dd>
               <dt>토큰까지</dt><dd>{evidence.msTokenReceived ?? '-'} ms</dd>
               <dt>연결까지</dt><dd>{evidence.msConnected ?? '-'} ms</dd>
-              <dt>내가 든 참조 사진(prefit)</dt><dd>{evidence.prefit.used ? `사용 · ${evidence.prefit.ms} ms` : `사용 안 함${evidence.prefit.note ? ` · ${evidence.prefit.note}` : ''}`}</dd>
+              <dt>내가 든 참조 사진(prefit)</dt><dd>{evidence.prefit.used ? `사용 · ${evidence.prefit.ms} ms · ${evidence.prefit.note ?? ''} ${evidence.prefit.checks ?? ''}` : `사용 안 함${evidence.prefit.note ? ` · ${evidence.prefit.note}` : ''}`}</dd>
               <dt>첫 AI 생성 신호(generationTick)</dt><dd>{evidence.msFirstGenerationTick ?? '없음'} ms · {evidence.generationTicks}회</dd>
               <dt>첫 영상 프레임</dt><dd>{evidence.msFirstVideoFrame ?? '없음'} ms{evidence.msFirstVideoFrame !== null && !evidence.firstFrameCameFromTick ? ' (생성 신호보다 먼저 화면이 재생됨)' : ''}</dd>
               <dt>출력 해상도 · FPS</dt><dd>{evidence.outputResolution ?? '-'} · {evidence.fps ?? '-'}</dd>
@@ -952,6 +994,7 @@ export function LiveTryOn({
               </button>
             ))}
           </div>
+          {devMode && (
           <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
             <input type="checkbox" className="mt-1" checked={mapOn} disabled={live || phase === 'starting'} onChange={(e) => setMapOn(e.target.checked)} data-testid="map-toggle" />
             <span>
@@ -959,6 +1002,7 @@ export function LiveTryOn({
               켜면 AI는 제품 모양의 초록 가방만 들게 만들고, 그 위에 실제 제품 사진을 붙입니다. 사진이 평평하게 붙어 움직임이 어색할 수 있어요. 끄면 AI가 제품을 직접 그려 자연스럽지만 무늬가 실제와 조금 다를 수 있어요.
             </span>
           </label>
+          )}
           {typeof MediaRecorder !== 'undefined' && (
             <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
               <input type="checkbox" className="mt-1" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
