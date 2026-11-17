@@ -104,7 +104,7 @@ ok_(); function ok_() {}
   await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('G6 phone-size: session reaches "live" and the stage fits the screen', await p.evaluate(() => document.querySelector('[data-testid=live-stage]').getBoundingClientRect().width <= window.innerWidth));
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 20000 });
-  ok('G7 after the session a link to the product page is offered', (await p.getByTestId('to-product').getAttribute('href'))?.includes('/product/plano-bag'));
+  ok('G7 after the session a link to the product page is offered', (await p.getByTestId('to-product').getAttribute('href'))?.includes('/product/zz-test-top'));
   const over2 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok('G8 phone-size: no sideways scrolling after the session either; no page errors', over2 <= 1 && p.errs.length === 0, `overflow ${over2}px; ${p.errs.join('|')}`); await ctx.close(); }
 // H. diagnostic mode (&debug=1): one picture with the AI raw frame, the camera and the result; invisible without the flag
@@ -122,7 +122,7 @@ ok_(); function ok_() {}
   await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   const log = await p.evaluate(() => window.__rtLog);
   ok('I2 the page asks for lucy-vton-3.6 and the SDK connects with it (standard speed)', log.includes('model:lucy-vton-3.6') && log.includes('speed:standard'), log.filter((l) => /^(model|speed)/.test(l)).join(' '));
-  ok('I3 the prompt is the VTON "Add ... to the outfit" one, with no green-screen wording', log.some((l) => l.startsWith('setImage:Add ')) && !log.some((l) => /chroma-key|green/i.test(l)), log.filter((l) => l.startsWith('setImage')).join(' | '));
+  ok('I3 the prompt is the clothing VTON one ("Substitute the current … with …", never the bag wording), with no green-screen wording', log.some((l) => l.startsWith('setImage:Substitute the current ')) && !log.some((l) => /chroma-key|green/i.test(l)), log.filter((l) => l.startsWith('setImage')).join(' | '));
   ok('I4 no cut-out matte request (that step belongs to the green overlay only)', !p.calls.some((c) => c.includes('(matte)')), p.calls.join(','));
   await p.context().close(); }
 // J. address flags go back to the old way: &model=lucy-2.6&map=1 (green overlay on, old model); a pasted address is picked up without a reload
@@ -145,7 +145,7 @@ ok_(); function ok_() {}
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('L1 prefit comes after the cut-out and BEFORE the paid token', p.calls.indexOf('/realtime/prefit') > p.calls.indexOf('/cutout') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(' > '));
   const body = JSON.parse(p.prefitBody || '{}');
-  ok('L2 the request carries a camera still (JPEG data URL) and the product address, nothing else', /^data:image\/jpeg;base64,/.test(body.person ?? '') && /zz-test-top/.test(body.productImage ?? '') && Object.keys(body).every((k) => ['person', 'productImage', 'productName', 'carry', 'provider', 'variant'].includes(k)), Object.keys(body).join(','));
+  ok('L2 the request carries a camera still (JPEG data URL) and the product address, nothing else', /^data:image\/jpeg;base64,/.test(body.person ?? '') && /zz-test-top/.test(body.productImage ?? '') && Object.keys(body).every((k) => ['person', 'productImage', 'productName', 'carry', 'garment', 'provider', 'variant'].includes(k)), Object.keys(body).join(','));
   const log = await p.evaluate(() => window.__rtLog);
   ok('L3 the generated photo (not the bare product photo) goes in with the connection', log.includes('initialState:with-connect'));
   await p.getByTestId('live-steps').waitFor(); ok('L4 the extra step is listed only when prefit is on', (await p.getByTestId('live-steps').innerText()).includes('참조 사진'));
