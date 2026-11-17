@@ -5,6 +5,7 @@
  *
  *   node scripts/rt-smoke-setup.mjs            # asks for the Decart TEST key (hidden input), generates ADMIN_TOKEN
  *   node scripts/rt-smoke-setup.mjs --no-key   # writes everything except the key (add it later by running the line above)
+ *   node scripts/rt-smoke-setup.mjs --fal      # also asks for the fal.ai key (hidden input) for the try-on reference photo step; caps: 4 photos a day
  *
  * The key and the admin token are NEVER printed, logged or sent anywhere. The file is created with mode 600 and is git-ignored.
  * Existing DECART_API_KEY / ADMIN_TOKEN values in an existing file are kept. This script makes no network call.
@@ -21,6 +22,8 @@ const old = fs.existsSync(file) ? parse(fs.readFileSync(file, 'utf8')) : {};
 let key = old.DECART_API_KEY ?? '';
 const withGemini = process.argv.includes('--gemini');
 let gemini = old.GEMINI_API_KEY ?? '';
+const withFal = process.argv.includes('--fal');
+let fal = old.FAL_KEY ?? '';
 
 function askHidden(q) {
   return new Promise((resolve) => {
@@ -41,6 +44,11 @@ if (withGemini && !gemini) {
   gemini = await askHidden('Gemini TEST API key (input is hidden, never shown or saved elsewhere): ');
   if (!gemini || /\s/.test(gemini) || gemini.length < 12) { console.log('That does not look like an API key. Nothing was written.'); process.exit(3); }
 }
+if (withFal && !fal) {
+  if (!process.stdin.isTTY) { console.log('No terminal for hidden input. Run this in your own terminal.'); process.exit(2); }
+  fal = await askHidden('fal.ai TEST API key (input is hidden, never shown or saved elsewhere): ');
+  if (!fal || /\s/.test(fal) || fal.length < 12) { console.log('That does not look like an API key. Nothing was written.'); process.exit(3); }
+}
 const lines = [
   '# Level 2 smoke test (local only, git-ignored). Do not paste this file anywhere.',
   `DECART_API_KEY=${key}`,
@@ -50,6 +58,7 @@ const lines = [
   ...(withGemini ? ['REALTIME_PER_IP_DAILY=4'] : []),
   'REALTIME_MAX_CONCURRENT=1',
   ...(gemini ? [`GEMINI_API_KEY=${gemini}`, 'TRYON_DAILY_UNITS_SITE=8', 'TRYON_DAILY_UNITS_PER_IP=8'] : []),
+  ...(fal ? [`FAL_KEY=${fal}`, 'PREFIT_DAILY_SITE=4', 'PREFIT_PER_IP_DAILY=4'] : []),
   `ADMIN_TOKEN=${old.ADMIN_TOKEN && old.ADMIN_TOKEN.length >= 16 ? old.ADMIN_TOKEN : crypto.randomBytes(24).toString('hex')}`,
   '',
 ];
@@ -61,4 +70,5 @@ console.log(`  DECART_API_KEY : ${key ? 'set (not shown)' : 'NOT SET — run aga
 console.log('  ADMIN_TOKEN    : generated (not shown). Read it for the usage check with:');
 console.log("    export ADMIN_TOKEN=$(grep '^ADMIN_TOKEN=' server/tryon-worker/.dev.vars | cut -d= -f2-)");
 console.log(`  GEMINI_API_KEY : ${gemini ? 'set (not shown); Gemini units capped at 8 per day' : 'not set (Gemini stays off)'}`);
+console.log(`  FAL_KEY        : ${fal ? 'set (not shown); reference photos capped at 4 per day' : 'not set (reference-photo step stays off)'}`);
 console.log('  Not written on purpose: REALTIME_MODEL, TRYON_QUOTA, REALTIME_DISABLED.');
