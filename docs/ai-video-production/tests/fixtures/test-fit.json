@@ -1,0 +1,16 @@
+{
+  "id": "zz-test-fit",
+  "name": "테스트 피팅 세트",
+  "category": "Set",
+  "price": 50000,
+  "setItems": [
+    "테스트 상의",
+    "테스트 하의"
+  ],
+  "main": "public/products/lagi-again-tee-black/images/main.jpg",
+  "fitting": {
+    "image": "public/products/lagi-again-tee-black/images/main.jpg",
+    "part": "top",
+    "description": "a black oversized short-sleeve cotton tee with a yellow abstract logo and the word AGAIN across the chest"
+  }
+}

@@ -4,10 +4,11 @@
 #   PW_MODULE=$(npm root -g)/playwright/index.mjs bash docs/ai-video-production/tests/run-ui-tests.sh
 cd "$(dirname "$0")/../../.." || exit 1
 OUT="${TEST_OUT:-/tmp/lagi-ui-test}"; mkdir -p "$OUT"
-cleanup() { pkill -f "vite preview --outDir $OUT/dist" 2>/dev/null; rm -rf public/products/zz-test-top public/products/zz-test-set; git checkout -- public/products/manifest.json 2>/dev/null; }
+cleanup() { pkill -f "vite preview --outDir $OUT/dist" 2>/dev/null; rm -rf public/products/zz-test-top public/products/zz-test-set public/products/zz-test-fit; node -e "const f='public/products/manifest.json',fs=require('fs'),m=JSON.parse(fs.readFileSync(f,'utf8'));m.products=m.products.filter(i=>!i.startsWith('zz-test-'));fs.writeFileSync(f,JSON.stringify(m,null,2)+'\\n')" 2>/dev/null; }
 trap cleanup EXIT
-node scripts/add-clothing.mjs docs/ai-video-production/tests/fixtures/test-top.json >/dev/null || exit 1
-node scripts/add-clothing.mjs docs/ai-video-production/tests/fixtures/test-set.json >/dev/null || exit 1
+node scripts/add-clothing.mjs docs/ai-video-production/tests/fixtures/test-top.json >/dev/null || { echo "add-clothing failed for docs/ai-video-production/tests/fixtures/test-top.json "; exit 1; }
+node scripts/add-clothing.mjs docs/ai-video-production/tests/fixtures/test-set.json >/dev/null || { echo "add-clothing failed for docs/ai-video-production/tests/fixtures/test-set.json "; exit 1; }
+node scripts/add-clothing.mjs docs/ai-video-production/tests/fixtures/test-fit.json >/dev/null || { echo "add-clothing failed for docs/ai-video-production/tests/fixtures/test-fit.json "; exit 1; }
 RT_MOCK=1 npx vite build --outDir dist --emptyOutDir >/dev/null 2>&1 && node scripts/build-images.mjs >/dev/null 2>&1 || { echo "build failed"; exit 1; }
 rm -rf "$OUT/dist"; mv dist "$OUT/dist"
 (npx vite preview --outDir "$OUT/dist" --port 4195 --strictPort >"$OUT/preview.log" 2>&1 &)

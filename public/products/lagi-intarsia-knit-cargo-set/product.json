@@ -50,7 +50,7 @@
   "drawings": [
     {
       "src": "products/lagi-intarsia-knit-cargo-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
@@ -84,5 +84,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-intarsia-knit-cargo-set/images/fitting.jpg",
+    "part": "top",
+    "description": "an olive-khaki crew-neck knit sweater in a patchwork colour-block intarsia of red, blue, yellow, pink, purple and black, with a large embroidered cartoon rat playing a red guitar and the arched lettering \"ROCK N' RAT\" on the chest, ribbed collar, cuffs and hem"
+  }
 }

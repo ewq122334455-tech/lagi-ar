@@ -50,7 +50,7 @@
   "drawings": [
     {
       "src": "products/lagi-red-stripe-cargo-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
@@ -84,5 +84,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-red-stripe-cargo-set/images/fitting.jpg",
+    "part": "top",
+    "description": "an oversized short-sleeve tee with wide red and white horizontal stripes, a striped crew collar, and a distressed grey and dark graphic with numerals across the centre of the chest"
+  }
 }

@@ -2,7 +2,7 @@
   "id": "lagi-alien-vest-sweat-set",
   "brandLabel": "LAGI",
   "name": {
-    "value": "에일리언 그래픽 베스트 티 & 깅엄 셔츠 & 그레이 스웻 버뮤다 세트",
+    "value": "에일리언 그래픽 티 & 깅엄 셔츠 & 그레이 스웻 버뮤다 세트",
     "status": "VERIFIED",
     "source": "사용자 제공 (2026-11-17)"
   },
@@ -50,12 +50,12 @@
   "drawings": [
     {
       "src": "products/lagi-alien-vest-sweat-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
   "setItems": [
-    "올리브 그레이 에일리언 그래픽 베스트 티",
+    "차콜 그레이 ACT NORMAL 에일리언 그래픽 티",
     "블루 깅엄 체크 셔츠",
     "그레이 스웻 버뮤다 쇼츠"
   ],
@@ -85,5 +85,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-alien-vest-sweat-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a washed charcoal-grey oversized short-sleeve tee with a large olive-green hand-drawn alien with antennae and a toothy smile, one arm waving, and hand-lettered \"ACT NORMAL\" below it, layered over a blue and white gingham long-sleeve shirt with a collar and chest pocket"
+  }
 }

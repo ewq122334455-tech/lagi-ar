@@ -51,7 +51,7 @@ function missingSupport(): string | null {
 /** The instruction for the realtime model: its own wording per model family and per carry style (see pipelines.ts). */
 function promptFor(product: Product, stylePrompt: string, description: string | undefined, model: string, prefit: boolean) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
-  return realtimePrompt({ model: model as RealtimeModel, carry: carryOf(stylePrompt), kind, description, prefit, garment: garmentOf(product.category.value) });
+  return realtimePrompt({ model: model as RealtimeModel, carry: carryOf(stylePrompt), kind, description, prefit, garment: garmentOf(product.fitting?.part ?? product.category.value) });
 }
 
 /** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
@@ -342,7 +342,7 @@ export function LiveTryOn({
   }, [debug, phase, waiting, mapOn, facing]);
 
   /** The clean product photo of the product's own data (white background, front view): used as it is, never redrawn. */
-  const cleanRef = (p: Product) => p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0];
+  const cleanRef = (p: Product) => p.fitting?.image ?? p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0];
 
   async function garmentBlob(p: Product) {
     if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;
@@ -350,8 +350,9 @@ export function LiveTryOn({
     if (pipe.reference !== 'legacy') {
       // The ORIGINAL photo, only trimmed to the product and padded on white (no AI redraw: colours, prints, logo, handles stay as they are).
       const url = new URL(cleanRef(p), base).toString();
+      // A hand-written exact description from the product data beats the one the server writes from the photo (and costs nothing).
       const [{ description }, photo] = await Promise.all([
-        post<{ description?: string }>('/cutout', { productImage: url, describeOnly: true }),
+        p.fitting?.description ? Promise.resolve({ description: p.fitting.description }) : post<{ description?: string }>('/cutout', { productImage: url, describeOnly: true }),
         fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('제품 사진을 불러오지 못했습니다.')))),
       ]);
       garment.current = { id: p.id, blob: await smallReference(photo, 1024), description };
@@ -519,7 +520,7 @@ export function LiveTryOn({
           const still = await cameraStill(local.current, facing === 'user');
           if (!still) throw new Error('카메라 화면을 잡지 못했어요');
           const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-          const made = await post<{ image: string; verified?: boolean; provider?: string; checks?: Record<string, unknown> }>('/realtime/prefit', { person: still, productImage: new URL(cleanRef(product), base).toString(), productName: product.name.value ?? '', carry: carryOf(stylePrompt), ...(isGarment(garmentOf(product.category.value)) ? { garment: garmentOf(product.category.value) } : {}), ...(pipe.provider ? { provider: pipe.provider } : {}), ...(/[?&]variant=official(&|$)/.test(flags) ? { variant: 'official' } : {}) });
+          const made = await post<{ image: string; verified?: boolean; provider?: string; checks?: Record<string, unknown> }>('/realtime/prefit', { person: still, productImage: new URL(cleanRef(product), base).toString(), productName: product.name.value ?? '', carry: carryOf(stylePrompt), ...(isGarment(garmentOf(product.fitting?.part ?? product.category.value)) ? { garment: garmentOf(product.fitting?.part ?? product.category.value) } : {}), ...(pipe.provider ? { provider: pipe.provider } : {}), ...(/[?&]variant=official(&|$)/.test(flags) ? { variant: 'official' } : {}) });
           prefitBlob = await scaledJpeg(await (await fetch(made.image)).blob(), 1024);
           ev.prefit = { used: true, ms: Date.now() - p0, note: made.verified ? '검사 통과' : null, checks: made.checks ? JSON.stringify(made.checks) : null };
         } catch (e) {

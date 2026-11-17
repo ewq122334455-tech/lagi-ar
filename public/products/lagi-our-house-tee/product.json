@@ -2,17 +2,17 @@
   "id": "lagi-our-house-tee",
   "brandLabel": "LAGI",
   "name": {
-    "value": "아워 하우스 핸드페인팅 그래픽 티셔츠 아이보리",
+    "value": "아워 하우스 그래픽 레이어드 티 & 플라워 미니 스커트 세트",
     "status": "VERIFIED",
     "source": "사용자 제공 (2026-11-17)"
   },
   "category": {
-    "value": "Top",
+    "value": "Set",
     "status": "VERIFIED",
     "source": "사용자 제공 (2026-11-17)"
   },
   "price": {
-    "value": 79000,
+    "value": 99000,
     "status": "VERIFIED",
     "source": "사용자 제공 (2026-11-17)"
   },
@@ -50,7 +50,7 @@
   "drawings": [
     {
       "src": "products/lagi-our-house-tee/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
@@ -80,5 +80,14 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-our-house-tee/images/fitting.jpg",
+    "part": "top",
+    "description": "an oversized off-white cotton tee with a hand-painted child-like graphic of a red brick house in a flower field under a blue sky, red hand-lettered \"Madness\" above and \"our house\" below, worn over a long sleeve in a red, black, yellow and blue retro flower print"
+  },
+  "setItems": [
+    "아워 하우스 핸드페인팅 그래픽 티셔츠 (아이보리, 플라워 긴팔 레이어드)",
+    "플라워 프린트 미니 스커트"
+  ]
 }

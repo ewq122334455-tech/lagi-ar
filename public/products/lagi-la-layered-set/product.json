@@ -50,7 +50,7 @@
   "drawings": [
     {
       "src": "products/lagi-la-layered-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
@@ -85,5 +85,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-la-layered-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a red oversized short-sleeve tee with a black collar and dark side stripes, arched white \"CALIFORNIA\" lettering above yellow script \"Los Angeles\" and small white \"ATHL. WEST LEAGUE DEPT. SINCE 1882 UNIVERSITY CHAMPS.\" text, layered over a long-sleeve tee with fine grey, orange and cream stripes"
+  }
 }
