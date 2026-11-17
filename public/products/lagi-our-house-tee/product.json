@@ -1,0 +1,83 @@
+{
+  "id": "lagi-our-house-tee",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "아워 하우스 핸드페인팅 그래픽 티셔츠 아이보리",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "category": {
+    "value": "Top",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "price": {
+    "value": 79000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/lagi-our-house-tee/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-our-house-tee/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": false
+}
