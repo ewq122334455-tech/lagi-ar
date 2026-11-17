@@ -50,14 +50,14 @@
   "drawings": [
     {
       "src": "products/lagi-plaid-cami-denim-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
   "setItems": [
     "옐로 체크 개더 캐미 톱",
     "브라운 반팔 티",
-    "라이트 워싱 와이드 데님 팬츠"
+    "그린 그레이 워싱 와이드 데님 팬츠"
   ],
   "model3D": "",
   "animations": [],
@@ -85,5 +85,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-plaid-cami-denim-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a yellow-green plaid gathered camisole dress with thin straps worn over a short-sleeve chocolate-brown tee"
+  }
 }

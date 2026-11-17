@@ -84,5 +84,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-star-knit-denim-set/images/fitting.jpg",
+    "part": "top",
+    "description": "an olive-green open-weave mesh knit crew-neck sweater, oversized with dropped shoulders and ribbed cuffs and hem, with one large solid star appliqué of the same green centered on the chest"
+  }
 }

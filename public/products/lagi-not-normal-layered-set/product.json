@@ -1,0 +1,93 @@
+{
+  "id": "lagi-not-normal-layered-set",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "NOT NORMAL 레이어드 티 & 플레어 스웻 쇼츠 세트",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "category": {
+    "value": "Set",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "price": {
+    "value": 118000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/lagi-not-normal-layered-set/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-not-normal-layered-set/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-not-normal-layered-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a washed charcoal-grey oversized short-sleeve tee with a large olive-green hand-drawn smiling alien with antennae and both arms raised, hand-lettered \"NOT NORMAL\" below it, layered over a blue and white gingham long-sleeve shirt with a collar"
+  },
+  "setItems": [
+    "차콜 NOT NORMAL 에일리언 레이어드 티 (깅엄 셔츠 레이어드)",
+    "그레이 플레어 스웻 쇼츠 (화이트 파이핑)"
+  ],
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": false
+}

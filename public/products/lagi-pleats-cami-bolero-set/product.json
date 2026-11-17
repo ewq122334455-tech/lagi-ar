@@ -50,14 +50,14 @@
   "drawings": [
     {
       "src": "products/lagi-pleats-cami-bolero-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
   "setItems": [
     "아이보리 플리츠 단추 캐미",
     "브라운 립 니트 볼레로",
-    "차콜 파라슈트 와이드 팬츠"
+    "블랙 파라슈트 와이드 팬츠"
   ],
   "model3D": "",
   "animations": [],
@@ -85,5 +85,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-pleats-cami-bolero-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a cream pleated button-front camisole with a gathered waist and thin straps, under a cropped taupe-brown chunky rib-knit bolero with long puffed sleeves"
+  }
 }

@@ -204,6 +204,14 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   ok('N6 camera released after the network refusal', await p.evaluate(() => window.__tracks.every((t) => t.readyState === 'ended'))); await p.context().close(); }
 { const p = await open({ seconds: 20 }); await start(p); await p.getByRole('button', { name: '실시간 착용 시작' }).click({ force: true, timeout: 2000 }).catch(() => undefined); await live(p);
   ok('N7 pressing start again while starting does not make a second paid token request', p.calls.filter((c) => c === '/realtime/token').length === 1, p.calls.filter((c) => c === '/realtime/token').length + ' token request(s)'); await p.context().close(); }
+// O. products with their own fitting data (one piece on a plain background + an exact description): used instead of asking the server to describe the photo
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+  ok('O1 no server description request for a product that has its own description (nothing to pay for)', !p.calls.includes('/cutout'), p.calls.join(','));
+  const lg = await p.evaluate(() => window.__rtLog);
+  ok('O2 the instruction is the clothing one for the fitting part (top) and carries the exact description', lg.some((l) => /^prompt:Substitute the current top with a black oversized short-sleeve cotton tee/.test(l)), lg.filter((l) => l.startsWith('prompt:')).join('|').slice(0, 200)); await p.context().close(); }
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+  const pb = body(p, '/realtime/prefit');
+  ok('O3 the reference-picture request uses the fitting photo and the fitting part, not the whole set photo', /fitting\.jpg/.test(pb.productImage ?? '') && pb.garment === 'top', `${pb.productImage} ${pb.garment}`); await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');

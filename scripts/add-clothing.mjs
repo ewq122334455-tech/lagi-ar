@@ -20,7 +20,8 @@
  *   "materials": [{ "name": "…", "characteristics": "…" }],
  *   "main": "/path/main.jpg",                    // the clean product photo (flat lay or ghost mannequin, plain background) — also what the AI fitting uses
  *   "gallery": ["/path/detail1.jpg"],            // optional extra photos
- *   "shipping": { "fee": 3000, "freeOver": 50000 }
+ *   "shipping": { "fee": 3000, "freeOver": 50000 },
+ *   "fitting": { "image": "/path/top-only.jpg", "part": "top", "description": "…" }   // optional: what the AI fitting uses (one piece, plain background) and an exact English description of it
  * }
  */
 import fs from 'node:fs';
@@ -71,6 +72,15 @@ const gallery = (spec.gallery ?? []).map((g, i) => {
   return to;
 });
 
+let fitting;
+if (spec.fitting) {
+  if (!fs.existsSync(spec.fitting.image ?? '')) fail('fitting.image must be an existing file.');
+  if (!['top', 'bottom', 'set', 'outer', 'dress'].includes(spec.fitting.part)) fail('fitting.part must be top, bottom, set, outer or dress.');
+  if (typeof spec.fitting.description !== 'string' || spec.fitting.description.length < 20) fail('fitting.description: an exact English description of the piece (colour, fabric, print, cut) is required.');
+  const to = `products/${spec.id}/images/fitting${ext(spec.fitting.image)}`;
+  files.push([spec.fitting.image, to]);
+  fitting = { image: to, part: spec.fitting.part, description: spec.fitting.description.trim() };
+}
 const sizes = Array.isArray(spec.sizes) && spec.sizes.length ? spec.sizes : [];
 const product = {
   id: spec.id,
@@ -95,6 +105,7 @@ const product = {
   drawings: [{ src: front, label: '정면', group: 'view' }],
   // Not on the smart store unless the spec says so: the page then shows no store links and no buy buttons.
   storeListed: spec.storeListed === true,
+  ...(fitting ? { fitting } : {}),
   ...(spec.category === 'Set' ? { setItems: spec.setItems.map((s) => String(s).trim()) } : {}),
   model3D: '',
   animations: [],

@@ -50,7 +50,7 @@
   "drawings": [
     {
       "src": "products/lagi-navy-jersey-camo-set/images/drawings/front.jpg",
-      "label": "정면",
+      "label": "구성품 (옷만)",
       "group": "view"
     }
   ],
@@ -84,5 +84,10 @@
   "arAvailable": false,
   "threeDAvailable": false,
   "featured": false,
-  "storeListed": false
+  "storeListed": false,
+  "fitting": {
+    "image": "products/lagi-navy-jersey-camo-set/images/fitting.jpg",
+    "part": "top",
+    "description": "a navy short-sleeve football-style jersey tee with a yellow ringer collar and yellow cuffs, three yellow stripes down each sleeve, a small round crest on the left chest and bold yellow italic lettering \"Lindejacob\" across the chest"
+  }
 }
