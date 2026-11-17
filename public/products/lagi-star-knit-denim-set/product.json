@@ -1,0 +1,88 @@
+{
+  "id": "lagi-star-knit-denim-set",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "스타 메쉬 니트 & 워싱 데님 버뮤다 세트",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "category": {
+    "value": "Set",
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "price": {
+    "value": 128000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 (2026-11-17)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "description": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "images": [
+    "products/lagi-star-knit-denim-set/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "lagiSelectionReason": {
+    "value": null,
+    "status": "CONTENT_REQUIRED"
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-star-knit-denim-set/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "setItems": [
+    "스타 패치 오픈 메쉬 크롭 니트 (그린)",
+    "빈티지 워싱 와이드 데님 버뮤다 쇼츠 (인디고)"
+  ],
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "featured": false,
+  "storeListed": false
+}

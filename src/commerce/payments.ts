@@ -10,7 +10,14 @@ import { AI_TRYON_URL } from '@/tryon/aiTryOn';
  */
 export const TOSS_CLIENT_KEY: string = import.meta.env.VITE_TOSS_CLIENT_KEY ?? '';
 export const API_BASE: string = import.meta.env.VITE_ORDER_API_URL || AI_TRYON_URL;
-export const paymentsEnabled = () => TOSS_CLIENT_KEY.length > 0;
+/**
+ * ON-SITE PAYMENT IS PAUSED. While true, nothing on the site leads to the on-site checkout: "주문하기" and "바로 구매" send the
+ * visitor to the official smart store instead, and the checkout page says payment is not available. The Worker refuses to create
+ * orders as well (PAYMENTS_DISABLED in wrangler.toml), so calling the order API directly does not work either.
+ * Set to false (and remove PAYMENTS_DISABLED) only when real products and prices are in place and on-site payment should open.
+ */
+export const PAYMENTS_PAUSED = true;
+export const paymentsEnabled = () => !PAYMENTS_PAUSED && TOSS_CLIENT_KEY.length > 0;
 
 export interface OrderInput {
   items: { productId: string; quantity: number }[];

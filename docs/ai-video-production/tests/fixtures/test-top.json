@@ -1,0 +1,22 @@
+{
+  "id": "zz-test-top",
+  "name": "테스트 상의 블랙",
+  "category": "Top",
+  "price": 39000,
+  "colors": [
+    "#111111"
+  ],
+  "sizes": [
+    "S",
+    "M",
+    "L"
+  ],
+  "main": "public/products/lagi-again-tee-black/images/main.jpg",
+  "materials": [
+    {
+      "name": "코튼 100%",
+      "characteristics": "테스트 항목"
+    }
+  ],
+  "description": "자동 테스트용 가짜 상품입니다."
+}
