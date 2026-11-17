@@ -67,6 +67,8 @@ export interface Env {
   FAL_KEY?: string;
   /** Who makes the try-on reference photo: "gemini" (default, already connected) or "fal" (Decart's example: FLUX Klein 9B + try-on LoRA). */
   PREFIT_PROVIDER?: string;
+  /** "1" = no NEW on-site orders (POST /orders is refused). Confirming or looking up an existing order keeps working. */
+  PAYMENTS_DISABLED?: string;
   /** "1" = stop making try-on reference photos at once (kill switch). */
   PREFIT_DISABLED?: string;
   /** Reference photos allowed per day across the whole site (cost cap). Default 100. */
@@ -606,6 +608,7 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
   }
 
   if (path === '/orders') {
+    if (env.PAYMENTS_DISABLED === '1') return json({ error: '온라인 결제를 잠시 중단했습니다. 라기 공식 스마트스토어에서 주문해 주세요.', reason: 'paused' }, 503, headers);
     const items = Array.isArray(body.items) ? (body.items as { productId?: unknown; quantity?: unknown }[]) : [];
     if (!items.length || items.length > 20) return json({ error: '주문할 제품이 없습니다.' }, 400, headers);
     const c = (body.customer ?? {}) as Record<string, unknown>;

@@ -30,6 +30,9 @@ REALTIME_DAILY_SESSIONS = "100"
 # Realtime model for new AI-video sessions: Decart's virtual try-on model, which draws the product from the reference photo itself
 # (the "Anywear" way). Allowed values: lucy-vton-3.6, lucy-vton-3.5, lucy-2.6 (the previous default; a page can still ask for it with &model=lucy-2.6).
 REALTIME_MODEL = "lucy-vton-3.6"
+# On-site payment is paused: no NEW orders can be created (POST /orders is refused). Confirming/looking up an existing order still works.
+# Remove this line (and set PAYMENTS_PAUSED = false in src/commerce/payments.ts) only when real products and prices are in place.
+PAYMENTS_DISABLED = "1"
 
 # Member accounts and login sessions. With no id, `wrangler deploy` creates the namespace on first deploy.
 [[kv_namespaces]]
