@@ -27,6 +27,9 @@ PRODUCTS_BASE_URL = "https://ewq122334455-tech.github.io/lagi-ar/products/"
 # TRYON_DAILY_UNITS_PER_IP = "24"
 # Realtime try-on: sessions per day for the whole site (each up to 20 s, about $0.40 at $0.02/s).
 REALTIME_DAILY_SESSIONS = "100"
+# Realtime model for new AI-video sessions: Decart's virtual try-on model, which draws the product from the reference photo itself
+# (the "Anywear" way). Allowed values: lucy-vton-3.6, lucy-vton-3.5, lucy-2.6 (the previous default; a page can still ask for it with &model=lucy-2.6).
+REALTIME_MODEL = "lucy-vton-3.6"
 
 # Member accounts and login sessions. With no id, `wrangler deploy` creates the namespace on first deploy.
 [[kv_namespaces]]

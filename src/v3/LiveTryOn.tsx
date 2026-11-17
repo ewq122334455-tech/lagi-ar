@@ -192,11 +192,16 @@ export function LiveTryOn({
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
   const garment = useRef<{ id: string; blob: Blob; description?: string; green?: Blob; product?: HTMLCanvasElement } | null>(null);
   // Real design mapped onto the green bag the AI draws (on by default); off shows the AI's own drawing.
-  // Address flags for trying the "Anywear" way: &model=lucy-vton-3.6 (Decart's virtual try-on model draws the product itself from the
-  // reference photo) and &map=0 (no green-screen overlay). Without them nothing changes.
+  // The default is the "Anywear" way: the Worker's model (Decart's virtual try-on, which draws the product itself from the reference
+  // photo) and no green-screen overlay. Address flags go back to the old way: &model=lucy-2.6 and &map=1.
   const flags = typeof window !== 'undefined' ? window.location.hash : '';
   const wantModel = /[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1];
-  const [mapOn, setMapOn] = useState(!/[?&]map=0(&|$)/.test(flags));
+  const [mapOn, setMapOn] = useState(/[?&]map=1(&|$)/.test(flags));
+  // The flags are read again when the address changes while no session is running (a pasted address does not rebuild the page).
+  useEffect(() => {
+    if (phase === 'idle' || phase === 'ended') setMapOn(/[?&]map=1(&|$)/.test(flags));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flags]);
   const vtonRef = useRef(false);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
@@ -879,8 +884,8 @@ export function LiveTryOn({
           <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
             <input type="checkbox" className="mt-1" checked={mapOn} disabled={live || phase === 'starting'} onChange={(e) => setMapOn(e.target.checked)} data-testid="map-toggle" />
             <span>
-              <b className="block text-[var(--c-ink)]">실제 디자인 입히기 (권장)</b>
-              AI는 제품 모양의 초록 가방을 자연스럽게 들게 만들고, 그 위에 실제 제품 디자인을 그대로 입힙니다. 끄면 AI가 그린 제품이 그대로 보여 모양과 무늬가 달라질 수 있어요.
+              <b className="block text-[var(--c-ink)]">실제 디자인 입히기 (실험)</b>
+              켜면 AI는 제품 모양의 초록 가방만 들게 만들고, 그 위에 실제 제품 사진을 붙입니다. 사진이 평평하게 붙어 움직임이 어색할 수 있어요. 끄면 AI가 제품을 직접 그려 자연스럽지만 무늬가 실제와 조금 다를 수 있어요.
             </span>
           </label>
           {typeof MediaRecorder !== 'undefined' && (

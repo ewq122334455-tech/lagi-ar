@@ -1,10 +1,11 @@
 // LEVEL 1 (free, local): the AI-video page against a MOCK Decart SDK + mocked Worker. Proves wiring, NOT AI video quality.
-import { chromium } from 'playwright-core';
+// Playwright is found through PW_MODULE (path to its index.mjs) when it is installed globally, else as playwright-core.
+const { chromium } = await import(process.env.PW_MODULE ?? 'playwright-core');
 import fs from 'node:fs';
 const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images/main.jpg').toString('base64');
 const W = 'https://lagi-tryon.lagi-official.workers.dev';
 const ok = (n, c, i = '') => console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${i ? '  — ' + i : ''}`);
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
+const b = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? chromium.executablePath(), args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
 async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, permissions: ['camera'], acceptDownloads: true });
   await ctx.addInitScript(([m, d]) => {
@@ -30,7 +31,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
     }
     return rt.abort();
   });
-  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.waitForSelector('[data-testid=live-stage]', { timeout: 20000 });
+  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&map=1'); await p.waitForSelector('[data-testid=live-stage]', { timeout: 20000 });
   return p;
 }
 const start = async (p, rec = false) => { if (rec) await p.getByTestId('rec-toggle').check(); await p.getByLabel(/카메라 영상이 AI 서버/).check(); await p.getByRole('button', { name: '실시간 착용 시작' }).click(); };
@@ -115,14 +116,19 @@ ok_(); function ok_() {}
 { const p = await open({ seconds: 5 }); await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
   ok('H3 without the flag there is no diagnostic button for normal visitors', (await p.getByTestId('save-diag').count()) === 0); await p.context().close(); }
 // I. Anywear way: &model=lucy-vton-3.6&map=0 -> VTON model by name, no green-screen overlay, plain "Add ... to the outfit" prompt
-{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live&model=lucy-vton-3.6&map=0'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
-  ok('I1 &map=0 starts with the design-mapping option off', !(await p.getByTestId('map-toggle').isChecked()));
+{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live&model=lucy-vton-3.6'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+  ok('I1 by default (no &map=1) the design-mapping option starts off: the Anywear way', !(await p.getByTestId('map-toggle').isChecked()));
   await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   const log = await p.evaluate(() => window.__rtLog);
   ok('I2 the page asks for lucy-vton-3.6 and the SDK connects with it (standard speed)', log.includes('model:lucy-vton-3.6') && log.includes('speed:standard'), log.filter((l) => /^(model|speed)/.test(l)).join(' '));
   ok('I3 the prompt is the VTON "Add ... to the outfit" one, with no green-screen wording', log.some((l) => l.startsWith('setImage:Add ')) && !log.some((l) => /chroma-key|green/i.test(l)), log.filter((l) => l.startsWith('setImage')).join(' | '));
   ok('I4 no cut-out matte request (that step belongs to the green overlay only)', !p.calls.some((c) => c.includes('(matte)')), p.calls.join(','));
   await p.context().close(); }
+// J. address flags go back to the old way: &model=lucy-2.6&map=1 (green overlay on, old model); a pasted address is picked up without a reload
+{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&model=lucy-2.6&map=1'); await p.waitForTimeout(600);
+  ok('J1 the flags are read again when the address changes (no reload needed)', await p.getByTestId('map-toggle').isChecked());
+  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.waitForTimeout(600);
+  ok('J2 and back to the default: option off again', !(await p.getByTestId('map-toggle').isChecked())); await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
