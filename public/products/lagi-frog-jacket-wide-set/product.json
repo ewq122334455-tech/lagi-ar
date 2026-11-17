@@ -83,5 +83,6 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": false,
-  "featured": false
+  "featured": false,
+  "storeListed": false
 }

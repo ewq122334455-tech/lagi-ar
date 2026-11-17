@@ -93,6 +93,8 @@ const product = {
   story: missing(),
   lagiSelectionReason: missing(),
   drawings: [{ src: front, label: '정면', group: 'view' }],
+  // Not on the smart store unless the spec says so: the page then shows no store links and no buy buttons.
+  storeListed: spec.storeListed === true,
   ...(spec.category === 'Set' ? { setItems: spec.setItems.map((s) => String(s).trim()) } : {}),
   model3D: '',
   animations: [],
