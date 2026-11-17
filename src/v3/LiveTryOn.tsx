@@ -7,12 +7,13 @@ import { createDesignMapper, greenReference, type DesignMapper } from './greenMa
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
 /** What the visitor sees as the current step (11 states). */
-type Step = 'before' | 'ready' | 'permission' | 'checking' | 'connecting' | 'processing' | 'live' | 'failed' | 'disconnected' | 'limited' | 'unsupported' | 'ended';
+type Step = 'before' | 'ready' | 'permission' | 'checking' | 'prefit' | 'connecting' | 'processing' | 'live' | 'failed' | 'disconnected' | 'limited' | 'unsupported' | 'ended';
 const STEP_LABEL: Record<Step, string> = {
   before: '제품을 고르고 동의하면 시작할 수 있어요',
   ready: '준비 완료 · 시작을 누르세요',
   permission: '카메라 권한을 확인하는 중',
   checking: '카메라 입력과 제품 이미지를 확인하는 중',
+  prefit: '내가 제품을 든 참조 사진을 만드는 중 (몇 초)',
   connecting: 'AI 서버에 연결하는 중',
   processing: 'AI가 영상을 만드는 중',
   live: '실시간 AI 영상 출력 중',
@@ -22,7 +23,7 @@ const STEP_LABEL: Record<Step, string> = {
   unsupported: '이 브라우저에서는 쓸 수 없어요',
   ended: '체험이 끝났어요',
 };
-const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'connecting', 'processing', 'live', 'ended'];
+const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'prefit', 'connecting', 'processing', 'live', 'ended'];
 /** Measurements of one session. They exist so a person can tell a REAL Decart output from a mock or from the camera passed through. */
 type Evidence = {
   at: string; model: string; sdkIsMock: boolean; speed: 'standard'; requestedSeconds: number; product: string; designMapping: boolean;
@@ -30,6 +31,8 @@ type Evidence = {
   generationTicks: number; firstFrameCameFromTick: boolean; outputResolution: string | null; framesSeen: number; fps: number | null; maxFrameGapMs: number | null; stalls200ms: number;
   meanDiffFromInput: number | null; diffSamples: number; sessionEndedReason: string | null; error: string | null; actualSessionSeconds: number | null;
   // What the SDK itself reported, so a missing AI output can be explained (state changes, connection phases, queue, generation end).
+  // Try-on reference photo (Decart's step for bags): did we make one for this visitor, how long it took, why not.
+  prefit: { used: boolean; ms: number | null; note: string | null };
   connectionStates: { state: string; ms: number }[]; diagnostics: { name: string; ms: number; data: string }[]; queuePositions: { position: number; ms: number }[]; generationEnded: { ms: number; data: string }[];
 };
 class ApiError extends Error {
@@ -125,6 +128,38 @@ function sessionToken() {
   }
 }
 
+/** The whole picture (no cropping), longest side `max` px, as JPEG. */
+async function scaledJpeg(blob: Blob, max: number): Promise<Blob> {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k);
+  c.height = Math.round(bmp.height * k);
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('참조 사진을 준비하지 못했습니다.'))), 'image/jpeg', 0.9));
+}
+
+/** One still from the live camera (longest side 1024 px, JPEG) — the "person" of the try-on reference photo. */
+async function cameraStill(video: HTMLVideoElement | null, mirror: boolean): Promise<string | null> {
+  if (!video) return null;
+  for (let i = 0; i < 20 && (!video.videoWidth || video.readyState < 2); i++) await new Promise((r) => setTimeout(r, 100));
+  if (!video.videoWidth) return null;
+  const k = Math.min(1, 1024 / Math.max(video.videoWidth, video.videoHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(video.videoWidth * k);
+  c.height = Math.round(video.videoHeight * k);
+  const g = c.getContext('2d');
+  if (!g) return null;
+  // The Decart connection flips a front camera (mirror:'auto') before sending; the still must match what the AI will see.
+  if (mirror) {
+    g.translate(c.width, 0);
+    g.scale(-1, 1);
+  }
+  g.drawImage(video, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   // The member session goes along so the owner's account can skip the daily limit.
   const token = sessionToken();
@@ -172,7 +207,7 @@ export function LiveTryOn({
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   // Connected but the AI has not sent a generated frame yet (queued or warming up).
   const [waiting, setWaiting] = useState<string | null>(null);
-  const [stage, setStage] = useState<'permission' | 'checking' | 'connecting' | null>(null);
+  const [stage, setStage] = useState<'permission' | 'checking' | 'prefit' | 'connecting' | null>(null);
   const [fail, setFail] = useState<'failed' | 'disconnected' | 'limited' | null>(null);
   const [unsupported, setUnsupported] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
@@ -196,6 +231,9 @@ export function LiveTryOn({
   // photo) and no green-screen overlay. Address flags go back to the old way: &model=lucy-2.6 and &map=1.
   const flags = typeof window !== 'undefined' ? window.location.hash : '';
   const wantModel = /[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1];
+  // Anywear's step for bags (Decart's examples): first make one still of THIS visitor holding THIS product and use it as the
+  // reference, instead of the bare product photo. Opt-in with &prefit=1 until it has been checked on real runs.
+  const prefitOn = /[?&]prefit=1(&|$)/.test(flags);
   const [mapOn, setMapOn] = useState(/[?&]map=1(&|$)/.test(flags));
   // The flags are read again when the address changes while no session is running (a pasted address does not rebuild the page).
   useEffect(() => {
@@ -387,6 +425,7 @@ export function LiveTryOn({
       at: new Date().toISOString(), model: '', sdkIsMock: false, speed: 'standard', requestedSeconds: 0, product: product.id, designMapping: mapOn,
       msTokenReceived: null, msConnected: null, msFirstGenerationTick: null, msFirstVideoFrame: null, generationTicks: 0, firstFrameCameFromTick: false,
       outputResolution: null, framesSeen: 0, fps: null, maxFrameGapMs: null, stalls200ms: 0, meanDiffFromInput: null, diffSamples: 0, sessionEndedReason: null, error: null, actualSessionSeconds: null,
+      prefit: { used: false, ms: null, note: prefitOn ? null : '꺼짐' },
       connectionStates: [], diagnostics: [], queuePositions: [], generationEnded: [],
     };
     let lastFrameAt = 0;
@@ -442,6 +481,23 @@ export function LiveTryOn({
       const track = stream.getVideoTracks()[0];
       if (!track || track.readyState !== 'live') throw new Error('카메라 영상이 들어오지 않습니다. 다른 앱이 카메라를 쓰고 있지 않은지 확인해 주세요.');
       const ref = await garmentBlob(product);
+      // 2b. Anywear's step for bags (opt-in): one still of THIS visitor holding THIS product, made before the paid realtime
+      //     session starts, used as the reference. If it cannot be made, the plain product photo is used and the record says so.
+      let prefitBlob: Blob | null = null;
+      if (prefitOn) {
+        setStage('prefit');
+        const p0 = Date.now();
+        try {
+          const still = await cameraStill(local.current, facing === 'user');
+          if (!still) throw new Error('카메라 화면을 잡지 못했어요');
+          const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
+          const made = await post<{ image: string }>('/realtime/prefit', { person: still, productImage: new URL(product.images[0], base).toString(), variant: /[?&]variant=official(&|$)/.test(flags) ? 'official' : 'carry' });
+          prefitBlob = await scaledJpeg(await (await fetch(made.image)).blob(), 1024);
+          ev.prefit = { used: true, ms: Date.now() - p0, note: null };
+        } catch (e) {
+          ev.prefit = { used: false, ms: Date.now() - p0, note: (e as Error).message || '실패' };
+        }
+      }
       // 3. The token last, right before connecting (it is minted and metered only now).
       setStage('connecting');
       const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', wantModel ? { model: wantModel } : {});
@@ -459,7 +515,7 @@ export function LiveTryOn({
       // applying them. Sending them after connecting made the AI wait several seconds before it began to generate.
       const useGreen = !!(mapOn && ref.green && ref.product);
       if (useGreen) mapper.current = createDesignMapper(ref.product!);
-      const initImage = useGreen ? ref.green! : ref.blob;
+      const initImage = useGreen ? ref.green! : (prefitBlob ?? ref.blob);
       const initPrompt = useGreen ? greenPromptFor(product, stylePrompt, vtonRef.current) : promptFor(product, stylePrompt, ref.description, vtonRef.current);
       let conn: Awaited<ReturnType<typeof client.realtime.connect>>;
       try {
@@ -751,14 +807,14 @@ export function LiveTryOn({
         </div>
         <div className="mt-3" data-testid="live-steps" data-step={step}>
           <ol className="flex flex-wrap gap-x-4 gap-y-1" aria-label="진행 단계">
-            {STEP_ORDER.map((k) => {
+            {STEP_ORDER.filter((k) => k !== 'prefit' || prefitOn).map((k) => {
               const at = STEP_ORDER.indexOf(step);
               const here = k === step;
               const done = at > STEP_ORDER.indexOf(k);
               return (
                 <li key={k} className={`t-caption kr ${here ? 'font-bold text-[var(--c-ink)]' : done ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)]'}`} aria-current={here ? 'step' : undefined}>
                   {done ? '✓ ' : here ? '● ' : '○ '}
-                  {k === 'ready' ? '준비' : k === 'permission' ? '카메라' : k === 'checking' ? '입력 검사' : k === 'connecting' ? '서버 연결' : k === 'processing' ? 'AI 처리' : k === 'live' ? '영상 출력' : '종료'}
+                  {k === 'ready' ? '준비' : k === 'permission' ? '카메라' : k === 'checking' ? '입력 검사' : k === 'prefit' ? '참조 사진' : k === 'connecting' ? '서버 연결' : k === 'processing' ? 'AI 처리' : k === 'live' ? '영상 출력' : '종료'}
                 </li>
               );
             })}
@@ -793,6 +849,7 @@ export function LiveTryOn({
               <dt>모델 · 속도</dt><dd>{evidence.model || '-'} · 표준</dd>
               <dt>토큰까지</dt><dd>{evidence.msTokenReceived ?? '-'} ms</dd>
               <dt>연결까지</dt><dd>{evidence.msConnected ?? '-'} ms</dd>
+              <dt>내가 든 참조 사진(prefit)</dt><dd>{evidence.prefit.used ? `사용 · ${evidence.prefit.ms} ms` : `사용 안 함${evidence.prefit.note ? ` · ${evidence.prefit.note}` : ''}`}</dd>
               <dt>첫 AI 생성 신호(generationTick)</dt><dd>{evidence.msFirstGenerationTick ?? '없음'} ms · {evidence.generationTicks}회</dd>
               <dt>첫 영상 프레임</dt><dd>{evidence.msFirstVideoFrame ?? '없음'} ms{evidence.msFirstVideoFrame !== null && !evidence.firstFrameCameFromTick ? ' (생성 신호보다 먼저 화면이 재생됨)' : ''}</dd>
               <dt>출력 해상도 · FPS</dt><dd>{evidence.outputResolution ?? '-'} · {evidence.fps ?? '-'}</dd>

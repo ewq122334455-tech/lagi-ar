@@ -63,6 +63,18 @@ export interface Env {
   DECART_BASE_URL?: string;
   /** Realtime sessions that may be open at once, whole site. Default 3. */
   REALTIME_MAX_CONCURRENT?: string;
+  /** fal.ai key for the "try-on reference photo" step (the person holding the product). Secret. Without it the step is off. */
+  FAL_KEY?: string;
+  /** "1" = stop making try-on reference photos at once (kill switch). */
+  PREFIT_DISABLED?: string;
+  /** Reference photos allowed per day across the whole site (cost cap). Default 100. */
+  PREFIT_DAILY_SITE?: string;
+  /** Reference photos per visitor per day, 1 to 10 (default 3). */
+  PREFIT_PER_IP_DAILY?: string;
+  /** USD per reference photo, only for the estimate in /admin/usage (check fal's price page; default 0.05). */
+  FAL_USD_PER_IMAGE?: string;
+  /** Base URL of fal's run API (tests point this at a local mock). Default https://fal.run */
+  FAL_BASE_URL?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
   /** Atomic daily counters for the AI-photo cost caps (Durable Object `QuotaCounter`). Without it the caps fall back to KV, which is NOT atomic. */
   QUOTA?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } };
@@ -903,6 +915,8 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description: desc.text, descriptionNote: desc.note }, 200, headers);
   }
 
+  if (path === '/realtime/prefit') return prefit(request, env, headers, ip);
+
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
   if (env.REALTIME_DISABLED === '1') return json({ error: '실시간 착용을 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
   if (throttled(`rt:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
@@ -966,6 +980,96 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, perIp(env) - usedToday) }, 200, headers);
 }
 
+/** The reference-photo prompts a page may pick by name (it can never send its own text). Neither is verified on bags yet. */
+const PREFIT_PROMPTS: Record<string, string> = {
+  // Decart's own example prompt (made for clothes).
+  official: 'TRYON [person in photo]. Replace the outfit with [garment] as shown in the reference image. The final image is a full body shot.',
+  // Same pattern, for a bag: keep the framing of the photo, hold the bag.
+  carry: 'TRYON [person in photo]. Add [garment] as shown in the reference image, held by its handles in the person\'s hand. Keep the same framing as the photo. Keep the bag exactly as in the reference image.',
+};
+const PREFIT_MODEL = 'fal-ai/flux-2/klein/9b/base/edit/lora';
+const PREFIT_LORA = 'https://huggingface.co/fal/flux-klein-9b-virtual-tryon-lora/resolve/main/flux-klein-tryon.safetensors';
+const PREFIT_MAX_PERSON_BYTES = 3_000_000;
+const prefitPerIp = (env: Env) => Math.min(10, Math.max(1, Math.floor(Number(env.PREFIT_PER_IP_DAILY ?? 3)) || 3));
+
+/**
+ * POST /realtime/prefit — Decart's recommended step for bags: one still of THIS visitor holding THIS product (fal.ai image
+ * edit + try-on LoRA), used as the reference image of the realtime session instead of the bare product photo.
+ * Body: { person: data URL (a camera frame), productImage: URL on an allowed origin, variant?: 'official' | 'carry' }.
+ * Paid call: reserved atomically before it leaves the Worker (no refunds), kill switch, per-visitor and per-day caps.
+ */
+async function prefit(request: Request, env: Env, headers: Record<string, string>, ip: string): Promise<Response> {
+  if (!env.FAL_KEY) return json({ error: '참조 사진 만들기는 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
+  if (env.PREFIT_DISABLED === '1') return json({ error: '참조 사진 만들기를 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
+  if (throttled(`prefit:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+  let body: { person?: string; productImage?: string; variant?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'invalid JSON' }, 400, headers);
+  }
+  const person = String(body.person ?? '');
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(person)) return json({ error: 'invalid person image' }, 400, headers);
+  if (person.length * 0.75 > PREFIT_MAX_PERSON_BYTES) return json({ error: 'person image too large' }, 413, headers);
+  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+  const product = await fetchProductImage(body.productImage ?? '', allowed);
+  if ('error' in product) return json({ error: product.error }, product.status, headers);
+  const prompt = PREFIT_PROMPTS[body.variant ?? ''] ?? PREFIT_PROMPTS.carry;
+
+  try {
+    await meter(env, 'prefit', ip, 1, Number(env.PREFIT_DAILY_SITE ?? 100), prefitPerIp(env));
+  } catch (e) {
+    if (!(e instanceof QuotaError)) throw e;
+    if (e.reason === 'daily_limit') return json({ error: `참조 사진 만들기는 하루 ${prefitPerIp(env)}번까지 가능합니다.`, reason: 'daily_limit' }, 429, headers);
+    if (e.reason === 'site_limit') return json({ error: '오늘 참조 사진 만들기가 모두 소진되었습니다.', reason: 'site_limit' }, 429, headers);
+    return json({ error: '참조 사진 만들기를 지금은 이용할 수 없습니다.', reason: 'quota_unavailable' }, 503, headers);
+  }
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 40_000);
+  try {
+    const res = await fetch(`${env.FAL_BASE_URL ?? 'https://fal.run'}/${PREFIT_MODEL}`, {
+      method: 'POST',
+      headers: { Authorization: `Key ${env.FAL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        image_urls: [person, `data:${product.mime};base64,${product.data}`],
+        loras: [{ path: PREFIT_LORA, scale: 1.0 }],
+        guidance_scale: 2.5,
+        num_inference_steps: 28,
+      }),
+      signal: ctl.signal,
+    });
+    void recordOutcome(env, 'prefit', res.ok ? 'http_ok' : `http_${res.status}`);
+    if (!res.ok) {
+      console.log('fal error', res.status, (await res.text()).slice(0, 300));
+      return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }, 502, headers);
+    }
+    const out = (await res.json()) as { images?: { url?: string }[] };
+    const url = out.images?.[0]?.url;
+    if (!url) {
+      void recordOutcome(env, 'prefit', 'no_image');
+      return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'no_image' }, 502, headers);
+    }
+    let img: Response;
+    if (url.startsWith('data:')) img = new Response(await (await fetch(url)).arrayBuffer(), { headers: { 'Content-Type': url.slice(5, url.indexOf(';')) } });
+    else {
+      if (!/^https:\/\//.test(url)) return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }, 502, headers);
+      img = await fetch(url, { signal: ctl.signal });
+    }
+    if (!img.ok) return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }, 502, headers);
+    const mime = (img.headers.get('Content-Type') ?? 'image/png').split(';')[0];
+    const buf = await img.arrayBuffer();
+    if (!/^image\//.test(mime) || buf.byteLength > 8_000_000) return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }, 502, headers);
+    return json({ image: `data:${mime};base64,${toBase64(buf)}`, variant: PREFIT_PROMPTS[body.variant ?? ''] ? body.variant : 'carry' }, 200, headers);
+  } catch {
+    void recordOutcome(env, 'prefit', 'network_error');
+    return json({ error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }, 502, headers);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ---- Router ----------------------------------------------------------------------------------
 
 export default {
@@ -994,7 +1098,7 @@ export default {
       return handleOrders(path, request, env, headers);
     }
     if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
-    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report') return realtime(path, request, env, headers);
+    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report' || path === '/realtime/prefit') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -1089,7 +1193,7 @@ function localOnly(env: Env): boolean {
  * whole site, atomically, in the day's counter object for `scope`. Throws QuotaError when over a cap or when the meter
  * cannot be trusted. Returns how many units this address has used so far today (for "N left" messages).
  */
-async function meter(env: Env, scope: 'tryon' | 'rt', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
+async function meter(env: Env, scope: 'tryon' | 'rt' | 'prefit', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
   if (env.TRYON_QUOTA === 'unmetered') {
     if (localOnly(env)) return { ipSpent: 0 };
     throw new QuotaError('quota_unavailable'); // "unmetered" next to a real origin is never allowed
@@ -1290,7 +1394,7 @@ async function callGemini(env: Env, body: string, model: string, budget: Budget,
  * a call is allowed, and nothing is refunded. Compare the totals with Google's own billing page — they will differ
  * (failed or blocked attempts may or may not be billed), and that difference is what this ledger exists to show.
  */
-async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string, n = 1): Promise<void> {
+async function recordOutcome(env: Env, scope: 'tryon' | 'rt' | 'prefit', outcome: string, n = 1): Promise<void> {
   if (!env.QUOTA) return;
   try {
     const day = new Date().toISOString().slice(0, 10);
@@ -1422,16 +1526,23 @@ async function adminUsage(request: Request, env: Env, headers: Record<string, st
   if (!env.QUOTA) return json({ error: 'no counter bound' }, 503, headers);
   const day = new Date().toISOString().slice(0, 10);
   const perUnit = Number(env.TRYON_USD_PER_UNIT ?? 0.04);
-  const read = async (scope: 'tryon' | 'rt') => {
+  const read = async (scope: 'tryon' | 'rt' | 'prefit') => {
     const r = await env.QUOTA!.get(env.QUOTA!.idFromName(`${scope}:${day}`)).fetch('https://quota/usage');
     const u = (await r.json()) as { spentCenti: number; outcomes: Record<string, number> };
     return { unitsReserved: u.spentCenti / 100, outcomes: u.outcomes };
   };
   const gemini = await read('tryon');
   const realtime = await read('rt');
+  const prefitU = await read('prefit');
   return json(
     {
       day,
+      prefit: {
+        photosReserved: prefitU.unitsReserved,
+        siteCapPhotos: Number(env.PREFIT_DAILY_SITE ?? 100),
+        outcomes: prefitU.outcomes,
+        estimatedUsd: Number((prefitU.unitsReserved * Number(env.FAL_USD_PER_IMAGE ?? 0.05)).toFixed(2)),
+      },
       gemini: { ...gemini, estimatedUsd: Number((gemini.unitsReserved * perUnit).toFixed(2)), siteCapUnits: Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT) },
       realtime: {
         sessionsReserved: realtime.unitsReserved,

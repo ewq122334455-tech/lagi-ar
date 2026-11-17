@@ -6,7 +6,7 @@ const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images
 const W = 'https://lagi-tryon.lagi-official.workers.dev';
 const ok = (n, c, i = '') => console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${i ? '  — ' + i : ''}`);
 const b = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? chromium.executablePath(), args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
-async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model } = {}) {
+async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model, prefit = 'ok' } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, permissions: ['camera'], acceptDownloads: true });
   await ctx.addInitScript(([m, d]) => {
     sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: m };
@@ -23,6 +23,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
     p.calls.push(u + (body.includes('matte') ? '(matte)' : ''));
     const J = (status, o) => rt.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(o) });
     if (u === '/cutout') return body.includes('matte') ? J(200, { matte: 'data:image/jpeg;base64,' + jpg }) : J(200, { image: 'data:image/jpeg;base64,' + jpg, cutout: true, description: 'a small square bag' });
+    if (u === '/realtime/prefit') { p.prefitBody = body; return prefit === 'fail' ? J(502, { error: '참조 사진을 만들지 못했습니다.', reason: 'provider' }) : J(200, { image: 'data:image/jpeg;base64,' + jpg, variant: 'carry' }); }
     if (u === '/realtime/token') {
       if (token === 'daily') return J(429, { error: '실시간 착용은 하루 3번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.', reason: 'daily_limit' });
       if (token === 'busy') return J(429, { error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' });
@@ -62,7 +63,7 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
   await p.waitForSelector('[data-testid=clip-result]', { timeout: 10000 }); ok('C8 recorded clip preview appears', true);
   const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /영상 저장/ }).click()]); const f = '/tmp/rtclip-' + dl.suggestedFilename(); await dl.saveAs(f);
   ok('C9 clip downloads and is not empty', fs.statSync(f).size > 2000, `${dl.suggestedFilename()} ${fs.statSync(f).size} bytes`);
-  ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report'), p.calls.join(','));
+  ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report' || c === '/realtime/prefit'), p.calls.join(','));
   await p.waitForSelector('[data-testid=evidence]', { timeout: 5000 });
   ok('C12 measurement record appears after the session', true);
   ok('C13 a mock SDK run is labelled "not real AI" on screen', /실제 AI가 만든 영상이 아닙니다/.test(await p.getByTestId('evidence-mock').innerText()));
@@ -138,6 +139,24 @@ ok_(); function ok_() {}
   await p.evaluate(() => { location.hash = '#/again?p=plano-bag&m=live'; }); await p.waitForTimeout(2500);
   log = await p.evaluate(() => window.__rtLog);
   ok('K2 choosing another product while live sends its photo on the same session (no reconnect)', log.filter((l) => l.startsWith('setImage:')).length === 2 && log.filter((l) => l === 'disconnect').length === 0 && p.calls.filter((c) => c === '/cutout').length === before + 1, `${log.filter((l) => l.startsWith('setImage:')).length} setImage, ${p.calls.filter((c) => c === '/cutout').length - before} new cut-out`);
+  await p.context().close(); }
+// L. Anywear's step for bags (&prefit=1): a still of the visitor holding the product is made BEFORE the paid token, and is the reference
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  ok('L1 prefit comes after the cut-out and BEFORE the paid token', p.calls.indexOf('/realtime/prefit') > p.calls.indexOf('/cutout') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(' > '));
+  const body = JSON.parse(p.prefitBody || '{}');
+  ok('L2 the request carries a camera still (JPEG data URL) and the product address, nothing else', /^data:image\/jpeg;base64,/.test(body.person ?? '') && /plano-bag/.test(body.productImage ?? '') && Object.keys(body).every((k) => ['person', 'productImage', 'variant'].includes(k)), Object.keys(body).join(','));
+  const log = await p.evaluate(() => window.__rtLog);
+  ok('L3 the generated photo (not the bare product photo) goes in with the connection', log.includes('initialState:with-connect'));
+  await p.getByTestId('live-steps').waitFor(); ok('L4 the extra step is listed only when prefit is on', (await p.getByTestId('live-steps').innerText()).includes('참조 사진'));
+  await p.context().close(); }
+{ const p = await open({ seconds: 20, prefit: 'fail' }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  ok('L5 if the reference photo fails, the session still starts with the plain product photo', (await p.evaluate(() => window.__rtLog)).includes('initialState:with-connect'));
+  await p.context().close(); }
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  ok('L6 default (no flag): no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
   await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
