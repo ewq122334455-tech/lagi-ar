@@ -1,4 +1,4 @@
-import { parsePipeline, carryOf, realtimePrompt, type RealtimeModel } from './pipelines';
+import { parsePipeline, carryOf, garmentOf, isGarment, realtimePrompt, type RealtimeModel } from './pipelines';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
@@ -51,7 +51,7 @@ function missingSupport(): string | null {
 /** The instruction for the realtime model: its own wording per model family and per carry style (see pipelines.ts). */
 function promptFor(product: Product, stylePrompt: string, description: string | undefined, model: string, prefit: boolean) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
-  return realtimePrompt({ model: model as RealtimeModel, carry: carryOf(stylePrompt), kind, description, prefit });
+  return realtimePrompt({ model: model as RealtimeModel, carry: carryOf(stylePrompt), kind, description, prefit, garment: garmentOf(product.category.value) });
 }
 
 /** Design mapping: the AI draws the product as a flat green bag of its exact shape; the real design goes on top. */
@@ -519,7 +519,7 @@ export function LiveTryOn({
           const still = await cameraStill(local.current, facing === 'user');
           if (!still) throw new Error('카메라 화면을 잡지 못했어요');
           const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
-          const made = await post<{ image: string; verified?: boolean; provider?: string; checks?: Record<string, unknown> }>('/realtime/prefit', { person: still, productImage: new URL(cleanRef(product), base).toString(), productName: product.name.value ?? '', carry: carryOf(stylePrompt), ...(pipe.provider ? { provider: pipe.provider } : {}), ...(/[?&]variant=official(&|$)/.test(flags) ? { variant: 'official' } : {}) });
+          const made = await post<{ image: string; verified?: boolean; provider?: string; checks?: Record<string, unknown> }>('/realtime/prefit', { person: still, productImage: new URL(cleanRef(product), base).toString(), productName: product.name.value ?? '', carry: carryOf(stylePrompt), ...(isGarment(garmentOf(product.category.value)) ? { garment: garmentOf(product.category.value) } : {}), ...(pipe.provider ? { provider: pipe.provider } : {}), ...(/[?&]variant=official(&|$)/.test(flags) ? { variant: 'official' } : {}) });
           prefitBlob = await scaledJpeg(await (await fetch(made.image)).blob(), 1024);
           ev.prefit = { used: true, ms: Date.now() - p0, note: made.verified ? '검사 통과' : null, checks: made.checks ? JSON.stringify(made.checks) : null };
         } catch (e) {

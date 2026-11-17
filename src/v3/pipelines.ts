@@ -37,6 +37,19 @@ export function parsePipeline(flags: string): Pipeline {
   return { id, reference: TABLE[id].reference, model, provider };
 }
 
+export type Garment = 'top' | 'bottom' | 'set' | 'outer' | 'dress' | 'bag' | 'item';
+/** What kind of thing a product is, from the store's category value (Top, Bottom, Set, Outer, Dress, Bag …). */
+export function garmentOf(category: string | null | undefined): Garment {
+  const c = (category ?? '').toLowerCase();
+  if (c === 'top') return 'top';
+  if (c === 'bottom') return 'bottom';
+  if (c === 'set') return 'set';
+  if (c === 'outer') return 'outer';
+  if (c === 'dress') return 'dress';
+  return c.includes('bag') ? 'bag' : 'item';
+}
+export const isGarment = (g: Garment) => g === 'top' || g === 'bottom' || g === 'set' || g === 'outer' || g === 'dress';
+
 /** How the bag is carried, from the instruction text of the chosen way of wearing it. */
 export function carryOf(stylePrompt: string): 'hand' | 'shoulder' {
   return /shoulder/i.test(stylePrompt) ? 'shoulder' : 'hand';
@@ -47,8 +60,16 @@ export function carryOf(stylePrompt: string): 'hand' | 'shoulder' {
  * and compared separately (Decart's guide for the VTON models: one action, "Add … to the outfit", only what the reference
  * shows, at most ~750 characters; the general Lucy 2.6 editor takes plain descriptive sentences).
  */
-export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'shoulder'; kind: string; description?: string; prefit: boolean }): string {
-  const { model, carry, kind, description, prefit } = opts;
+export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'shoulder'; kind: string; description?: string; prefit: boolean; garment?: Garment }): string {
+  const { model, carry, kind, description, prefit, garment } = opts;
+  if (garment && isGarment(garment)) {
+    // Clothing — what the VTON models were made for. Decart's two patterns: "Substitute the current <part> with …" (20-30 words: colour, material, pattern, fit).
+    const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'pants' : garment === 'outer' ? 'top layer' : 'outfit';
+    const what = description ? description.slice(0, 380) : garment === 'set' ? 'the matching set shown in the reference image' : `the ${garment === 'bottom' ? 'pants' : 'garment'} shown in the reference image`;
+    const exact = 'Copy its exact colours, prints, lettering, logo and fit; do not invent details; keep the face, hair and background unchanged.';
+    if (model.startsWith('lucy-vton')) return garment === 'set' ? `Substitute the current top and bottoms with ${what} ${exact}` : `Substitute the current ${part} with ${what}. ${exact}${prefit ? ' Exactly as in the reference image.' : ''}`;
+    return `The person wears the ${garment === 'set' ? 'matching set' : garment === 'bottom' ? 'pants' : 'garment'} from the reference image in place of their current ${garment === 'set' ? 'outfit' : part}. ${description ? `It is ${description.slice(0, 380)} ` : ''}${exact}`;
+  }
   const what = description ? `the ${kind}: ${description.slice(0, 380)}` : `the ${kind} shown in the reference image`;
   const place =
     carry === 'shoulder'

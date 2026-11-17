@@ -32,7 +32,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
     }
     return rt.abort();
   });
-  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&map=1'); await p.waitForSelector('[data-testid=live-stage]', { timeout: 20000 });
+  await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&map=1'); await p.waitForSelector('[data-testid=live-stage]', { timeout: 20000 });
   return p;
 }
 const start = async (p, rec = false) => { if (rec) await p.getByTestId('rec-toggle').check(); await p.getByLabel(/카메라 영상이 AI 서버/).check(); await p.getByRole('button', { name: '실시간 착용 시작' }).click(); };
@@ -91,13 +91,13 @@ ok_(); function ok_() {}
 { const p = await open(); await p.addInitScript(() => { try { delete window.RTCPeerConnection; delete window.webkitRTCPeerConnection; } catch {} Object.defineProperty(window, 'RTCPeerConnection', { value: undefined, configurable: true }); }); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await p.waitForSelector('[data-testid=live-error]');
   ok('G1 no WebRTC: clear "unsupported" message, step "unsupported", and NO paid request', /WebRTC/.test(await p.getByTestId('live-error').innerText()) && (await step(p)) === 'unsupported' && p.calls.length === 0, p.calls.join(',') || 'none'); await p.context().close(); }
 { const ctx = await b.newContext({ permissions: ['camera'] }); await ctx.addInitScript(() => { sessionStorage.setItem('lagi-intro-seen', '1'); navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('busy', 'NotReadableError'); }; });
-  const p = await ctx.newPage(); await p.route(W + '/**', (rt) => { p.calls = (p.calls ?? []).concat(rt.request().url().replace(W, '')); rt.abort(); }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await p.waitForSelector('[data-testid=live-error]');
+  const p = await ctx.newPage(); await p.route(W + '/**', (rt) => { p.calls = (p.calls ?? []).concat(rt.request().url().replace(W, '')); rt.abort(); }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await p.waitForSelector('[data-testid=live-error]');
   ok('G2 camera busy (NotReadableError): says another app/tab may be using it, no paid request', /다른 앱이나 탭/.test(await p.getByTestId('live-error').innerText()) && !(p.calls ?? []).length); await ctx.close(); }
 { const p = await open({ token: 'netfail' }); await p.unroute(W + '/**'); await p.route(W + '/**', (rt) => rt.request().url().endsWith('/cutout') && !rt.request().postData()?.includes('matte') ? rt.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': 'http://localhost:4195' }, contentType: 'application/json', body: JSON.stringify({ image: 'data:image/jpeg;base64,' + jpg }) }) : rt.abort('failed')); await p.getByLabel(/실제 디자인 입히기|실제 디자인/).first().uncheck().catch(() => {}); await start(p); await p.waitForSelector('[data-testid=live-error]', { timeout: 30000 });
   ok('G3 server unreachable: says the AI server could not be reached and to check the internet connection (not a generic retry)', /AI 서버에 닿지 못했습니다/.test(await p.getByTestId('live-error').innerText()), (await p.getByTestId('live-error').innerText()).slice(0, 60)); await p.context().close(); }
 { const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, permissions: ['camera'] }); await ctx.addInitScript(() => { sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: 'ok' }; delete window.MediaRecorder; });
   const p = await ctx.newPage(); p.calls = []; p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message)); await p.route(W + '/**', (rt) => { const u = rt.request().url().replace(W, ''); const body = rt.request().postData() ?? ''; const cors = { 'Access-Control-Allow-Origin': 'http://localhost:4195', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' }; const J = (o) => rt.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(o) }); if (rt.request().method() === 'OPTIONS') return rt.fulfill({ status: 204, headers: cors }); if (u === '/cutout') return body.includes('matte') ? J({ matte: 'data:image/jpeg;base64,' + jpg }) : J({ image: 'data:image/jpeg;base64,' + jpg }); if (u === '/realtime/token') return J({ apiKey: 'm', seconds: 5, remainingToday: 2 }); if (u === '/realtime/report') return J({ ok: true }); rt.abort(); });
-  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.waitForSelector('[data-testid=live-stage]');
+  await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.waitForSelector('[data-testid=live-stage]');
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok('G4 phone-size screen (390x844, simulated): no sideways scrolling before the session', over <= 1, `overflow ${over}px`);
   ok('G5 browser without MediaRecorder: the record option is hidden instead of failing later', (await p.getByTestId('rec-toggle').count()) === 0);
@@ -108,7 +108,7 @@ ok_(); function ok_() {}
   const over2 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok('G8 phone-size: no sideways scrolling after the session either; no page errors', over2 <= 1 && p.errs.length === 0, `overflow ${over2}px; ${p.errs.join('|')}`); await ctx.close(); }
 // H. diagnostic mode (&debug=1): one picture with the AI raw frame, the camera and the result; invisible without the flag
-{ const p = await open({ seconds: 6 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&debug=1'); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 6 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&debug=1'); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
   await p.waitForSelector('[data-testid=save-diag]', { timeout: 5000 }).catch(() => {});
   const has = (await p.getByTestId('save-diag').count()) > 0; ok('H1 with &debug=1 a diagnostic picture can be saved after the session', has);
@@ -117,7 +117,7 @@ ok_(); function ok_() {}
 { const p = await open({ seconds: 5 }); await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
   ok('H3 without the flag there is no diagnostic button for normal visitors', (await p.getByTestId('save-diag').count()) === 0); await p.context().close(); }
 // I. Anywear way: &model=lucy-vton-3.6&map=0 -> VTON model by name, no green-screen overlay, plain "Add ... to the outfit" prompt
-{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live&model=lucy-vton-3.6'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=zz-test-set&m=live&model=lucy-vton-3.6'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
   ok('I1 by default (no &map=1) the design-mapping option starts off: the Anywear way', !(await p.getByTestId('map-toggle').isChecked()));
   await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   const log = await p.evaluate(() => window.__rtLog);
@@ -126,66 +126,68 @@ ok_(); function ok_() {}
   ok('I4 no cut-out matte request (that step belongs to the green overlay only)', !p.calls.some((c) => c.includes('(matte)')), p.calls.join(','));
   await p.context().close(); }
 // J. address flags go back to the old way: &model=lucy-2.6&map=1 (green overlay on, old model); a pasted address is picked up without a reload
-{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&model=lucy-2.6&map=1'); await p.waitForTimeout(600);
+{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&model=lucy-2.6&map=1'); await p.waitForTimeout(600);
   ok('J1 the flags are read again when the address changes (no reload needed)', await p.getByTestId('map-toggle').isChecked());
-  await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&debug=1'); await p.waitForTimeout(600);
+  await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&debug=1'); await p.waitForTimeout(600);
   ok('J2 and back to the default: option off again', !(await p.getByTestId('map-toggle').isChecked())); await p.context().close(); }
 // K. Anywear's way: photo + instruction go in WITH the connection; another product while live is swapped without reconnecting
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-set&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   let log = await p.evaluate(() => window.__rtLog);
   ok('K1 the product photo and instruction travel WITH the connection (initialState), not after it', log.includes('initialState:with-connect') && log.filter((l) => l.startsWith('setImage:')).length === 1, log.filter((l) => /initialState|setImage/.test(l)).join(' | '));
   const before = p.calls.filter((c) => c === '/cutout').length;
-  await p.evaluate(() => { location.hash = '#/again?p=plano-bag&m=live'; }); await p.waitForTimeout(2500);
+  await p.evaluate(() => { location.hash = '#/again?p=zz-test-top&m=live'; }); await p.waitForTimeout(2500);
   log = await p.evaluate(() => window.__rtLog);
   ok('K2 choosing another product while live sends its photo on the same session (no reconnect)', log.filter((l) => l.startsWith('setImage:')).length === 2 && log.filter((l) => l === 'disconnect').length === 0 && p.calls.filter((c) => c === '/cutout').length === before + 1, `${log.filter((l) => l.startsWith('setImage:')).length} setImage, ${p.calls.filter((c) => c === '/cutout').length - before} new cut-out`);
   await p.context().close(); }
 // L. Anywear's step for bags (&prefit=1): a still of the visitor holding the product is made BEFORE the paid token, and is the reference
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('L1 prefit comes after the cut-out and BEFORE the paid token', p.calls.indexOf('/realtime/prefit') > p.calls.indexOf('/cutout') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(' > '));
   const body = JSON.parse(p.prefitBody || '{}');
-  ok('L2 the request carries a camera still (JPEG data URL) and the product address, nothing else', /^data:image\/jpeg;base64,/.test(body.person ?? '') && /plano-bag/.test(body.productImage ?? '') && Object.keys(body).every((k) => ['person', 'productImage', 'productName', 'carry', 'provider', 'variant'].includes(k)), Object.keys(body).join(','));
+  ok('L2 the request carries a camera still (JPEG data URL) and the product address, nothing else', /^data:image\/jpeg;base64,/.test(body.person ?? '') && /zz-test-top/.test(body.productImage ?? '') && Object.keys(body).every((k) => ['person', 'productImage', 'productName', 'carry', 'provider', 'variant'].includes(k)), Object.keys(body).join(','));
   const log = await p.evaluate(() => window.__rtLog);
   ok('L3 the generated photo (not the bare product photo) goes in with the connection', log.includes('initialState:with-connect'));
   await p.getByTestId('live-steps').waitFor(); ok('L4 the extra step is listed only when prefit is on', (await p.getByTestId('live-steps').innerText()).includes('참조 사진'));
   await p.context().close(); }
-{ const p = await open({ seconds: 20, prefit: 'fail' }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 20, prefit: 'fail' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&prefit=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('L5 if the reference photo fails, the session still starts with the plain product photo', (await p.evaluate(() => window.__rtLog)).includes('initialState:with-connect'));
   await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('L6 default (no flag): no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
   await p.context().close(); }
 // M. pipelines A/B/C/D, original product photo, carry styles, developer UI hidden from visitors
 const body = (p, u) => { try { return JSON.parse(p.bodies?.[u] || '{}'); } catch { return {}; } };
 const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
   ok('M1 visitors do not see the experimental overlay option or developer settings', (await p.getByTestId('map-toggle').count()) === 0);
   await start(p); await live(p);
   ok('M2 default pipeline B: the ORIGINAL clean photo is used (describe only, nothing redrawn, no prefit)', body(p, '/cutout').describeOnly === true && /drawings\/front\.jpg/.test(body(p, '/cutout').productImage ?? '') && !p.calls.includes('/realtime/prefit'), JSON.stringify(body(p, '/cutout')));
   ok('M3 default pipeline asks for lucy-vton-3.6', body(p, '/realtime/token').model === 'lucy-vton-3.6', JSON.stringify(body(p, '/realtime/token')));
   ok('M4 no measurement panel for visitors after the session', (await p.getByTestId('evidence').count()) === 0);
   await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=A'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
-  ok('M5 pipeline A keeps the old Gemini cut-out (no describeOnly)', !body(p, '/cutout').describeOnly && /main\.jpg/.test(body(p, '/cutout').productImage ?? ''));
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=A'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+  ok('M5 pipeline A keeps the old Gemini cut-out (no describeOnly)', !body(p, '/cutout').describeOnly && /zz-test-top.*main\.jpg/.test(body(p, '/cutout').productImage ?? ''));
   ok('M6 pipeline A is shown in the developer panel', (await p.getByTestId('evidence').innerText()).includes('파이프라인') ); await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=D'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=D'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   ok('M7 pipeline D asks for lucy-2.6 with the original photo and no prefit', body(p, '/realtime/token').model === 'lucy-2.6' && body(p, '/cutout').describeOnly === true && !p.calls.includes('/realtime/prefit'));
   const log = await p.evaluate(() => window.__rtLog); ok('M8 pipeline D: the connection carried the lucy-2.6 model name', log.some((l) => /lucy-2\.6/.test(l)), log.filter((l) => /model/.test(l)).join('|')); await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   const pb = body(p, '/realtime/prefit');
   ok('M9 pipeline C: prefit sends the camera still, the ORIGINAL front photo, the carry style and the name', /^data:image\/jpeg/.test(pb.person ?? '') && /drawings\/front\.jpg/.test(pb.productImage ?? '') && pb.carry === 'hand' && typeof pb.productName === 'string', Object.keys(pb).join(','));
   ok('M10 prefit before the paid token, token model lucy-vton-3.6', p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token') && body(p, '/realtime/token').model === 'lucy-vton-3.6');
   ok('M11 the developer panel shows the check result of the reference picture', /검사 통과/.test(await p.getByTestId('evidence').innerText())); await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
-  await p.getByRole('button', { name: /어깨에 메기/ }).click(); await start(p); await live(p);
-  ok('M12 shoulder carry is sent as its own style', body(p, '/realtime/prefit').carry === 'shoulder'); await p.context().close(); }
-{ const p = await open({ seconds: 20, prefit: 'reject' }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+  ok('M12 clothing: the reference picture request names the garment kind (top)', body(p, '/realtime/prefit').garment === 'top', JSON.stringify(Object.keys(body(p, '/realtime/prefit'))));
+  const lg = await p.evaluate(() => window.__rtLog); ok('M12b the instruction sent with the connection is the clothing one ("Substitute the current top …")', lg.some((l) => /^prompt:Substitute the current top/.test(l)), lg.filter((l) => l.startsWith('prompt:')).join('|')); await p.context().close(); }
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-set&m=live&pipe=D'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+  const lg = await p.evaluate(() => window.__rtLog); ok('M12c a set on lucy-2.6 gets the "wears the matching set" wording', lg.some((l) => /^prompt:The person wears the matching set/.test(l)), lg.filter((l) => l.startsWith('prompt:')).join('|')); await p.context().close(); }
+{ const p = await open({ seconds: 20, prefit: 'reject' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   const t = await p.getByTestId('evidence').innerText();
   ok('M13 a reference picture that fails the check is NOT used: the session starts with the original photo and the panel says so', /사용 안 함/.test(t) && /원본 제품 사진으로 진행/.test(t), t.split('\n').find((l) => l.includes('prefit')) ?? ''); await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=plano-bag&m=live&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   ok('M14 pipeline B sends no camera frame to our server (only the Decart connection gets video)', !p.calls.includes('/realtime/prefit')); await p.context().close(); }
 // N. cost protection: no automatic re-dial, one connect retry only, network checked before anything is paid
 { const p = await open({ mock: 'reconnect', seconds: 20 }); await start(p);

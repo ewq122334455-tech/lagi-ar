@@ -200,6 +200,7 @@ export default function ProductPage() {
       ['브랜드 표기', p.brandLabel ?? 'LAGI'],
       ['제작', maker ? `${maker} (라기는 발견하고 선별해 소개합니다)` : null],
       ['분류', category || null],
+      ['세트 구성', p.setItems?.length ? p.setItems.join(' + ') : null],
       ['크기', size ? `가로 × 높이 × 폭 ${size}` : null],
       ['주요 소재', materialText],
       ['가격', price(p.price.value)],
@@ -294,6 +295,11 @@ export default function ProductPage() {
             </div>
             <h1 className="t-h1 kr mt-2 !font-bold">{p.name.value}</h1>
             {p.shortDescription.value && <p className="t-kr-sub mt-1.5">{p.shortDescription.value}</p>}
+            {p.setItems && p.setItems.length > 0 && (
+              <p className="t-caption kr mt-3" data-testid="set-items">
+                <b>세트 구성</b> · {p.setItems.join(' + ')}
+              </p>
+            )}
             <p className="t-h2 kr mt-5 tabular-nums">{price(p.price.value)}</p>
             {highlights.length > 0 && (
               <ul className="t-caption kr mt-4 grid gap-1.5" data-testid="product-highlights">

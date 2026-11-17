@@ -251,8 +251,8 @@ async function productCutout(env: Env, url: string, product: { mime: string; dat
 
 const DESCRIBE_PROMPT =
   'Describe this product for a video generator in one English sentence of at most 45 words. Only what is visible: ' +
-  'the kind of item, its overall shape and proportions, each main colour and the part it is on (body, top band, handles, ' +
-  'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
+  'the kind of item (a bag or a garment), its overall shape and proportions, each main colour and the part it is on (body, top band, handles, ' +
+  'straps, pockets, trims — or for a garment: neckline, sleeves, hem, waist, closures, fabric look), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
 
 /** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
 async function productDescription(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ text?: string; note?: string }> {
@@ -1046,11 +1046,25 @@ async function prefitFal(env: Env, personUrl: string, product: Img, prompt: stri
 }
 
 /** The same step with Gemini (already connected, already capped): visitor photo + the ORIGINAL product photo → the visitor carrying it. */
-async function prefitGemini(env: Env, person: Img, product: Img, style: 'hand' | 'shoulder', name: string, ip: string): Promise<{ image?: Img; reason?: string }> {
+/** The same step for clothing: the visitor wearing exactly this garment (top, bottoms, a whole set …). */
+export function buildGarmentPrompt(name: string, garment: string) {
+  const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'bottoms' : garment === 'set' ? 'top and bottoms of this set' : garment === 'outer' ? 'outer layer' : 'outfit';
+  return [
+    `You are a virtual fitting room for a clothing brand. Image 1 is a photo of a person. Image 2 shows ONLY the garment${name ? ` (${name})` : ''} on a plain background — it is the exact design to reproduce.`,
+    `Create one photorealistic photo of the SAME person from image 1 wearing exactly that garment in place of their current ${part}${garment === 'set' ? ', both pieces together as one matching set' : ''}.`,
+    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, pose and background as in image 1. Only the clothes covered by this garment change.',
+    'ANATOMY: exactly two arms and two hands with five fingers each; add no limb, take no body parts or background from image 2.',
+    'KEEP THE GARMENT: the same colours, fabric look, cut, length, neckline, sleeves, prints, lettering and logos in the same place and spelling; do not redraw, translate, simplify or add details.',
+    'Let the fabric fall and fold naturally on this body; match the light and shadows of image 1.',
+    'FRAMING: the same framing and aspect ratio as image 1, without cropping or zooming. Return only the edited photo.',
+  ].join(' ');
+}
+
+async function prefitGemini(env: Env, person: Img, product: Img, style: 'hand' | 'shoulder', name: string, ip: string, garment = ''): Promise<{ image?: Img; reason?: string }> {
   const req: TryOnRequest = { person: '', productImage: '', productName: name, style: style === 'shoulder' ? 'carried on one shoulder' : 'held in one hand by its handle' };
   const out = await geminiImage(
     env,
-    [{ text: buildPromptV2(req, false, 0) }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }],
+    [{ text: garment ? buildGarmentPrompt(name, garment) : buildPromptV2(req, false, 0) }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }],
     { ip },
   );
   if (out.quota) return { reason: out.quota };
@@ -1059,22 +1073,23 @@ async function prefitGemini(env: Env, person: Img, product: Img, style: 'hand' |
   return m ? { image: { mime: m[1], data: m[2] } } : { reason: 'no_image' };
 }
 
-const VERIFY_PROMPT = [
-  'You check a virtual fitting result. Image 1 is the ORIGINAL photo of a person. Image 2 is the product reference photo (the exact design). Image 3 is the GENERATED photo (the same person should now carry the product).',
-  'Answer with JSON only, with these keys: bagPresent (boolean: the product is visible in image 3), oneBag (boolean: exactly one such bag, no extra bags or accessories),',
-  'designMatch (integer 1-5: how exactly colours, prints, lettering, handles, hardware and proportions of the bag in image 3 match image 2; 5 = identical, 3 = recognisably the same kind but details differ, 1 = a different product),',
-  'personKept (integer 1-5: same person, face, clothing and background as image 1), anatomyOk (boolean: exactly two arms and hands, five fingers each, no extra limb),',
-  'carryOk (boolean: it is held or worn in a physically plausible way, not floating, not merged into the body, handles visible and not melted).',
-].join(' ');
+const verifyPrompt = (garment: string) =>
+  [
+    `You check a virtual fitting result. Image 1 is the ORIGINAL photo of a person. Image 2 is the product reference photo (the exact design). Image 3 is the GENERATED photo (the same person should now ${garment ? 'wear the garment' : 'carry the product'}).`,
+    `Answer with JSON only, with these keys: bagPresent (boolean: the ${garment ? 'garment' : 'product'} is visible in image 3), oneBag (boolean: exactly one such ${garment ? 'garment (or the two pieces of one set)' : 'bag'}, no extra bags or accessories),`,
+    `designMatch (integer 1-5: how exactly colours, prints, lettering, logos, ${garment ? 'cut, neckline, sleeves, length and fabric' : 'handles, hardware and proportions'} in image 3 match image 2; 5 = identical, 3 = recognisably the same kind but details differ, 1 = a different product),`,
+    'personKept (integer 1-5: same person, face, hair and background as image 1' + (garment ? '' : ', same clothing') + '), anatomyOk (boolean: exactly two arms and hands, five fingers each, no extra limb),',
+    `carryOk (boolean: ${garment ? 'it is worn naturally, the fabric falls plausibly, nothing is merged into the skin or cut off oddly' : 'it is held or worn in a physically plausible way, not floating, not merged into the body, handles visible and not melted'}).`,
+  ].join(' ');
 
 /** Checks a generated reference photo before it can reach the realtime model (fail closed: no verdict = no pass). */
-async function verifyPrefit(env: Env, person: Img, product: Img, made: Img, ip: string): Promise<Verdict> {
+async function verifyPrefit(env: Env, person: Img, product: Img, made: Img, ip: string, garment = ''): Promise<Verdict> {
   if (!env.GEMINI_API_KEY) return { pass: false, checks: {}, note: 'no verifier' };
   try {
     const res = await callGemini(
       env,
       JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: VERIFY_PROMPT }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }, { inline_data: { mime_type: made.mime, data: made.data } }] }],
+        contents: [{ role: 'user', parts: [{ text: verifyPrompt(garment) }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }, { inline_data: { mime_type: made.mime, data: made.data } }] }],
         generationConfig: { temperature: 0, maxOutputTokens: 1024, responseMimeType: 'application/json' },
       }),
       env.GEMINI_TEXT_MODEL ?? 'gemini-3.8-flash',
@@ -1108,7 +1123,7 @@ const dataImg = (d: string): Img | null => {
  */
 async function prefit(request: Request, env: Env, headers: Record<string, string>, ip: string): Promise<Response> {
   if (env.PREFIT_DISABLED === '1') return json({ error: '참조 사진 만들기를 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
-  let body: { person?: string; productImage?: string; variant?: string; carry?: string; provider?: string; productName?: string };
+  let body: { person?: string; productImage?: string; variant?: string; carry?: string; provider?: string; productName?: string; garment?: string };
   try {
     body = await request.json();
   } catch {
@@ -1126,8 +1141,9 @@ async function prefit(request: Request, env: Env, headers: Record<string, string
   const product = await fetchProductImage(body.productImage ?? '', allowed);
   if ('error' in product) return json({ error: product.error }, product.status, headers);
   const carry: 'hand' | 'shoulder' = body.carry === 'shoulder' ? 'shoulder' : 'hand';
-  const falPrompt = PREFIT_PROMPTS[body.variant ?? ''] ?? PREFIT_PROMPTS[carry === 'shoulder' ? 'shoulder' : 'carry'];
+  const falPrompt = PREFIT_PROMPTS[body.variant ?? ''] ?? (body.garment && ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment) ? PREFIT_PROMPTS.official : PREFIT_PROMPTS[carry === 'shoulder' ? 'shoulder' : 'carry']);
   const name = String(body.productName ?? '').slice(0, 80);
+  const garment = ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment ?? '') ? (body.garment as string) : '';
 
   try {
     await meter(env, 'prefit', ip, 1, Number(env.PREFIT_DAILY_SITE ?? 100), prefitPerIp(env));
@@ -1142,13 +1158,13 @@ async function prefit(request: Request, env: Env, headers: Record<string, string
   let last: Verdict | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt) void recordOutcome(env, 'prefit', 'retry');
-    const made = provider === 'fal' ? await prefitFal(env, person, product, falPrompt) : await prefitGemini(env, personImg, product, carry, name, ip);
+    const made = provider === 'fal' ? await prefitFal(env, person, product, falPrompt) : await prefitGemini(env, personImg, product, carry, name, ip, garment);
     if (!made.image) {
       if (made.reason === 'daily_limit' || made.reason === 'site_limit' || made.reason === 'quota_unavailable') return json({ error: '참조 사진 만들기를 지금은 이용할 수 없습니다.', reason: made.reason }, 429, headers);
       if (attempt === 1 || made.reason === 'provider') return json({ error: '참조 사진을 만들지 못했습니다.', reason: made.reason ?? 'provider' }, 502, headers);
       continue;
     }
-    const verdict = await verifyPrefit(env, personImg, product, made.image, ip);
+    const verdict = await verifyPrefit(env, personImg, product, made.image, ip, garment);
     last = verdict;
     void recordOutcome(env, 'prefit', verdict.pass ? 'verified' : 'rejected');
     if (verdict.pass) return json({ image: `data:${made.image.mime};base64,${made.image.data}`, provider, carry, verified: true, checks: verdict.checks }, 200, headers);

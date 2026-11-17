@@ -1,0 +1,15 @@
+{
+  "id": "zz-test-set",
+  "name": "테스트 스웻 세트 블랙",
+  "category": "Set",
+  "price": 88000,
+  "setItems": [
+    "테스트 후드",
+    "테스트 팬츠"
+  ],
+  "main": "public/products/lagi-cargo-pants/images/main.jpg",
+  "sizes": [
+    "M",
+    "L"
+  ]
+}

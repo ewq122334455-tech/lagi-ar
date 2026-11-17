@@ -33,6 +33,7 @@ export function createDecartClient(opts: { apiKey: string }) {
         log(`connect:${mode}`);
         log(`model:${o.model?.name}`);
         log(`retries:${(o as { retries?: number }).retries}`);
+        log(`prompt:${o.initialState?.prompt?.text ?? ''}`);
         log(`speed:${o.speed ?? 'standard'}`);
         // The product photo and instruction arrive WITH the connection (initialState), as Decart's own examples do.
         if (o.initialState?.image) {

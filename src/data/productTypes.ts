@@ -243,6 +243,9 @@ export interface Product {
   hotspots: Hotspot[];
   imageAnalysis?: ImageAnalysis;
 
+  /** Set products only: the exact names of the pieces the set contains. */
+  setItems?: string[];
+
   shopUrl: VerifiableField<string>;
   instagramUrl: string;
 

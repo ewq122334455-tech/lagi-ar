@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
-import { CATEGORY_LABEL, price, useRealProducts } from '../data';
+import { CATEGORY_LABEL, isClothing, price, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
 import { MapTryOn } from '../MapTryOn';
 import { cleanImage } from '../ProductCard';
@@ -17,12 +17,14 @@ const STYLES = {
     { key: 'hand', label: '손에 들기', prompt: CARRY_PROMPTS.HAND },
     { key: 'shoulder', label: '어깨에 메기', prompt: CARRY_PROMPTS.SHOULDER },
   ],
+  // Clothing: there is one way to try it on.
+  clothes: [{ key: 'wear', label: '입어 보기', prompt: 'worn naturally' }],
   acc: [
     { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
     { key: 'show', label: '들어 보이기', prompt: 'held up near the face with one hand, showing it to the camera' },
   ],
 };
-const stylesFor = (p: Product | undefined) => ((p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc);
+const stylesFor = (p: Product | undefined) => (isClothing(p) ? STYLES.clothes : (p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc);
 
 const MAX_INPUT_BYTES = 15 * 1024 * 1024;
 const TIMEOUT_MS = 120_000;
@@ -48,6 +50,9 @@ export default function Again() {
   const has3d = !!products.find((x) => x.id === productId)?.model3d;
   const mode: Mode = m === 'photo' || m === 'live' || m === 'map' ? m : has3d ? 'map' : 'photo';
   const product = products.find((p) => p.id === productId);
+  // The realtime AI fitting (video) is for clothing only; the other two ways keep every product.
+  const pickable = mode === 'live' ? products.filter(isClothing) : products;
+  const liveBlocked = mode === 'live' && !!product && !isClothing(product);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -219,7 +224,7 @@ export default function Again() {
           [
             ['map', '실시간 3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
             ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
-            ['live', 'AI 영상 (베타)', 'AI가 다시 그리는 영상 · 20초'],
+            ['live', 'AI 영상 (베타)', '옷 전용 · AI가 다시 그리는 영상 · 20초'],
           ] as const
         ).map(([m, label, sub]) => (
           <button
@@ -237,7 +242,7 @@ export default function Again() {
         ))}
       </div>
       <p className="t-caption kr mt-2 px-1 text-[var(--c-mute)] sm:hidden" data-testid="mode-sub">
-        {mode === 'map' ? '내 손·몸을 따라가는 3D 제품 · 무료' : mode === 'photo' ? 'AI 실사 사진 · 10~40초' : 'AI가 다시 그리는 영상 · 20초'}
+        {mode === 'map' ? '내 손·몸을 따라가는 3D 제품 · 무료' : mode === 'photo' ? 'AI 실사 사진 · 10~40초' : '옷 전용 · AI가 다시 그리는 영상 · 20초'}
       </p>
 
       {mode === 'photo' && (
@@ -262,7 +267,7 @@ export default function Again() {
           <p className="t-caption kr mt-4">불러오는 중…</p>
         ) : (
           <ul className="no-scrollbar mt-5 flex snap-x gap-3 overflow-x-auto pb-2">
-            {products.map((p) => (
+            {pickable.map((p) => (
               <li key={p.id} className="w-[38vw] shrink-0 snap-start sm:w-44">
                 <button
                   type="button"
@@ -303,7 +308,29 @@ export default function Again() {
         </div>
       )}
       {mode === 'map' && product?.model3d && <MapTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
-      {mode === 'live' && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+      {mode === 'live' && liveBlocked && (
+        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="live-clothing-only">
+          <p className="t-value kr">실시간 AI 피팅은 옷만 가능해요.</p>
+          <p className="t-caption kr mt-2 text-[var(--c-mute)]">가방과 소품은 3D 착용이나 사진 합성으로 착용 모습을 볼 수 있습니다.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {product?.model3d && (
+              <button type="button" className="btn btn-primary" onClick={() => setMode('map')}>
+                3D 착용으로 보기
+              </button>
+            )}
+            <button type="button" className="btn btn-primary" onClick={() => setMode('photo')}>
+              사진 합성으로 보기
+            </button>
+          </div>
+        </div>
+      )}
+      {mode === 'live' && !liveBlocked && pickable.length === 0 && !loading && (
+        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="live-no-clothes">
+          <p className="t-value kr">입어 볼 수 있는 옷을 준비하고 있어요.</p>
+          <p className="t-caption kr mt-2 text-[var(--c-mute)]">가방은 3D 착용이나 사진 합성으로 먼저 해 보세요.</p>
+        </div>
+      )}
+      {mode === 'live' && !liveBlocked && pickable.length > 0 && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
       <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
