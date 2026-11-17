@@ -192,7 +192,11 @@ export function LiveTryOn({
   const session = useRef<{ stop: () => void; setPrompt: (p: string) => Promise<void> } | null>(null);
   const garment = useRef<{ id: string; blob: Blob; description?: string; green?: Blob; product?: HTMLCanvasElement } | null>(null);
   // Real design mapped onto the green bag the AI draws (on by default); off shows the AI's own drawing.
-  const [mapOn, setMapOn] = useState(true);
+  // Address flags for trying the "Anywear" way: &model=lucy-vton-3.6 (Decart's virtual try-on model draws the product itself from the
+  // reference photo) and &map=0 (no green-screen overlay). Without them nothing changes.
+  const flags = typeof window !== 'undefined' ? window.location.hash : '';
+  const wantModel = /[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1];
+  const [mapOn, setMapOn] = useState(!/[?&]map=0(&|$)/.test(flags));
   const vtonRef = useRef(false);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
@@ -425,7 +429,7 @@ export function LiveTryOn({
       const ref = await garmentBlob(product);
       // 3. The token last, right before connecting (it is minted and metered only now).
       setStage('connecting');
-      const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', {});
+      const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', wantModel ? { model: wantModel } : {});
       setRemaining(token.remainingToday ?? 'unlimited');
       tokenAt = Date.now();
       ev.msTokenReceived = tokenAt - t0;

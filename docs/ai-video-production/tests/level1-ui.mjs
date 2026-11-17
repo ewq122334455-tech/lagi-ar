@@ -26,7 +26,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
       if (token === 'daily') return J(429, { error: '실시간 착용은 하루 3번까지 체험할 수 있습니다. 내일 다시 이용해 주세요.', reason: 'daily_limit' });
       if (token === 'busy') return J(429, { error: '이미 진행 중인 실시간 착용이 있습니다. 끝난 뒤에 다시 시작해 주세요.', reason: 'busy_ip' });
       if (token === 'down') return J(503, { error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' });
-      return J(200, { apiKey: 'mock-token', seconds, remainingToday: 2, ...(model ? { model } : {}) });
+      { let rm; try { rm = JSON.parse(body || '{}').model; } catch {} return J(200, { apiKey: 'mock-token', seconds, remainingToday: 2, ...((rm ?? model) ? { model: rm ?? model } : {}) }); }
     }
     return rt.abort();
   });
@@ -114,6 +114,15 @@ ok_(); function ok_() {}
   await p.context().close(); }
 { const p = await open({ seconds: 5 }); await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
   ok('H3 without the flag there is no diagnostic button for normal visitors', (await p.getByTestId('save-diag').count()) === 0); await p.context().close(); }
+// I. Anywear way: &model=lucy-vton-3.6&map=0 -> VTON model by name, no green-screen overlay, plain "Add ... to the outfit" prompt
+{ const p = await open({ seconds: 5 }); await p.goto('http://localhost:4195/#/again?p=daily-tote&m=live&model=lucy-vton-3.6&map=0'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+  ok('I1 &map=0 starts with the design-mapping option off', !(await p.getByTestId('map-toggle').isChecked()));
+  await start(p); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  const log = await p.evaluate(() => window.__rtLog);
+  ok('I2 the page asks for lucy-vton-3.6 and the SDK connects with it (standard speed)', log.includes('model:lucy-vton-3.6') && log.includes('speed:standard'), log.filter((l) => /^(model|speed)/.test(l)).join(' '));
+  ok('I3 the prompt is the VTON "Add ... to the outfit" one, with no green-screen wording', log.some((l) => l.startsWith('setImage:Add ')) && !log.some((l) => /chroma-key|green/i.test(l)), log.filter((l) => l.startsWith('setImage')).join(' | '));
+  ok('I4 no cut-out matte request (that step belongs to the green overlay only)', !p.calls.some((c) => c.includes('(matte)')), p.calls.join(','));
+  await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');

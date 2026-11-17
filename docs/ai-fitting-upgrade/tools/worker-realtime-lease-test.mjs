@@ -33,4 +33,8 @@ const realNow = Date.now; let offset = 0; Date.now = () => realNow() + offset;
   ok('8 token request: 20 s session cap, single model, our origins only, short expiry', t.constraints.realtime.maxSessionDuration === 20 && t.allowedModels.length === 1 && t.allowedModels[0] === 'lucy-2.6' && t.allowedOrigins.every((o) => o.startsWith('https://')) && t.expiresIn <= 30, JSON.stringify({ exp: t.expiresIn, max: t.constraints.realtime.maxSessionDuration })); }
 { const env = mk({ REALTIME_DISABLED: '1' }); minted = [];
   ok('9 kill switch REALTIME_DISABLED=1: no token, reason "disabled"', (await code(await w.fetch(req('7.1.1.1'), env))) === '503/disabled' && minted.length === 0); }
+{ const env = mk(); minted = [];
+  const asked = (ip, model) => w.fetch(new Request('https://w/realtime/token', { method: 'POST', headers: { Origin: O, 'CF-Connecting-IP': ip, 'Content-Type': 'application/json' }, body: JSON.stringify(model ? { model } : {}) }), env);
+  await asked('8.1.1.1', 'lucy-vton-3.6'); await asked('8.1.1.2', 'evil-model'); await asked('8.1.1.3');
+  ok('10 a page may ask for an allow-listed model by name (lucy-vton-3.6); any other name falls back to the Worker default lucy-2.6', minted[0].allowedModels[0] === 'lucy-vton-3.6' && minted[1].allowedModels[0] === 'lucy-2.6' && minted[2].allowedModels[0] === 'lucy-2.6', minted.map((m) => m.allowedModels[0]).join(' / ')); }
 Date.now = realNow;

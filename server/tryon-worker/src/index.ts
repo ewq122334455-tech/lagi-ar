@@ -934,7 +934,15 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   }
 
   const origins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
-  const model = REALTIME_MODELS.includes(env.REALTIME_MODEL ?? '') ? (env.REALTIME_MODEL as string) : 'lucy-2.6';
+  // The model for this session: the Worker's default (REALTIME_MODEL, else lucy-2.6), or one the page asks for by name, but only
+  // from the fixed allow-list. A page can never name any other model.
+  let wanted = '';
+  try {
+    wanted = String(((await request.clone().json()) as { model?: string }).model ?? '');
+  } catch {
+    /* no body or not JSON: use the default */
+  }
+  const model = REALTIME_MODELS.includes(wanted) ? wanted : REALTIME_MODELS.includes(env.REALTIME_MODEL ?? '') ? (env.REALTIME_MODEL as string) : 'lucy-2.6';
   const res = await fetch(`${env.DECART_BASE_URL ?? 'https://api.decart.ai'}/v1/client/tokens`, {
     method: 'POST',
     headers: { 'X-API-KEY': env.DECART_API_KEY, 'Content-Type': 'application/json' },
