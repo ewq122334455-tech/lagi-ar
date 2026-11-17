@@ -66,7 +66,9 @@ export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'sh
     // Clothing — what the VTON models were made for. Decart's two patterns: "Substitute the current <part> with …" (20-30 words: colour, material, pattern, fit).
     const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'pants' : garment === 'outer' ? 'top layer' : 'outfit';
     const what = description ? description.slice(0, 380) : garment === 'set' ? 'the matching set shown in the reference image' : `the ${garment === 'bottom' ? 'pants' : 'garment'} shown in the reference image`;
-    const exact = 'Copy its exact colours, prints, lettering, logo and fit; do not invent details; keep the face, hair and background unchanged.';
+    // The strongest wording that still stays inside Decart's guide (one action, only what the reference shows, well under 750 characters in all).
+    const exact =
+      'It must look identical to the reference image: the same weave and fabric texture, the same colours, the same print size, position and lettering, the same neckline, sleeve length and fit. Do not simplify, restyle, shrink or move any graphic, and do not add details. Keep the face, hair and background unchanged.';
     if (model.startsWith('lucy-vton')) return garment === 'set' ? `Substitute the current top and bottoms with ${what} ${exact}` : `Substitute the current ${part} with ${what}. ${exact}${prefit ? ' Exactly as in the reference image.' : ''}`;
     return `The person wears the ${garment === 'set' ? 'matching set' : garment === 'bottom' ? 'pants' : 'garment'} from the reference image in place of their current ${garment === 'set' ? 'outfit' : part}. ${description ? `It is ${description.slice(0, 380)} ` : ''}${exact}`;
   }
