@@ -825,9 +825,10 @@ export function LiveTryOn({
     : product && consent ? 'ready' : 'before';
 
   return (
-    <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
-      <div className="lg:col-span-7">
-        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)]" data-testid="live-stage">
+    <div className="mt-16 grid grid-cols-1 gap-x-[var(--gap)] gap-y-16 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        {/* The fitting screen is the biggest thing on the page: edge to edge on phones, wider than the text column on desktop, brand blue (never black) around the picture. */}
+        <div className="relative -mx-[var(--page-x)] flex aspect-[4/5] items-center justify-center overflow-hidden bg-[var(--c-blue)] md:mx-0 md:aspect-video md:rounded-[var(--radius-card)] lg:-mx-[6vw]" data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && !mapOn ? '' : 'opacity-0'}`} />
           <canvas ref={mapped} aria-hidden="true" className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && mapOn ? '' : 'hidden'}`} data-testid="mapped-canvas" />
           {(!live || waiting) && (
@@ -839,7 +840,7 @@ export function LiveTryOn({
           <video ref={local} autoPlay playsInline muted className={`absolute bottom-3 right-3 w-24 -scale-x-100 border border-white/60 md:w-32 ${phase === 'starting' || live ? '' : 'hidden'}`} />
           {live && (
             <>
-              <span className="t-label t-mark absolute left-3 top-3 bg-[var(--c-ink)] px-2 py-1 text-[var(--c-white)]">AI live</span>
+              <span className="t-label t-mark absolute left-3 top-3 bg-white px-2 py-1 text-[var(--c-blue)]">AI live</span>
               <span className="t-h2 t-mark absolute right-3 top-2 tabular-nums text-[var(--c-white)]" aria-live="polite" data-testid="countdown">
                 {left}
               </span>
@@ -933,7 +934,7 @@ export function LiveTryOn({
         )}
         {clip && (
           <div className="mt-6" data-testid="clip-result">
-            <video src={clip.url} controls playsInline muted className="block h-auto w-full max-w-xl bg-[var(--c-ink)]" />
+            <video src={clip.url} controls playsInline muted className="block h-auto w-full max-w-xl bg-[var(--c-blue)]" />
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button type="button" className="btn btn-primary" onClick={saveClip}>
                 영상 저장 ({clip.ext.toUpperCase()}, {(clip.size / 1048576).toFixed(1)}MB)
@@ -974,7 +975,7 @@ export function LiveTryOn({
         )}
       </div>
 
-      <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
+      <div className="mx-auto w-full max-w-xl space-y-8 lg:col-span-12">
 
         <section aria-labelledby="l3">
           <h2 id="l3" className="t-h3 kr">
