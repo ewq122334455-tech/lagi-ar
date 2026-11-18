@@ -29,7 +29,7 @@ export default function Discover() {
       {loading && <p className="t-caption kr mt-20">불러오는 중…</p>}
       {error && <p className="t-caption kr mt-20">{error}</p>}
 
-      <ul className="mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-24 sm:grid-cols-2 lg:grid-cols-3" data-testid="shop-grid">
+      <ul className="mt-20 grid grid-cols-2 gap-x-[var(--gap)] gap-y-14 lg:mt-24 lg:grid-cols-3 lg:gap-y-24" data-testid="shop-grid">
         {list.map((p, i) => (
           <li key={p.id}>
             <ProductCard p={p} eager={i < 8} />
