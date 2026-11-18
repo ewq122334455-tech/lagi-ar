@@ -220,6 +220,7 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
 // P. starting again right after a session: the slot is freed at once (or the button shows a countdown instead of failing)
 { const p = await open({ seconds: 5, release: 'ok' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
+  await p.waitForFunction(() => true, null, { timeout: 100 }); for (let i = 0; i < 30 && !p.calls.includes('/realtime/release'); i++) await p.waitForTimeout(100); // the call is sent just as the session ends; give it a moment to reach the server mock
   ok('P1 when the session ends the page tells the server (frees the slot)', p.calls.includes('/realtime/release'), p.calls.join(','));
   await p.waitForTimeout(700);
   const b = p.getByTestId('start-button');
