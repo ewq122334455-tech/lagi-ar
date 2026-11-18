@@ -64,7 +64,7 @@ export function BrandFilmSection() {
         loop
         playsInline
         preload="metadata"
-        className="mt-4 block aspect-video w-full rounded-[var(--radius-card)] bg-[var(--c-ink)] object-cover"
+        className="mt-4 block aspect-video w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] object-cover"
       >
         <source src={FILM_WEBM} type="video/webm" />
         <source src={FILM_SRC} type="video/mp4" />
@@ -84,7 +84,7 @@ export function BrandFilmOverlay({ onClose }: { onClose: () => void }) {
   }, [f.ref, onClose]);
   // Rendered at the top of the document (inside a .v3 wrapper for the tokens) so it covers the site header.
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="Brand film" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-ink)] px-page pb-5 pt-5">
+    <div role="dialog" aria-modal="true" aria-label="Brand film" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-blue)] px-page pb-5 pt-5">
       <div className="flex items-center justify-between">
         <p className="t-label t-mark text-[var(--c-white)]">LAGI FILM</p>
         <div className="flex gap-3 text-[var(--c-white)]">

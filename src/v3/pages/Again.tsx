@@ -319,12 +319,12 @@ export default function Again() {
               <p className="t-body kr px-8 text-center text-[var(--c-mute)]">정면에서 찍은 전신 또는 상반신 사진이 가장 잘 나옵니다.</p>
             )}
             {result && (
-              <span className="t-label t-mark absolute left-3 top-3 bg-[var(--c-ink)] px-2 py-1 text-[var(--c-white)]">
+              <span className="t-label t-mark absolute left-3 top-3 bg-[var(--c-blue)] px-2 py-1 text-[var(--c-white)]">
                 {before ? 'Original photo' : 'AI generated'}
               </span>
             )}
             {busy && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-ink)]/75 text-[var(--c-white)]" role="status">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-blue)]/80 text-[var(--c-white)]" role="status">
                 <p className="t-value kr">이미지를 합성하고 있습니다… {elapsed}초</p>
                 <p className="t-caption kr text-white/80">{retrying ? '한 번 더 시도하고 있습니다.' : '보통 10~40초, 처음 고른 제품은 조금 더 걸립니다.'}</p>
                 <button type="button" className="btn !min-h-[40px] bg-white text-[var(--c-ink)]" onClick={() => abortRef.current?.abort('cancel')}>
@@ -590,7 +590,7 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
       role="dialog"
       aria-modal="true"
       aria-label="카메라로 촬영"
-      className="v3 fixed inset-0 z-[300] flex flex-col items-center gap-4 bg-[var(--c-ink)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
+      className="v3 fixed inset-0 z-[300] flex flex-col items-center gap-4 bg-[var(--c-blue)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
       data-testid="camera"
     >
       <p className="t-caption kr self-start text-white/80">정면 전신 또는 상반신이 화면에 들어오게 찍어 주세요.</p>
@@ -610,7 +610,7 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
           </div>
         </div>
       ) : (
-        <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-black ${mirrored ? '-scale-x-100' : ''}`} />
+        <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] ${mirrored ? '-scale-x-100' : ''}`} />
       )}
       </div>
       {/* Close · shutter · flip, like a phone camera */}

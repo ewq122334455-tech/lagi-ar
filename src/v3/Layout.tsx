@@ -418,7 +418,7 @@ function LegalFooter() {
 
 const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
   return (
-    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-ink)] px-page text-[var(--c-white)]">
+    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-blue)] px-page text-[var(--c-white)]">
       {/* Lifted above the phone buy bar on product pages. A transform, not padding: it does not
           re-lay out the page when the bar appears (no layout shift). */}
       <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
