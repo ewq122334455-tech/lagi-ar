@@ -20,7 +20,7 @@ ok('R5 live tab with a bag selected says realtime fitting is clothing only and o
 ok('R6 no bag in the live picker, only clothing', !(await p.locator('ul').filter({ hasText: '플라노' }).count()) && /테스트 상의 블랙/.test(await p.locator('section').first().innerText()));
 await p.goto(B + 'again?p=zz-test-set&m=live'); await p.waitForTimeout(1500);
 ok('R7 clothing set opens in the AI video with the start flow', await p.getByTestId('live-stage').count() === 1);
-ok('R8 only one way of wearing for clothing (입어 보기)', /입어 보기/.test(await p.locator('body').innerText()) && !/손에 들기/.test(await p.locator('body').innerText()));
+ok('R8 clothing has one way to try it on, so no way-of-wearing choice is shown (and no bag carry choices)', !/손에 들기|어깨에 메기/.test(await p.locator('body').innerText()));
 await p.goto(B + 'again?p=plano-bag&m=photo'); await p.waitForTimeout(1200);
 ok('R9 the photo compositing still lists bags', /플라노/.test(await p.locator('body').innerText()));
 await p.goto(B + 'again?p=plano-bag&m=map'); await p.waitForTimeout(1200);
