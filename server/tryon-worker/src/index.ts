@@ -1065,7 +1065,7 @@ export function buildGarmentPrompt(name: string, garment: string) {
   return [
     `You are a virtual fitting room for a clothing brand. Image 1 is a photo of a person. Image 2 shows ONLY the garment${name ? ` (${name})` : ''} on a plain background — it is the exact design to reproduce.`,
     `Create one photorealistic photo of the SAME person from image 1 wearing exactly that garment in place of their current ${part}${garment === 'set' ? ', both pieces together as one matching set' : ''}.`,
-    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, pose and background as in image 1. Only the clothes covered by this garment change.',
+    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, chest, build, pose and background as in image 1 — the garment takes the shape of THIS body; never add, enlarge or reshape a bust or any body part, and never change the person\'s apparent sex or age. Only the clothes covered by this garment change.',
     'ANATOMY: exactly two arms and two hands with five fingers each; add no limb, take no body parts or background from image 2.',
     'KEEP THE GARMENT: the same colours, fabric look, cut, length, neckline, sleeves, prints, lettering and logos in the same place and spelling; do not redraw, translate, simplify or add details.',
     'Let the fabric fall and fold naturally on this body; match the light and shadows of image 1.',
@@ -1091,7 +1091,7 @@ const verifyPrompt = (garment: string) =>
     `You check a virtual fitting result. Image 1 is the ORIGINAL photo of a person. Image 2 is the product reference photo (the exact design). Image 3 is the GENERATED photo (the same person should now ${garment ? 'wear the garment' : 'carry the product'}).`,
     `Answer with JSON only, with these keys: bagPresent (boolean: the ${garment ? 'garment' : 'product'} is visible in image 3), oneBag (boolean: exactly one such ${garment ? 'garment (or the two pieces of one set)' : 'bag'}, no extra bags or accessories),`,
     `designMatch (integer 1-5: how exactly colours, prints, lettering, logos, ${garment ? 'cut, neckline, sleeves, length and fabric' : 'handles, hardware and proportions'} in image 3 match image 2; 5 = identical, 3 = recognisably the same kind but details differ, 1 = a different product),`,
-    'personKept (integer 1-5: same person, face, hair and background as image 1' + (garment ? '' : ', same clothing') + '), anatomyOk (boolean: exactly two arms and hands, five fingers each, no extra limb),',
+    'personKept (integer 1-5: same person, face, hair, body shape and chest and background as image 1 — a changed or added bust, build or apparent sex scores 1' + (garment ? '' : ', same clothing') + '), anatomyOk (boolean: exactly two arms and hands, five fingers each, no extra limb),',
     `carryOk (boolean: ${garment ? 'it is worn naturally, the fabric falls plausibly, nothing is merged into the skin or cut off oddly' : 'it is held or worn in a physically plausible way, not floating, not merged into the body, handles visible and not melted'}).`,
   ].join(' ');
 
