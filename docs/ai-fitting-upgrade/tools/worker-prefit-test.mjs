@@ -76,7 +76,8 @@ ok('shoulder carry is its own instruction', /shoulder/i.test(lastGenParts[0].tex
 
 reset(); r = await post(env, { ...good, garment: 'top', productName: 'knit top' }, '1.2.3.4'); await r.json();
 ok('clothing: the generation prompt keeps THIS body (no added/enlarged/reshaped bust, no change of apparent sex)', /same face, identity, hair, skin, body shape, chest, build/.test(lastGenParts[0].text) && /never add, enlarge or reshape a bust/.test(lastGenParts[0].text) && /apparent sex/.test(lastGenParts[0].text));
-ok('clothing: the checker scores a changed or added bust, build or apparent sex as 1 (so such a picture is rejected)', /body shape and chest/.test(lastVerifyText) && /changed or added bust, build or apparent sex scores 1/.test(lastVerifyText));
+ok('clothing: the generation prompt orders full coverage (no underwear, no bra, no bare skin through the fabric; sheer garments over a plain tee/tank)', /show NO underwear, no bra and no bare skin through the fabric/.test(lastGenParts[0].text) && /plain white or matching tank top or t-shirt/.test(lastGenParts[0].text));
+ok('clothing: the checker scores a changed or added bust, build or apparent sex as 1 (so such a picture is rejected)', /body shape and chest/.test(lastVerifyText) && /changed or added bust, build or apparent sex scores 1/.test(lastVerifyText) && /visible underwear, bra or bare chest showing through the garment/.test(lastVerifyText));
 
 reset(); env = mk();
 verdicts = [{ ...GOOD, designMatch: 2 }, { ...GOOD, designMatch: 3 }];
