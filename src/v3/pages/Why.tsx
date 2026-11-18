@@ -8,6 +8,7 @@ import { WHY_LAGI } from '@/content/whyLagi';
 export default function Why() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(() => window.innerWidth >= 1200 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [height, setHeight] = useState<number | null>(null);
 
@@ -31,6 +32,7 @@ export default function Why() {
         const r = wrap.getBoundingClientRect();
         const p = Math.min(1, Math.max(0, -r.top / (r.height - window.innerHeight)));
         track.style.transform = `translate3d(${(-p * distance()).toFixed(1)}px,0,0)`;
+        if (barRef.current) barRef.current.style.width = `${(p * 100).toFixed(1)}%`;
       });
     };
     onScroll();
@@ -73,6 +75,13 @@ export default function Why() {
           {intro}
           {steps}
           <div className="w-[10vw] shrink-0" />
+        </div>
+        {/* A progress line and a cue: the four criteria travel sideways as the page scrolls. */}
+        <div className="pointer-events-none absolute inset-x-[var(--page-x)] bottom-[7vh] flex items-center gap-4" aria-hidden="true">
+          <span className="t-label t-mark shrink-0">Scroll ↓</span>
+          <div className="h-px flex-1 bg-black/15">
+            <div ref={barRef} className="h-px bg-[var(--c-blue)]" style={{ width: '0%' }} />
+          </div>
         </div>
         <svg className="pointer-events-none absolute inset-x-0 bottom-[14vh] h-24 w-full" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 70 C 150 10, 300 90, 450 50 S 750 10, 1000 60" fill="none" stroke="var(--c-ink)" strokeWidth="1" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" />

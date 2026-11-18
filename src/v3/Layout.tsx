@@ -344,7 +344,7 @@ function HelpButton() {
     // On a product page on phones, lifted above the buy bar (--buybar-h is 0 elsewhere).
     <div
       className={`fixed bottom-4 right-4 z-[35] flex flex-col items-end gap-2 transition-opacity duration-200 md:bottom-6 md:right-6 ${away ? 'pointer-events-none opacity-0' : ''}`}
-      style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}
+      style={{ transform: 'translateY(calc(-1 * (var(--buybar-h, 0px) + var(--buybar-gap, 0px))))' }}
       data-testid="help-float"
     >
       {open && (
@@ -368,7 +368,7 @@ function HelpButton() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="도움말 열기"
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-[0_4px_18px_rgba(0,0,0,0.16)] transition-transform hover:scale-105 md:h-14 md:w-14"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-[0_4px_18px_rgba(0,0,0,0.16)] transition-transform hover:scale-105 md:h-14 md:w-14"
         data-testid="help-button"
       >
         <LagiLogo className="h-8 w-auto text-[var(--c-blue)] md:h-9" title="" />

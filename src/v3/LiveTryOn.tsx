@@ -24,6 +24,8 @@ const STEP_LABEL: Record<Step, string> = {
   unsupported: '이 브라우저에서는 쓸 수 없어요',
   ended: '체험이 끝났어요',
 };
+/** The Worker keeps a visitor's "session open" lease this long after the token (session length + this margin) unless the page releases it. */
+const LEASE_MARGIN_S = 15;
 const STEP_ORDER: Step[] = ['ready', 'permission', 'checking', 'prefit', 'connecting', 'processing', 'live', 'ended'];
 /** Measurements of one session. They exist so a person can tell a REAL Decart output from a mock or from the camera passed through. */
 type Evidence = {
@@ -197,6 +199,9 @@ export function LiveTryOn({
   styleChips: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
+  // Seconds until a new session may start: the server still counts the last one as open until it releases it or its lease runs out.
+  const [wait, setWait] = useState(0);
+  const leaseUntil = useRef(0);
   const [left, setLeft] = useState(20);
   const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
@@ -246,6 +251,13 @@ export function LiveTryOn({
   const liveProductId = useRef<string | null>(null);
   const mapped = useRef<HTMLCanvasElement>(null);
   const mapper = useRef<DesignMapper | null>(null);
+
+  // Counts the wait down once a second (only while there is one).
+  useEffect(() => {
+    if (wait <= 0) return;
+    const id = window.setInterval(() => setWait((w) => Math.max(0, w - 1)), 1000);
+    return () => window.clearInterval(id);
+  }, [wait > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Never leave a paid session running: stop on unmount and when the tab is hidden.
   useEffect(() => {
@@ -459,6 +471,18 @@ export function LiveTryOn({
       }
       // Tell the Worker how long it really ran. Advisory bookkeeping only (the Worker never trusts it for limits).
       if (tokenAt) void report(connectedAt ? (Date.now() - connectedAt) / 1000 : 0, !!connectedAt && gotFrames);
+      // The session is over: free this visitor's "open session" slot so they can start again at once. A server that does not
+      // know this call yet (or a failed call) leaves the slot to run out by itself, so show the visitor a short countdown.
+      if (tokenAt) {
+        const left = Math.ceil((leaseUntil.current - Date.now()) / 1000);
+        if (left > 0) setWait(left);
+        void post('/realtime/release', {})
+          .then(() => {
+            leaseUntil.current = 0;
+            setWait(0);
+          })
+          .catch(() => undefined);
+      }
       window.clearInterval(timer);
       try {
         if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop();
@@ -532,6 +556,7 @@ export function LiveTryOn({
       const token = await post<{ apiKey: string; seconds: number; model?: string; remainingToday: number | null }>('/realtime/token', wantModel ? { model: wantModel } : {});
       setRemaining(token.remainingToday ?? 'unlimited');
       tokenAt = Date.now();
+      leaseUntil.current = tokenAt + (token.seconds + LEASE_MARGIN_S) * 1000;
       ev.msTokenReceived = tokenAt - t0;
       ev.requestedSeconds = token.seconds;
       ev.sdkIsMock = !!(sdk as { isMock?: boolean }).isMock;
@@ -717,6 +742,11 @@ export function LiveTryOn({
       stop();
       const name = (e as DOMException)?.name;
       const reason = (e as ApiError).reason;
+      if (reason === 'busy_ip') {
+        // The previous session's slot is still counted as open on the server: it frees itself in a few seconds.
+        setWait(Math.max(5, Math.ceil((leaseUntil.current - Date.now()) / 1000)));
+        ev.error = '이전 체험을 정리하는 중';
+      }
       const limited = reason === 'daily_limit' || reason === 'site_limit' || reason === 'busy_ip' || reason === 'busy_site' || reason === 'quota_unavailable';
       setFail(limited ? 'limited' : 'failed');
       setError(
@@ -726,9 +756,11 @@ export function LiveTryOn({
             ? '사용할 수 있는 카메라를 찾지 못했습니다. 카메라가 연결되어 있는지 확인해 주세요.'
             : name === 'NotReadableError' || name === 'AbortError'
               ? '카메라를 열지 못했습니다. 다른 앱이나 탭이 카메라를 쓰고 있다면 닫은 뒤 다시 시작해 주세요.'
-              : reason === 'network'
-                ? (e as Error).message
-                : (e as Error).message || '실시간 착용을 시작하지 못했습니다. 잠시 뒤에 다시 시작해 주세요.',
+              : reason === 'busy_ip'
+                ? '이전 체험을 정리하는 중입니다. 몇 초 뒤에 다시 시작해 주세요.'
+                : reason === 'network'
+                  ? (e as Error).message
+                  : (e as Error).message || '실시간 착용을 시작하지 못했습니다. 잠시 뒤에 다시 시작해 주세요.',
       );
     }
   }
@@ -1013,10 +1045,11 @@ export function LiveTryOn({
           <button
             type="button"
             onClick={start}
-            disabled={!product || !consent || live || phase === 'starting'}
+            disabled={!product || !consent || live || phase === 'starting' || wait > 0}
             className="btn btn-primary mt-5 w-full"
+            data-testid="start-button"
           >
-            {phase === 'starting' ? '연결 중…' : phase === 'ended' ? '다시 시작' : '실시간 착용 시작'}
+            {phase === 'starting' ? '연결 중…' : wait > 0 ? `정리 중 · ${wait}초 후 다시 시작` : phase === 'ended' ? '다시 시작' : '실시간 착용 시작'}
           </button>
           {!product && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 제품을 고르세요.</p>}
           <p className="t-caption kr mt-3 text-[var(--c-mute)]">

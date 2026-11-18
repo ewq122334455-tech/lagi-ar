@@ -30,13 +30,18 @@ function MobileBuyBar({ children }: { children: React.ReactNode }) {
     const el = bar.current;
     if (!el) return;
     const root = document.documentElement;
-    const publish = () => root.style.setProperty('--buybar-h', `${typing ? 0 : el.offsetHeight}px`);
+    const publish = () => {
+      root.style.setProperty('--buybar-h', `${typing ? 0 : el.offsetHeight}px`);
+      // A clear gap between the bar and the floating help button, so it never looks stuck to it.
+      root.style.setProperty('--buybar-gap', typing ? '0px' : '12px');
+    };
     publish();
     const ro = new ResizeObserver(publish);
     ro.observe(el);
     return () => {
       ro.disconnect();
       root.style.removeProperty('--buybar-h');
+      root.style.removeProperty('--buybar-gap');
     };
   }, [typing]);
   useEffect(() => {
