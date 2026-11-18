@@ -98,7 +98,7 @@ function productBox(bmp: ImageBitmap) {
 }
 
 /** The model wants a small reference: crop to the product, shrink to 768 px on white, send as JPEG (the PNG cutout is ~1 MB). */
-async function smallReference(blob: Blob, max = 768): Promise<Blob> {
+async function smallReference(blob: Blob, max = 768, quality = 0.88): Promise<Blob> {
   const bmp = await createImageBitmap(blob);
   const { sx, sy, sw, sh } = productBox(bmp);
   const k = Math.min(1, max / Math.max(sw, sh));
@@ -110,7 +110,7 @@ async function smallReference(blob: Blob, max = 768): Promise<Blob> {
   ctx.fillRect(0, 0, c.width, c.height);
   ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
   bmp.close();
-  return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', 0.88));
+  return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('제품 이미지를 준비하지 못했습니다.'))), 'image/jpeg', quality));
 }
 
 /** Fire-and-forget usage note for the owner's records (survives the page closing). */
@@ -370,7 +370,7 @@ export function LiveTryOn({
         p.fitting?.description ? Promise.resolve({ description: p.fitting.description }) : post<{ description?: string }>('/cutout', { productImage: url, describeOnly: true }),
         fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('제품 사진을 불러오지 못했습니다.')))),
       ]);
-      garment.current = { id: p.id, blob: await smallReference(photo, 1024), description };
+      garment.current = { id: p.id, blob: await smallReference(photo, 1280, 0.95), description };
     } else {
       const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
       garment.current = { id: p.id, blob: await smallReference(await (await fetch(image)).blob()), description };
