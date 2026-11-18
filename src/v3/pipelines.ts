@@ -68,7 +68,7 @@ export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'sh
     const what = description ? description.slice(0, 380) : garment === 'set' ? 'the matching set shown in the reference image' : `the ${garment === 'bottom' ? 'pants' : 'garment'} shown in the reference image`;
     // The strongest wording that still stays inside Decart's guide (one action, only what the reference shows, well under 750 characters in all).
     const exact =
-      'It must look identical to the reference image: the same weave and fabric texture, the same colours, the same print size, position and lettering, the same neckline, sleeve length and fit. Do not simplify, restyle, shrink or move any graphic, and do not add details. Keep the face, hair and background unchanged.';
+      'It must look identical to the reference image: the same weave and fabric texture, the same colours, the same print size, position and lettering, the same neckline, sleeve length and fit. Do not simplify, restyle, shrink or move any graphic, and do not add details. Keep the wearer\'s own face, hair, body shape, chest and build, and the background, exactly unchanged.';
     if (model.startsWith('lucy-vton')) return garment === 'set' ? `Substitute the current top and bottoms with ${what} ${exact}` : `Substitute the current ${part} with ${what}. ${exact}${prefit ? ' Exactly as in the reference image.' : ''}`;
     return `The person wears the ${garment === 'set' ? 'matching set' : garment === 'bottom' ? 'pants' : 'garment'} from the reference image in place of their current ${garment === 'set' ? 'outfit' : part}. ${description ? `It is ${description.slice(0, 380)} ` : ''}${exact}`;
   }

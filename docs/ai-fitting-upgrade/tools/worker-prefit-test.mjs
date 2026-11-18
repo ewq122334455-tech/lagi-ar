@@ -5,7 +5,7 @@ import { makeQuotaNs } from './quota-mock.mjs';
 const D = process.argv[2];
 const png = fs.readFileSync(D + '/fake-gemini.png').toString('base64');
 const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images/main.jpg');
-let gen = 0, ver = 0, falCalls = 0, lastGenParts = null, lastFal = null, lastFalAuth = '';
+let gen = 0, ver = 0, falCalls = 0, lastGenParts = null, lastFal = null, lastFalAuth = '', lastVerifyText = '';
 let verdicts = []; // queue of verifier answers: object | 'http500' | 'garbage'
 let genMode = 'ok';
 globalThis.fetch = async (url, init) => {
@@ -19,6 +19,7 @@ globalThis.fetch = async (url, init) => {
       return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: png } }] } }] }));
     }
     ver++;
+    lastVerifyText = body.contents[0].parts[0].text;
     const v = verdicts.length ? verdicts.shift() : GOOD;
     if (v === 'http500') return new Response('x', { status: 500 });
     const text = v === 'garbage' ? 'not json' : JSON.stringify(v);
@@ -72,6 +73,10 @@ ok('the generation got the visitor photo + the ORIGINAL product photo (two image
 ok('hand carry asks for a grip on the handle', /hand/i.test(lastGenParts[0].text));
 reset(); r = await post(env, { ...good, carry: 'shoulder' }, '1.1.1.1'); await r.json();
 ok('shoulder carry is its own instruction', /shoulder/i.test(lastGenParts[0].text) && !/held in one hand/i.test(lastGenParts[0].text));
+
+reset(); r = await post(env, { ...good, garment: 'top', productName: 'knit top' }, '1.2.3.4'); await r.json();
+ok('clothing: the generation prompt keeps THIS body (no added/enlarged/reshaped bust, no change of apparent sex)', /same face, identity, hair, skin, body shape, chest, build/.test(lastGenParts[0].text) && /never add, enlarge or reshape a bust/.test(lastGenParts[0].text) && /apparent sex/.test(lastGenParts[0].text));
+ok('clothing: the checker scores a changed or added bust, build or apparent sex as 1 (so such a picture is rejected)', /body shape and chest/.test(lastVerifyText) && /changed or added bust, build or apparent sex scores 1/.test(lastVerifyText));
 
 reset(); env = mk();
 verdicts = [{ ...GOOD, designMatch: 2 }, { ...GOOD, designMatch: 3 }];
