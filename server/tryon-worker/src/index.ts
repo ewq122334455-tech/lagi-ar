@@ -878,6 +878,16 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     return json({ ok: true }, 200, headers);
   }
 
+  // The page says its session is over: free this visitor's "open session" slot so they can start again at once (instead of waiting
+  // for the lease to run out). Safe to trust: it only changes how many sessions one address may have open at the same moment. The
+  // number of sessions per day is still counted (and capped) at the token, so releasing early gives no extra paid sessions.
+  if (path === '/realtime/release') {
+    if (throttled(`rtrel:${ip}`, 10)) return json({ error: 'slow down' }, 429, headers);
+    await releaseRealtime(env, ip);
+    void recordOutcome(env, 'rt', 'released');
+    return json({ ok: true }, 200, headers);
+  }
+
   if (path === '/cutout') {
     if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
     let body: { productImage?: string; matte?: boolean };
@@ -994,7 +1004,7 @@ export default {
       return handleOrders(path, request, env, headers);
     }
     if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
-    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report') return realtime(path, request, env, headers);
+    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report' || path === '/realtime/release') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -1161,7 +1171,7 @@ export class QuotaCounter {
     if (route === '/usage') {
       const all = Number((await this.state.storage.get('all')) ?? 0);
       const outcomes: Record<string, number> = {};
-      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms'])
+      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms', 'released'])
         outcomes[k] = Number((await this.state.storage.get(`out:${k}`)) ?? 0);
       return Response.json({ spentCenti: all, outcomes });
     }

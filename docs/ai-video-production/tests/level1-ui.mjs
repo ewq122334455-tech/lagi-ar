@@ -6,7 +6,7 @@ const jpg = fs.readFileSync('/home/user/lagi-ar/public/products/plano-bag/images
 const W = 'https://lagi-tryon.lagi-official.workers.dev';
 const ok = (n, c, i = '') => console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${i ? '  — ' + i : ''}`);
 const b = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? chromium.executablePath(), args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
-async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model, prefit = 'ok' } = {}) {
+async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, model, prefit = 'ok', release = 'ok' } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 }, permissions: ['camera'], acceptDownloads: true });
   await ctx.addInitScript(([m, d]) => {
     sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: m };
@@ -19,6 +19,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
   await p.route(W + '/**', (rt) => {
     const u = rt.request().url().replace(W, ''); const body = rt.request().postData() ?? '';
     if (u === '/realtime/report') { p.calls.push(u); return rt.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: '{"ok":true}' }); }
+    if (u === '/realtime/release') { p.calls.push(u); return rt.request().method() === 'OPTIONS' ? rt.fulfill({ status: 204, headers: cors }) : release === 'fail' ? rt.fulfill({ status: 404, headers: cors, contentType: 'application/json', body: '{"error":"not found"}' }) : rt.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: '{"ok":true}' }); }
     if (rt.request().method() === 'OPTIONS') return rt.fulfill({ status: 204, headers: cors });
     p.calls.push(u + (body.includes('matte') ? '(matte)' : '')); (p.bodies ??= {})[u] = body;
     const J = (status, o) => rt.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(o) });
@@ -63,7 +64,7 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
   await p.waitForSelector('[data-testid=clip-result]', { timeout: 10000 }); ok('C8 recorded clip preview appears', true);
   const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /영상 저장/ }).click()]); const f = '/tmp/rtclip-' + dl.suggestedFilename(); await dl.saveAs(f);
   ok('C9 clip downloads and is not empty', fs.statSync(f).size > 2000, `${dl.suggestedFilename()} ${fs.statSync(f).size} bytes`);
-  ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report' || c === '/realtime/prefit'), p.calls.join(','));
+  ok('C10 no request carries video to our server (only /cutout, /realtime/token, /realtime/report)', p.calls.every((c) => c.startsWith('/cutout') || c === '/realtime/token' || c === '/realtime/report' || c === '/realtime/release' || c === '/realtime/prefit'), p.calls.join(','));
   await p.waitForSelector('[data-testid=evidence]', { timeout: 5000 });
   ok('C12 measurement record appears after the session', true);
   ok('C13 a mock SDK run is labelled "not real AI" on screen', /실제 AI가 만든 영상이 아닙니다/.test(await p.getByTestId('evidence-mock').innerText()));
@@ -212,8 +213,23 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   const pb = body(p, '/realtime/prefit');
   ok('O3 the reference-picture request uses the fitting photo and the fitting part, not the whole set photo', /fitting\.jpg/.test(pb.productImage ?? '') && pb.garment === 'top', `${pb.productImage} ${pb.garment}`); await p.context().close(); }
+// P. starting again right after a session: the slot is freed at once (or the button shows a countdown instead of failing)
+{ const p = await open({ seconds: 5, release: 'ok' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
+  ok('P1 when the session ends the page tells the server (frees the slot)', p.calls.includes('/realtime/release'), p.calls.join(','));
+  await p.waitForTimeout(700);
+  const b = p.getByTestId('start-button');
+  ok('P2 right after the session the start button is usable at once and says "다시 시작"', !(await b.isDisabled()) && /^다시 시작$/.test((await b.innerText()).trim()), (await b.innerText()).trim());
+  await b.click(); await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  ok('P3 and the second session really starts (second token request)', p.calls.filter((c) => c === '/realtime/token').length === 2, p.calls.filter((c) => c === '/realtime/token').length + ' token requests'); await p.context().close(); }
+{ const p = await open({ seconds: 5, release: 'fail' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 }); await p.waitForTimeout(700);
+  const b = p.getByTestId('start-button');
+  ok('P4 if the server cannot free the slot, the button shows a countdown ("N초 후 다시 시작") instead of letting the visitor hit a refusal', (await b.isDisabled()) && /초 후 다시 시작/.test(await b.innerText()), (await b.innerText()).trim());
+  const t1 = Number(/(\d+)초/.exec(await b.innerText())?.[1]); await p.waitForTimeout(2200); const t2 = Number(/(\d+)초/.exec(await b.innerText())?.[1]);
+  ok('P5 the countdown moves down', t2 < t1, `${t1} -> ${t2}`); await p.context().close(); }
 // D. failures
-for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 already running', { token: 'busy' }, 'limited', /이미 진행/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
+for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 previous session still being wrapped up', { token: 'busy' }, 'limited', /정리하는 중/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
   ok(`${name}: message + step "${kind}"`, re.test(await p.getByTestId('live-error').innerText()) && (await step(p)) === kind, await step(p));
   ok(`${name}: camera released`, await p.evaluate(() => window.__tracks.every((t) => t.readyState === 'ended'))); await p.context().close(); }
