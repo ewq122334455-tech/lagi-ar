@@ -8,17 +8,12 @@ import { responsive } from '../img';
 export default function ReviewPage() {
   const { products } = useRealProducts();
   return (
-    <div className="px-page pb-32 pt-page">
-      <div className="text-center">
-        <p className="t-label t-mark text-[var(--c-mute)]">Review</p>
-        <h1 className="t-h2 t-mark mt-2">REVIEW</h1>
-        <p className="t-kr-sub mt-2">라기 제품을 받아 본 분들의 이야기</p>
-      </div>
+    <div className="px-page pb-[var(--section)] pt-page">
+      <h1 className="t-label t-mark text-center">Review</h1>
 
-      <div className="mx-auto mt-12 max-w-4xl">
-        <div className="rounded-[var(--radius-card)] bg-[var(--c-gray)] p-5">
-          <p className="t-value kr">구매평 쓰기</p>
-          <p className="t-caption kr mt-1 text-[var(--c-mute)]">제품을 고르면 그 제품 페이지의 구매평 탭으로 이동합니다. 회원만 쓸 수 있고, 라기에서 결제한 제품에는 ‘구매 확인’이 표시됩니다.</p>
+      <div className="mx-auto mt-24 max-w-4xl">
+        <div>
+          <p className="t-caption kr text-[var(--c-mute)]">구매평 쓰기</p>
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {products.map((p) => (
               <Link key={p.id} to={`/product/${p.id}`} className="w-24 shrink-0 text-center" aria-label={`${p.name.value} 구매평 쓰기`}>
@@ -30,7 +25,7 @@ export default function ReviewPage() {
             ))}
           </div>
         </div>
-        <div className="mt-12">
+        <div className="mt-24">
           <Reviews productId={null} />
         </div>
       </div>

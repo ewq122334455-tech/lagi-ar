@@ -877,7 +877,6 @@ export function LiveTryOn({
             </button>
           </div>
         )}
-        {live && <p className="t-caption kr mt-2 text-[var(--c-mute)]">실시간 화면은 미리보기라 제품 모양이 실제와 다를 수 있어요. 포즈를 잡고 “정확한 사진 만들기”를 누르면 실제 제품 그대로 합성합니다.</p>}
         {evidence && devMode && (
           <div className="mt-6 rounded-[var(--radius-card)] border border-black/10 p-4" data-testid="evidence">
             <h3 className="t-h3 kr">이번 세션 측정 기록</h3>
@@ -950,7 +949,6 @@ export function LiveTryOn({
                 삭제
               </button>
             </div>
-            <p className="t-caption kr mt-2 text-[var(--c-mute)]">AI가 만든 영상입니다. 이 기기에만 있고, 이 화면을 닫으면 사라집니다.</p>
           </div>
         )}
         {(exact.busy || exact.image || exact.error) && (
@@ -977,16 +975,10 @@ export function LiveTryOn({
       </div>
 
       <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
-        <section aria-labelledby="l2">
-          <h2 id="l2" className="t-h3 kr">
-            <span className="t-mark text-[var(--c-mute)]">02</span> 착용 방식
-          </h2>
-          {styleChips}
-        </section>
 
         <section aria-labelledby="l3">
           <h2 id="l3" className="t-h3 kr">
-            <span className="t-mark text-[var(--c-mute)]">03</span> 실시간 착용 · 20초
+            실시간 착용
           </h2>
           <div className="mt-3 flex gap-2">
             {(['user', 'environment'] as const).map((f) => (
@@ -1008,14 +1000,14 @@ export function LiveTryOn({
             <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
               <input type="checkbox" className="mt-1" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
               <span>
-                <b className="block text-[var(--c-ink)]">결과 영상을 이 기기에 녹화</b>
-                끝나면 영상으로 저장할 수 있습니다. 파일은 이 기기에만 만들어지고 라기 서버로 올라가지 않습니다.
+                <b className="block text-[var(--c-ink)]">영상 녹화</b>
+                이 기기에만 저장됩니다.
               </span>
             </label>
           )}
           <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-            <span>체험하는 20초 동안 카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
+            <span>카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
           </label>
           <button
             type="button"
@@ -1027,7 +1019,7 @@ export function LiveTryOn({
           </button>
           {!product && <p className="t-caption kr mt-2 text-[var(--c-mute)]">먼저 제품을 고르세요.</p>}
           <p className="t-caption kr mt-3 text-[var(--c-mute)]">
-            한 번에 20초, 하루 3번까지 체험할 수 있습니다{remaining === 'unlimited' ? ' (이 계정은 횟수 제한 없음)' : remaining != null ? ` (오늘 남은 횟수 ${remaining}번)` : ''}. 화면은 AI가 만든 영상이며, 실제 크기와 색은 다를 수 있습니다.
+            20초 · 하루 3번{remaining === 'unlimited' ? ' (제한 없음)' : remaining != null ? ` (남은 횟수 ${remaining}번)` : ''} · AI가 만든 영상이라 실제와 다를 수 있습니다.
           </p>
           {error && (
             <p className="t-caption kr mt-3 text-[var(--c-blue)]" role="alert" data-testid="live-error" data-kind={fail ?? 'failed'}>

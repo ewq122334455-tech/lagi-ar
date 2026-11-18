@@ -23,19 +23,18 @@ import { responsive } from '../img';
 export function CartPage() {
   const { lines, setQuantity, remove, subtotal, count } = useCart();
   return (
-    <div className="px-page pb-32 pt-page">
-      <p className="t-label t-mark text-[var(--c-mute)]">Cart</p>
-      <h1 className="t-h1 kr mt-2 !font-bold">장바구니</h1>
+    <div className="px-page pb-[var(--section)] pt-page">
+      <h1 className="t-label t-mark text-center">Cart</h1>
       {lines.length === 0 ? (
-        <div className="rule mt-12 pt-6">
-          <p className="t-body kr">장바구니가 비어 있습니다.</p>
+        <div className="mt-32 text-center">
+          <p className="t-body kr text-[var(--c-mute)]">비어 있습니다.</p>
           <Link to="/discover" className="t-nav tag tag-ink kr mt-6 px-4 py-3">
             제품 보러 가기
           </Link>
         </div>
       ) : (
         <>
-          <ul className="rule mt-12">
+          <ul className="mt-24 border-t border-black/10">
             {lines.map((l) => (
               <li key={lineKey(l)} className="grid grid-cols-[88px_1fr_auto] items-center gap-4 border-b border-[var(--c-ink)]/15 py-5 lg:grid-cols-[120px_1fr_auto_auto]">
                 {l.image ? <img {...responsive(l.image, '120px')} src={l.image} alt="" className="aspect-square w-full rounded-[var(--radius-card)] object-cover" /> : <span />}
@@ -75,7 +74,6 @@ export function CartPage() {
                 <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="t-nav tag tag-ink kr px-5 py-3.5" data-testid="cart-store-order">
                   스마트스토어에서 주문 ↗
                 </a>
-                <span className="t-caption kr text-[var(--c-mute)]">지금은 라기 공식 스마트스토어에서 결제할 수 있습니다.</span>
               </span>
             )}
           </div>
@@ -222,7 +220,7 @@ export function CheckoutPage() {
         <p className="t-label t-mark text-[var(--c-mute)]">Checkout</p>
         <h1 className="t-h1 kr mt-2 !font-bold">주문서</h1>
         <div className="rule mt-12 max-w-xl pt-6">
-          <p className="t-body kr">온라인 결제는 잠시 중단되어 있습니다. 지금은 라기 공식 스마트스토어에서 주문할 수 있습니다.</p>
+          <p className="t-body kr">온라인 결제는 잠시 중단되어 있습니다.</p>
           <p className="t-caption kr mt-2 text-[var(--c-mute)]">장바구니에 담은 {count}개 제품은 그대로 남아 있습니다.</p>
           <div className="mt-6 flex flex-wrap gap-2">
             <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="t-nav tag tag-ink kr px-4 py-3">
@@ -373,7 +371,7 @@ export function CheckoutPage() {
 
             {!enabled ? (
               <div className="mt-6 border-t border-[var(--c-ink)]/20 pt-5">
-                <p className="t-body kr">온라인 결제는 잠시 중단되어 있습니다. 지금은 라기 공식 스마트스토어에서 주문할 수 있습니다.</p>
+                <p className="t-body kr">온라인 결제는 잠시 중단되어 있습니다.</p>
                 <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="t-nav tag tag-ink kr mt-4 px-4 py-3">
                   스마트스토어에서 결제 ↗
                 </a>

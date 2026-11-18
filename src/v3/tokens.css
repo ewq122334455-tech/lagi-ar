@@ -9,8 +9,10 @@
   --c-label: rgb(230, 230, 230);
 
   /* Side margins grow with the screen (20px on phones → 96px on very wide screens). */
-  --page-x: clamp(24px, 8vw, 200px);
-  --gap: clamp(14px, 1.4vw, 24px);
+  --page-x: clamp(28px, 11vw, 280px);
+  --gap: clamp(18px, 2.2vw, 40px);
+  /* Empty space is part of the brand: the distance between blocks on every page. */
+  --section: clamp(112px, 15vw, 240px);
   --top: 96px;
   --radius-card: 4px;
   --radius-sheet: 50px;
