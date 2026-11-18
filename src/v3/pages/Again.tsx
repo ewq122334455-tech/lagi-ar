@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
-import { CATEGORY_LABEL, isClothing, price, useRealProducts } from '../data';
+import { isClothing, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
 import { MapTryOn } from '../MapTryOn';
 import { cleanImage } from '../ProductCard';
@@ -209,13 +209,13 @@ export default function Again() {
     <div className="px-page pb-32 pt-page">
       <header className="text-center">
         <h1 className="t-display t-mark">AGAIN</h1>
-        <p className="t-caption kr mt-6 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
+        <p className="t-caption kr mt-4 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
       </header>
 
-      <div className="mx-auto mt-24 grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
+      <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
         {(
           [
-            ['map', '실시간 3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
+            ['map', '3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
             ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
             ['live', 'AI 영상 (베타)', '옷 전용 · AI가 다시 그리는 영상 · 20초'],
           ] as const
@@ -226,23 +226,23 @@ export default function Again() {
             role="tab"
             aria-selected={mode === m}
             onClick={() => setMode(m)}
-            className={`rounded-xl px-2 py-3 text-left transition-all sm:px-4 ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-3 text-center text-[13px] transition-all sm:px-4 sm:text-left sm:text-base ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
           >
-            <span className="t-value kr block">{label}</span>
+            <span className="t-value kr block !text-[inherit]">{label}</span>
           </button>
         ))}
       </div>
 
 
       {/* 01 Product */}
-      <section className="mt-[var(--section)]" aria-labelledby="s1">
+      <section className="mt-10" aria-labelledby="s1">
         <h2 id="s1" className="sr-only">제품을 고르세요</h2>
         {loading ? (
           <p className="t-caption kr mt-4">불러오는 중…</p>
         ) : (
-          <ul className="no-scrollbar mt-5 flex snap-x gap-3 overflow-x-auto pb-2">
+          <ul className="no-scrollbar flex snap-x gap-3 overflow-x-auto pb-2 md:justify-center">
             {pickable.map((p) => (
-              <li key={p.id} className="w-[38vw] shrink-0 snap-start sm:w-44">
+              <li key={p.id} className="w-[22vw] shrink-0 snap-start sm:w-24">
                 <button
                   type="button"
                   aria-pressed={p.id === productId}
@@ -257,10 +257,7 @@ export default function Again() {
                       </span>
                     )}
                   </span>
-                  <span className="t-caption kr mt-2 block px-1 pb-1 font-bold">{p.name.value}</span>
-                  <span className="t-caption kr block px-1 pb-1 text-[var(--c-mute)]">
-                    {CATEGORY_LABEL[p.category.value ?? ''] ?? ''} · {price(p.price.value)}
-                  </span>
+                  <span className="t-label kr mt-1.5 block truncate px-0.5">{p.name.value}</span>
                 </button>
               </li>
             ))}
