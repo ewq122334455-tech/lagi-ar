@@ -37,4 +37,17 @@ const realNow = Date.now; let offset = 0; Date.now = () => realNow() + offset;
   const asked = (ip, model) => w.fetch(new Request('https://w/realtime/token', { method: 'POST', headers: { Origin: O, 'CF-Connecting-IP': ip, 'Content-Type': 'application/json' }, body: JSON.stringify(model ? { model } : {}) }), env);
   await asked('8.1.1.1', 'lucy-vton-3.6'); await asked('8.1.1.2', 'evil-model'); await asked('8.1.1.3');
   ok('10 a page may ask for an allow-listed model by name (lucy-vton-3.6); any other name falls back to the Worker default lucy-2.6', minted[0].allowedModels[0] === 'lucy-vton-3.6' && minted[1].allowedModels[0] === 'lucy-2.6' && minted[2].allowedModels[0] === 'lucy-2.6', minted.map((m) => m.allowedModels[0]).join(' / ')); }
+{ const env = mk(); minted = [];
+  const rel = (ip) => w.fetch(new Request('https://w/realtime/release', { method: 'POST', headers: { Origin: O, 'CF-Connecting-IP': ip, 'Content-Type': 'application/json' }, body: '{}' }), env);
+  ok('11 a session just ended: without a release the same visitor is refused (busy_ip)', (await code(await w.fetch(req('9.1.1.1'), env))) === '200/ok' && (await code(await w.fetch(req('9.1.1.1'), env))) === '429/busy_ip');
+  const r = await rel('9.1.1.1');
+  ok('11b the page releases the slot when the session ends → 200', r.status === 200 && (await r.json()).ok === true);
+  ok('11c the same visitor can start again at once after the release', (await code(await w.fetch(req('9.1.1.1'), env))) === '200/ok');
+  // releasing early never gives extra sessions: the daily count is taken at the token
+  const env2 = mk({ REALTIME_PER_IP_DAILY: '2' }); minted = [];
+  const rel2 = (ip) => w.fetch(new Request('https://w/realtime/release', { method: 'POST', headers: { Origin: O, 'CF-Connecting-IP': ip, 'Content-Type': 'application/json' }, body: '{}' }), env2);
+  await w.fetch(req('9.2.2.2'), env2); await rel2('9.2.2.2'); await w.fetch(req('9.2.2.2'), env2); await rel2('9.2.2.2');
+  ok('11d releasing early does not give extra paid sessions: the per-visitor daily cap (2) still stops the third', (await code(await w.fetch(req('9.2.2.2'), env2))) === '429/daily_limit' && minted.length === 2);
+  const bad = await w.fetch(new Request('https://w/realtime/release', { method: 'POST', headers: { Origin: 'https://evil.example', 'CF-Connecting-IP': '9.3.3.3', 'Content-Type': 'application/json' }, body: '{}' }), env);
+  ok('11e a foreign origin cannot call it', bad.status === 403); }
 Date.now = realNow;

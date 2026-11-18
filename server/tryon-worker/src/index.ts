@@ -63,6 +63,22 @@ export interface Env {
   DECART_BASE_URL?: string;
   /** Realtime sessions that may be open at once, whole site. Default 3. */
   REALTIME_MAX_CONCURRENT?: string;
+  /** fal.ai key for the "try-on reference photo" step (the person holding the product). Secret. Without it the step is off. */
+  FAL_KEY?: string;
+  /** Who makes the try-on reference photo: "gemini" (default, already connected) or "fal" (Decart's example: FLUX Klein 9B + try-on LoRA). */
+  PREFIT_PROVIDER?: string;
+  /** "1" = no NEW on-site orders (POST /orders is refused). Confirming or looking up an existing order keeps working. */
+  PAYMENTS_DISABLED?: string;
+  /** "1" = stop making try-on reference photos at once (kill switch). */
+  PREFIT_DISABLED?: string;
+  /** Reference photos allowed per day across the whole site (cost cap). Default 100. */
+  PREFIT_DAILY_SITE?: string;
+  /** Reference photos per visitor per day, 1 to 10 (default 3). */
+  PREFIT_PER_IP_DAILY?: string;
+  /** USD per reference photo, only for the estimate in /admin/usage (check fal's price page; default 0.05). */
+  FAL_USD_PER_IMAGE?: string;
+  /** Base URL of fal's run API (tests point this at a local mock). Default https://fal.run */
+  FAL_BASE_URL?: string;
   /** Gemini relay pinned to the western US (Durable Object) — see GeminiRelay below. Optional. */
   /** Atomic daily counters for the AI-photo cost caps (Durable Object `QuotaCounter`). Without it the caps fall back to KV, which is NOT atomic. */
   QUOTA?: { idFromName(name: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } };
@@ -237,8 +253,8 @@ async function productCutout(env: Env, url: string, product: { mime: string; dat
 
 const DESCRIBE_PROMPT =
   'Describe this product for a video generator in one English sentence of at most 45 words. Only what is visible: ' +
-  'the kind of item, its overall shape and proportions, each main colour and the part it is on (body, top band, handles, ' +
-  'straps, pockets, trims), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
+  'the kind of item (a bag or a garment), its overall shape and proportions, each main colour and the part it is on (body, top band, handles, ' +
+  'straps, pockets, trims — or for a garment: neckline, sleeves, hem, waist, closures, fabric look), and where the prints, lettering and label sit and their colours. No brand names, no opinions.';
 
 /** A plain visual description of the product, so the realtime model is steered by words as well as the image. Cached. */
 async function productDescription(env: Env, url: string, product: { mime: string; data: string }, budget: Budget): Promise<{ text?: string; note?: string }> {
@@ -592,6 +608,7 @@ async function handleOrders(path: string, request: Request, env: Env, headers: R
   }
 
   if (path === '/orders') {
+    if (env.PAYMENTS_DISABLED === '1') return json({ error: '온라인 결제를 잠시 중단했습니다. 라기 공식 스마트스토어에서 주문해 주세요.', reason: 'paused' }, 503, headers);
     const items = Array.isArray(body.items) ? (body.items as { productId?: unknown; quantity?: unknown }[]) : [];
     if (!items.length || items.length > 20) return json({ error: '주문할 제품이 없습니다.' }, 400, headers);
     const c = (body.customer ?? {}) as Record<string, unknown>;
@@ -878,9 +895,19 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     return json({ ok: true }, 200, headers);
   }
 
+  // The page says its session is over: free this visitor's "open session" slot so they can start again at once (instead of waiting
+  // for the lease to run out). Safe to trust: it only changes how many sessions one address may have open at the same moment. The
+  // number of sessions per day is still counted (and capped) at the token, so releasing early gives no extra paid sessions.
+  if (path === '/realtime/release') {
+    if (throttled(`rtrel:${ip}`, 10)) return json({ error: 'slow down' }, 429, headers);
+    await releaseRealtime(env, ip);
+    void recordOutcome(env, 'rt', 'released');
+    return json({ ok: true }, 200, headers);
+  }
+
   if (path === '/cutout') {
     if (throttled(`cutout:${ip}`, 10)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
-    let body: { productImage?: string; matte?: boolean };
+    let body: { productImage?: string; matte?: boolean; describeOnly?: boolean };
     try {
       body = await request.json();
     } catch {
@@ -894,6 +921,11 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
       if (!matte) return json({ error: '제품 이미지를 준비하지 못했습니다.' }, 502, headers);
       return json({ matte: `data:${matte.mime};base64,${matte.data}` }, 200, headers);
     }
+    // describeOnly: the page uses the ORIGINAL clean product photo itself (nothing is redrawn); only the one-line description is made.
+    if (body.describeOnly) {
+      const d = env.GEMINI_API_KEY ? await productDescription(env, body.productImage!, product, { ip }) : ({} as { text?: string; note?: string });
+      return json({ description: d.text, descriptionNote: d.note }, 200, headers);
+    }
     const [{ cut, quota }, desc] = env.GEMINI_API_KEY
       ? await Promise.all([productCutout(env, body.productImage!, product, { ip }), productDescription(env, body.productImage!, product, { ip })])
       : [{} as { cut?: { mime: string; data: string }; quota?: QuotaFail }, {} as { text?: string; note?: string }];
@@ -902,6 +934,8 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
     // descriptionNote: why there is no description (shown only in the response, for diagnosis).
     return json({ image: `data:${img.mime};base64,${img.data}`, cutout: !!cut, description: desc.text, descriptionNote: desc.note }, 200, headers);
   }
+
+  if (path === '/realtime/prefit') return prefit(request, env, headers, ip);
 
   if (!env.DECART_API_KEY) return json({ error: '실시간 착용은 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
   if (env.REALTIME_DISABLED === '1') return json({ error: '실시간 착용을 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
@@ -966,6 +1000,192 @@ async function realtime(path: string, request: Request, env: Env, headers: Recor
   return json({ apiKey: token.apiKey, expiresAt: token.expiresAt, seconds: sessionSeconds(env), model, remainingToday: Math.max(0, perIp(env) - usedToday) }, 200, headers);
 }
 
+/** Prompts for fal's try-on LoRA, picked by name (a page can never send its own text). */
+const PREFIT_PROMPTS: Record<string, string> = {
+  // Decart's own example prompt (made for clothes).
+  official: 'TRYON [person in photo]. Replace the outfit with [garment] as shown in the reference image. The final image is a full body shot.',
+  // Same pattern, for a bag: keep the framing of the photo, hold the bag.
+  carry: "TRYON [person in photo]. Add [garment] as shown in the reference image, held by its handles in the person's hand. Keep the same framing as the photo. Keep the bag exactly as in the reference image.",
+  shoulder: "TRYON [person in photo]. Add [garment] as shown in the reference image, resting on the person's shoulder by its handles or strap. Keep the same framing as the photo. Keep the bag exactly as in the reference image.",
+};
+const PREFIT_MODEL = 'fal-ai/flux-2/klein/9b/base/edit/lora';
+const PREFIT_LORA = 'https://huggingface.co/fal/flux-klein-9b-virtual-tryon-lora/resolve/main/flux-klein-tryon.safetensors';
+const PREFIT_MAX_PERSON_BYTES = 3_000_000;
+const prefitPerIp = (env: Env) => Math.min(10, Math.max(1, Math.floor(Number(env.PREFIT_PER_IP_DAILY ?? 3)) || 3));
+type PrefitProvider = 'gemini' | 'fal';
+type Img = { mime: string; data: string };
+type Verdict = { pass: boolean; checks: Record<string, unknown>; note?: string };
+
+/** Decart's "Extreme Precision" with fal.ai: image-edit model + try-on LoRA. Returns the picture or a short reason. */
+async function prefitFal(env: Env, personUrl: string, product: Img, prompt: string): Promise<{ image?: Img; reason?: string }> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 40_000);
+  try {
+    const res = await fetch(`${env.FAL_BASE_URL ?? 'https://fal.run'}/${PREFIT_MODEL}`, {
+      method: 'POST',
+      headers: { Authorization: `Key ${env.FAL_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        image_urls: [personUrl, `data:${product.mime};base64,${product.data}`],
+        loras: [{ path: PREFIT_LORA, scale: 1.0 }],
+        guidance_scale: 2.5,
+        num_inference_steps: 28,
+      }),
+      signal: ctl.signal,
+    });
+    void recordOutcome(env, 'prefit', res.ok ? 'http_ok' : `http_${res.status}`);
+    if (!res.ok) {
+      console.log('fal error', res.status, (await res.text()).slice(0, 300));
+      return { reason: 'provider' };
+    }
+    const out = (await res.json()) as { images?: { url?: string }[] };
+    const url = out.images?.[0]?.url;
+    if (!url || !/^https:\/\//.test(url)) {
+      void recordOutcome(env, 'prefit', 'no_image');
+      return { reason: 'no_image' };
+    }
+    const img = await fetch(url, { signal: ctl.signal });
+    if (!img.ok) return { reason: 'provider' };
+    const mime = (img.headers.get('Content-Type') ?? 'image/png').split(';')[0];
+    const buf = await img.arrayBuffer();
+    if (!/^image\//.test(mime) || buf.byteLength > 8_000_000) return { reason: 'provider' };
+    return { image: { mime, data: toBase64(buf) } };
+  } catch {
+    void recordOutcome(env, 'prefit', 'network_error');
+    return { reason: 'provider' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The same step with Gemini (already connected, already capped): visitor photo + the ORIGINAL product photo → the visitor carrying it. */
+/** The same step for clothing: the visitor wearing exactly this garment (top, bottoms, a whole set …). */
+export function buildGarmentPrompt(name: string, garment: string) {
+  const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'bottoms' : garment === 'set' ? 'top and bottoms of this set' : garment === 'outer' ? 'outer layer' : 'outfit';
+  return [
+    `You are a virtual fitting room for a clothing brand. Image 1 is a photo of a person. Image 2 shows ONLY the garment${name ? ` (${name})` : ''} on a plain background — it is the exact design to reproduce.`,
+    `Create one photorealistic photo of the SAME person from image 1 wearing exactly that garment in place of their current ${part}${garment === 'set' ? ', both pieces together as one matching set' : ''}.`,
+    'KEEP THE PERSON: the same face, identity, hair, skin, body shape, pose and background as in image 1. Only the clothes covered by this garment change.',
+    'ANATOMY: exactly two arms and two hands with five fingers each; add no limb, take no body parts or background from image 2.',
+    'KEEP THE GARMENT: the same colours, fabric look, cut, length, neckline, sleeves, prints, lettering and logos in the same place and spelling; do not redraw, translate, simplify or add details.',
+    'Let the fabric fall and fold naturally on this body; match the light and shadows of image 1.',
+    'FRAMING: the same framing and aspect ratio as image 1, without cropping or zooming. Return only the edited photo.',
+  ].join(' ');
+}
+
+async function prefitGemini(env: Env, person: Img, product: Img, style: 'hand' | 'shoulder', name: string, ip: string, garment = ''): Promise<{ image?: Img; reason?: string }> {
+  const req: TryOnRequest = { person: '', productImage: '', productName: name, style: style === 'shoulder' ? 'carried on one shoulder' : 'held in one hand by its handle' };
+  const out = await geminiImage(
+    env,
+    [{ text: garment ? buildGarmentPrompt(name, garment) : buildPromptV2(req, false, 0) }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }],
+    { ip },
+  );
+  if (out.quota) return { reason: out.quota };
+  if (!out.image) return { reason: out.reason === 'busy' ? 'busy' : 'no_image' };
+  const m = /^data:([^;]+);base64,(.+)$/.exec(out.image);
+  return m ? { image: { mime: m[1], data: m[2] } } : { reason: 'no_image' };
+}
+
+const verifyPrompt = (garment: string) =>
+  [
+    `You check a virtual fitting result. Image 1 is the ORIGINAL photo of a person. Image 2 is the product reference photo (the exact design). Image 3 is the GENERATED photo (the same person should now ${garment ? 'wear the garment' : 'carry the product'}).`,
+    `Answer with JSON only, with these keys: bagPresent (boolean: the ${garment ? 'garment' : 'product'} is visible in image 3), oneBag (boolean: exactly one such ${garment ? 'garment (or the two pieces of one set)' : 'bag'}, no extra bags or accessories),`,
+    `designMatch (integer 1-5: how exactly colours, prints, lettering, logos, ${garment ? 'cut, neckline, sleeves, length and fabric' : 'handles, hardware and proportions'} in image 3 match image 2; 5 = identical, 3 = recognisably the same kind but details differ, 1 = a different product),`,
+    'personKept (integer 1-5: same person, face, hair and background as image 1' + (garment ? '' : ', same clothing') + '), anatomyOk (boolean: exactly two arms and hands, five fingers each, no extra limb),',
+    `carryOk (boolean: ${garment ? 'it is worn naturally, the fabric falls plausibly, nothing is merged into the skin or cut off oddly' : 'it is held or worn in a physically plausible way, not floating, not merged into the body, handles visible and not melted'}).`,
+  ].join(' ');
+
+/** Checks a generated reference photo before it can reach the realtime model (fail closed: no verdict = no pass). */
+async function verifyPrefit(env: Env, person: Img, product: Img, made: Img, ip: string, garment = ''): Promise<Verdict> {
+  if (!env.GEMINI_API_KEY) return { pass: false, checks: {}, note: 'no verifier' };
+  try {
+    const res = await callGemini(
+      env,
+      JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: verifyPrompt(garment) }, { inline_data: { mime_type: person.mime, data: person.data } }, { inline_data: { mime_type: product.mime, data: product.data } }, { inline_data: { mime_type: made.mime, data: made.data } }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 1024, responseMimeType: 'application/json' },
+      }),
+      env.GEMINI_TEXT_MODEL ?? 'gemini-3.8-flash',
+      { ip },
+      Number(env.TRYON_TEXT_UNIT ?? 0.1),
+    );
+    if (!res.ok) return { pass: false, checks: {}, note: `verifier HTTP ${res.status}` };
+    const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const text = data.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '';
+    const c = JSON.parse(text.replace(/^```json|```$/g, '').trim()) as Record<string, unknown>;
+    const pass = c.bagPresent === true && c.oneBag === true && Number(c.designMatch) >= 4 && Number(c.personKept) >= 4 && c.anatomyOk === true && c.carryOk === true;
+    return { pass, checks: { bagPresent: c.bagPresent, oneBag: c.oneBag, designMatch: c.designMatch, personKept: c.personKept, anatomyOk: c.anatomyOk, carryOk: c.carryOk } };
+  } catch (e) {
+    if (e instanceof QuotaError) return { pass: false, checks: {}, note: e.reason };
+    return { pass: false, checks: {}, note: 'verifier error' };
+  }
+}
+
+const dataImg = (d: string): Img | null => {
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(d);
+  return m ? { mime: m[1], data: m[2] } : null;
+};
+
+/**
+ * POST /realtime/prefit — Decart's "Extreme Precision" step for bags: ONE still of THIS visitor carrying THIS product, used as
+ * the reference image of the realtime session. Body: { person: camera frame (data URL), productImage: URL on an allowed origin
+ * (the original clean product photo, never redrawn), carry?: 'hand' | 'shoulder', provider?: 'gemini' | 'fal', variant? (fal only) }.
+ * The result is CHECKED (a second model compares it with the product photo and the visitor's photo); a picture that fails is
+ * never returned (one retry, then 422) so a wrong picture cannot reach the paid realtime model. Nothing is stored.
+ * Paid: reserved atomically before each call (no refunds), kill switch, per-visitor and per-day caps.
+ */
+async function prefit(request: Request, env: Env, headers: Record<string, string>, ip: string): Promise<Response> {
+  if (env.PREFIT_DISABLED === '1') return json({ error: '참조 사진 만들기를 잠시 중단했습니다.', reason: 'disabled' }, 503, headers);
+  let body: { person?: string; productImage?: string; variant?: string; carry?: string; provider?: string; productName?: string; garment?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'invalid JSON' }, 400, headers);
+  }
+  const provider: PrefitProvider = body.provider === 'fal' || body.provider === 'gemini' ? body.provider : env.PREFIT_PROVIDER === 'fal' ? 'fal' : 'gemini';
+  if (provider === 'fal' && !env.FAL_KEY) return json({ error: '참조 사진 만들기는 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers);
+  if (!env.GEMINI_API_KEY) return json({ error: '참조 사진 만들기는 아직 준비 중입니다.', reason: 'not_configured' }, 503, headers); // also needed for the check
+  if (throttled(`prefit:${ip}`, 5)) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429, headers);
+  const person = String(body.person ?? '');
+  const personImg = dataImg(person);
+  if (!personImg) return json({ error: 'invalid person image' }, 400, headers);
+  if (person.length * 0.75 > PREFIT_MAX_PERSON_BYTES) return json({ error: 'person image too large' }, 413, headers);
+  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+  const product = await fetchProductImage(body.productImage ?? '', allowed);
+  if ('error' in product) return json({ error: product.error }, product.status, headers);
+  const carry: 'hand' | 'shoulder' = body.carry === 'shoulder' ? 'shoulder' : 'hand';
+  const falPrompt = PREFIT_PROMPTS[body.variant ?? ''] ?? (body.garment && ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment) ? PREFIT_PROMPTS.official : PREFIT_PROMPTS[carry === 'shoulder' ? 'shoulder' : 'carry']);
+  const name = String(body.productName ?? '').slice(0, 80);
+  const garment = ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment ?? '') ? (body.garment as string) : '';
+
+  try {
+    await meter(env, 'prefit', ip, 1, Number(env.PREFIT_DAILY_SITE ?? 100), prefitPerIp(env));
+  } catch (e) {
+    if (!(e instanceof QuotaError)) throw e;
+    if (e.reason === 'daily_limit') return json({ error: `참조 사진 만들기는 하루 ${prefitPerIp(env)}번까지 가능합니다.`, reason: 'daily_limit' }, 429, headers);
+    if (e.reason === 'site_limit') return json({ error: '오늘 참조 사진 만들기가 모두 소진되었습니다.', reason: 'site_limit' }, 429, headers);
+    return json({ error: '참조 사진 만들기를 지금은 이용할 수 없습니다.', reason: 'quota_unavailable' }, 503, headers);
+  }
+
+  // Up to two generations; each one is checked before it may be returned.
+  let last: Verdict | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) void recordOutcome(env, 'prefit', 'retry');
+    const made = provider === 'fal' ? await prefitFal(env, person, product, falPrompt) : await prefitGemini(env, personImg, product, carry, name, ip, garment);
+    if (!made.image) {
+      if (made.reason === 'daily_limit' || made.reason === 'site_limit' || made.reason === 'quota_unavailable') return json({ error: '참조 사진 만들기를 지금은 이용할 수 없습니다.', reason: made.reason }, 429, headers);
+      if (attempt === 1 || made.reason === 'provider') return json({ error: '참조 사진을 만들지 못했습니다.', reason: made.reason ?? 'provider' }, 502, headers);
+      continue;
+    }
+    const verdict = await verifyPrefit(env, personImg, product, made.image, ip, garment);
+    last = verdict;
+    void recordOutcome(env, 'prefit', verdict.pass ? 'verified' : 'rejected');
+    if (verdict.pass) return json({ image: `data:${made.image.mime};base64,${made.image.data}`, provider, carry, verified: true, checks: verdict.checks }, 200, headers);
+  }
+  // A picture that failed the check is NOT returned: the page falls back to the original product photo.
+  return json({ error: '만들어진 참조 사진이 제품과 충분히 같지 않아 사용하지 않았습니다.', reason: 'verify_failed', checks: last?.checks ?? {}, note: last?.note }, 422, headers);
+}
+
 // ---- Router ----------------------------------------------------------------------------------
 
 export default {
@@ -994,7 +1214,7 @@ export default {
       return handleOrders(path, request, env, headers);
     }
     if (path === '/admin/usage' && request.method === 'GET') return adminUsage(request, env, headers);
-    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report') return realtime(path, request, env, headers);
+    if (path === '/realtime/token' || path === '/cutout' || path === '/realtime/report' || path === '/realtime/release' || path === '/realtime/prefit') return realtime(path, request, env, headers);
     if (path.startsWith('/auth/')) {
       if (!env.USERS) return json({ error: '회원 기능이 아직 연결되지 않았습니다.' }, 503, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -1089,7 +1309,7 @@ function localOnly(env: Env): boolean {
  * whole site, atomically, in the day's counter object for `scope`. Throws QuotaError when over a cap or when the meter
  * cannot be trusted. Returns how many units this address has used so far today (for "N left" messages).
  */
-async function meter(env: Env, scope: 'tryon' | 'rt', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
+async function meter(env: Env, scope: 'tryon' | 'rt' | 'prefit', ip: string, units: number, siteCapUnits: number, ipCapUnits: number): Promise<{ ipSpent: number }> {
   if (env.TRYON_QUOTA === 'unmetered') {
     if (localOnly(env)) return { ipSpent: 0 };
     throw new QuotaError('quota_unavailable'); // "unmetered" next to a real origin is never allowed
@@ -1161,7 +1381,7 @@ export class QuotaCounter {
     if (route === '/usage') {
       const all = Number((await this.state.storage.get('all')) ?? 0);
       const outcomes: Record<string, number> = {};
-      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms'])
+      for (const k of ['http_ok', 'http_400', 'http_403', 'http_429', 'http_500', 'http_503', 'network_error', 'image', 'no_image', 'blocked', 'error', 'busy', 'token', 'token_vip', 'reserved_ms', 'report_ok', 'report_fail', 'reported_ms', 'verified', 'rejected', 'retry', 'released'])
         outcomes[k] = Number((await this.state.storage.get(`out:${k}`)) ?? 0);
       return Response.json({ spentCenti: all, outcomes });
     }
@@ -1290,7 +1510,7 @@ async function callGemini(env: Env, body: string, model: string, budget: Budget,
  * a call is allowed, and nothing is refunded. Compare the totals with Google's own billing page — they will differ
  * (failed or blocked attempts may or may not be billed), and that difference is what this ledger exists to show.
  */
-async function recordOutcome(env: Env, scope: 'tryon' | 'rt', outcome: string, n = 1): Promise<void> {
+async function recordOutcome(env: Env, scope: 'tryon' | 'rt' | 'prefit', outcome: string, n = 1): Promise<void> {
   if (!env.QUOTA) return;
   try {
     const day = new Date().toISOString().slice(0, 10);
@@ -1422,16 +1642,23 @@ async function adminUsage(request: Request, env: Env, headers: Record<string, st
   if (!env.QUOTA) return json({ error: 'no counter bound' }, 503, headers);
   const day = new Date().toISOString().slice(0, 10);
   const perUnit = Number(env.TRYON_USD_PER_UNIT ?? 0.04);
-  const read = async (scope: 'tryon' | 'rt') => {
+  const read = async (scope: 'tryon' | 'rt' | 'prefit') => {
     const r = await env.QUOTA!.get(env.QUOTA!.idFromName(`${scope}:${day}`)).fetch('https://quota/usage');
     const u = (await r.json()) as { spentCenti: number; outcomes: Record<string, number> };
     return { unitsReserved: u.spentCenti / 100, outcomes: u.outcomes };
   };
   const gemini = await read('tryon');
   const realtime = await read('rt');
+  const prefitU = await read('prefit');
   return json(
     {
       day,
+      prefit: {
+        photosReserved: prefitU.unitsReserved,
+        siteCapPhotos: Number(env.PREFIT_DAILY_SITE ?? 100),
+        outcomes: prefitU.outcomes,
+        estimatedUsd: Number((prefitU.unitsReserved * Number(env.FAL_USD_PER_IMAGE ?? 0.05)).toFixed(2)),
+      },
       gemini: { ...gemini, estimatedUsd: Number((gemini.unitsReserved * perUnit).toFixed(2)), siteCapUnits: Number(env.TRYON_DAILY_UNITS_SITE ?? UNITS_SITE_DEFAULT) },
       realtime: {
         sessionsReserved: realtime.unitsReserved,
