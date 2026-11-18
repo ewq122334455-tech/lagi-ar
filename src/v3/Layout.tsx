@@ -424,42 +424,25 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
       <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
         <div className="text-center">
           <p className="t-h1 t-mark">LAGI in AGAIN</p>
-          <p className="t-caption kr mt-3 text-white/80">디자인과 완성도, 소재의 새로운 가능성을 발견하고 소개합니다.</p>
         </div>
         {/* Phones: the emblem sits below the links (in flow); wider screens: large and behind, cropped by the edge. */}
         <span aria-hidden="true" className="pointer-events-none order-last -mb-16 mt-10 block h-40 self-center md:absolute md:bottom-[-16%] md:left-1/2 md:mb-0 md:mt-0 md:h-[40%] md:-translate-x-1/2 lg:h-[52%]">
           <LagiLogo className="h-full w-auto text-[var(--c-white)]" title="" />
         </span>
         <div className="relative mt-14 md:mt-0">
-          <div className="t-caption kr flex flex-wrap items-end justify-between gap-8">
-            <div>
-              <p className="t-label t-mark mb-2 text-white/80">Official</p>
-              <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
+          <div className="t-caption kr flex flex-wrap items-end justify-between gap-8 border-t border-white/20 pt-6">
+            <p className="flex flex-wrap gap-x-6">
+              <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
                 네이버 스마트스토어
               </a>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
+              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
                 인스타그램
               </a>
-            </div>
-            <div className="text-right">
-              <p className="t-label t-mark mb-2 text-white/80">Menu</p>
-              {[{ to: '/', kr: '홈' }, ...NAV, { to: '/cart', kr: '장바구니' }, { to: '/order', kr: '주문 조회' }].map((n) => (
-                <Link key={n.to} to={n.to} className="tap block opacity-80 hover:opacity-100 sm:py-0.5">
-                  {n.kr}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="t-caption kr mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-4 text-white/70">
-            <p className="t-mark font-bold text-white">© LAGI</p>
-            <p className="flex gap-4">
-              <Link to="/contact" className="hit hover:text-white">
+              <Link to="/contact" className="tap opacity-80 hover:opacity-100">
                 문의
               </Link>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
-                Instagram
-              </a>
             </p>
+            <p className="t-mark font-bold text-white">© LAGI</p>
           </div>
           <LegalFooter />
         </div>

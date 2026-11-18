@@ -207,19 +207,12 @@ export default function Again() {
 
   return (
     <div className="px-page pb-32 pt-page">
-      <header className="grid grid-cols-1 gap-x-[var(--gap)] gap-y-4 lg:grid-cols-12">
-        <div className="lg:col-span-7">
-          <p className="t-label t-mark text-[var(--c-mute)]">Again experience</p>
-          <h1 className="t-display t-mark mt-3">AGAIN</h1>
-        </div>
-        <div className="lg:col-span-5 lg:self-end">
-          <p className="t-en">See it again, on you.</p>
-          <p className="t-kr-sub mt-3">내 사진 위에 라기 제품을 올려, 일상 속에서 다시 보는 모습을 미리 봅니다.</p>
-          <p className="t-caption kr mt-1 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
-        </div>
+      <header className="text-center">
+        <h1 className="t-display t-mark">AGAIN</h1>
+        <p className="t-caption kr mt-6 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
       </header>
 
-      <div className="mt-12 grid grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5 lg:inline-grid lg:min-w-[760px]" role="tablist" aria-label="체험 방식">
+      <div className="mx-auto mt-24 grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
         {(
           [
             ['map', '실시간 3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
@@ -236,33 +229,14 @@ export default function Again() {
             className={`rounded-xl px-2 py-3 text-left transition-all sm:px-4 ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
           >
             <span className="t-value kr block">{label}</span>
-            {/* Phones show only the chosen mode's line (below), so the three labels never break word by word. */}
-            <span className="t-caption kr hidden text-[var(--c-mute)] sm:block">{sub}</span>
           </button>
         ))}
       </div>
-      <p className="t-caption kr mt-2 px-1 text-[var(--c-mute)] sm:hidden" data-testid="mode-sub">
-        {mode === 'map' ? '내 손·몸을 따라가는 3D 제품 · 무료' : mode === 'photo' ? 'AI 실사 사진 · 10~40초' : '옷 전용 · AI가 다시 그리는 영상 · 20초'}
-      </p>
 
-      {mode === 'photo' && (
-      <ol className="t-caption kr mt-6 grid grid-cols-3 gap-2 md:grid-cols-6" aria-label="진행 단계">
-        {['제품 선택', '사진', '착용 방식', '합성', '결과 확인', '저장 · 다시'].map((t, i) => (
-          <li key={t} aria-current={step === i + 1 ? 'step' : undefined} className="flex flex-col gap-1.5">
-            <span className={`h-1 rounded-full ${step > i ? 'bg-[var(--c-ink)]' : 'bg-[var(--c-label)]'}`} />
-            <span className={step === i + 1 ? 'font-bold' : step > i + 1 ? '' : 'text-[var(--c-mute)]'}>
-              <span className="t-mark tabular-nums">{pad(i + 1)}</span> {t}
-            </span>
-          </li>
-        ))}
-      </ol>
-      )}
 
       {/* 01 Product */}
-      <section className="mt-14" aria-labelledby="s1">
-        <h2 id="s1" className="t-h3 kr">
-          <span className="t-mark text-[var(--c-mute)]">01</span> 제품을 고르세요
-        </h2>
+      <section className="mt-[var(--section)]" aria-labelledby="s1">
+        <h2 id="s1" className="sr-only">제품을 고르세요</h2>
         {loading ? (
           <p className="t-caption kr mt-4">불러오는 중…</p>
         ) : (

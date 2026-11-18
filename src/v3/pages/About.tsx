@@ -1,21 +1,19 @@
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CATEGORY_LABEL, price, useRealProducts } from '../data';
+import { price, useRealProducts } from '../data';
 import { BrandFilmSection } from '../BrandFilm';
 // three.js is only needed for the ribbon — load it after the page text.
 const RibbonCanvas = lazy(() => import('../RibbonCanvas').then((m) => ({ default: m.RibbonCanvas })));
-import { ROLES } from '@/content/roles';
 
 const STATEMENT_EN = 'We discover, select, introduce and connect products worth seeing again.';
-const STATEMENT_KR = '라기는 디자인과 완성도, 소재의 새로운 가능성을 발견하고 제품을 선별해 소개하는 큐레이션 브랜드입니다. 제품은 각 제작사가 만들고, 라기는 발견하고 선별하고 소개하고 연결합니다.';
+// One honest line is kept: the products are made by their makers, LAGI curates them.
+const STATEMENT_KR = '제품은 각 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.';
 
-/** ABOUT (reference: The studio) — name, a ribbon of products, the statement, information lists. */
+/** ABOUT — name, a ribbon of products, one statement, the film. The rest is space. */
 export default function About() {
   const { products } = useRealProducts();
   const navigate = useNavigate();
   const textRef = useRef<HTMLParagraphElement>(null);
-  const collabs = [...new Set(products.map((p) => p.brandLabel).filter((b): b is string => !!b && b.includes('×')))].map((b) => b.split('×')[1].trim());
-  const categories = [...new Set(products.map((p) => p.category.value).filter(Boolean))] as string[];
 
   useEffect(() => {
     let raf = 0;
@@ -46,7 +44,7 @@ export default function About() {
     .map((p) => ({ src: p.images[0], caption: `${p.name.value} · ${price(p.price.value)}`, href: `/product/${p.id}`, label: `${p.name.value} 보기` }));
 
   return (
-    <div className="pb-32">
+    <div className="pb-[var(--section)]">
       <section className="relative h-[100svh] min-h-[560px] overflow-hidden" aria-label="LAGI in AGAIN">
         {ribbon.length > 0 && (
           <Suspense fallback={null}>
@@ -71,48 +69,8 @@ export default function About() {
         <p className="t-kr-sub mt-4 max-w-[26rem]">{STATEMENT_KR}</p>
       </div>
 
-      <div className="mt-24 lg:mt-36">
+      <div className="mt-[var(--section)]">
         <BrandFilmSection />
-      </div>
-
-      <section className="rule mx-[var(--page-x)] mt-24 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 pt-6 lg:mt-36 lg:grid-cols-12 [&>*]:min-w-0">
-        <h2 className="t-h1 kr lg:col-span-12">정보</h2>
-        <div className="lg:col-span-4">
-          <h3 className="t-h3 kr">역할</h3>
-          <ul className="t-body mt-4 text-[var(--c-mute)]">
-            {ROLES.map((r) => (
-              <li key={r.key} className="kr">
-                <span className="t-mark">{r.key}</span> · {r.kr} — {r.text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="lg:col-span-4">
-          <h3 className="t-h3 kr">분류</h3>
-          <ul className="t-body mt-4 text-[var(--c-mute)]">
-            {categories.map((c) => (
-              <li key={c}>{CATEGORY_LABEL[c] ?? c}</li>
-            ))}
-          </ul>
-        </div>
-        {collabs.length > 0 && (
-          <div className="lg:col-span-4">
-            <h3 className="t-h3 kr">협업 브랜드</h3>
-            <ul className="t-body mt-4 text-[var(--c-mute)]">
-              {collabs.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-
-      <div className="mt-32 overflow-hidden border-y border-[var(--c-ink)] py-5 lg:mt-48" aria-hidden="true">
-        <div className="animate-marquee t-h1 flex w-max gap-12 whitespace-nowrap">
-          {Array.from({ length: 8 }, (_, i) => (
-            <span key={i} className="t-mark">LAGI in AGAIN · Discover it again</span>
-          ))}
-        </div>
       </div>
     </div>
   );
