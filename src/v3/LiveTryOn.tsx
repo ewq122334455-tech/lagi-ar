@@ -55,6 +55,9 @@ function missingSupport(): string | null {
   return null;
 }
 
+/** Cache key of the reference picture: the product AND which piece (top / bottom of a set) is being tried on. */
+const refKey = (p: Product) => `${p.id}|${p.fitting?.image ?? ''}`;
+
 /** The instruction for the realtime model: its own wording per model family and per carry style (see pipelines.ts). */
 function promptFor(product: Product, stylePrompt: string, description: string | undefined, model: string, prefit: boolean) {
   const kind = (product.category.value ?? '').toLowerCase().includes('bag') ? 'bag' : 'item';
@@ -239,7 +242,7 @@ export function LiveTryOn({
   // photo) and no green-screen overlay. Address flags go back to the old way: &model=lucy-2.6 and &map=1.
   const flags = typeof window !== 'undefined' ? window.location.hash : '';
   const devMode = /[?&](debug|pipe|prefit|provider|map|model)=/.test(flags);
-  const pipe = parsePipeline(flags);
+  const pipe = parsePipeline(flags, isGarment(garmentOf(product.fitting?.part ?? product.category.value)));
   const wantModel = pipe.model;
   // Anywear's step for bags (Decart's examples): first make one still of THIS visitor holding THIS product and use it as the
   // reference, instead of the bare product photo. Opt-in with &prefit=1 until it has been checked on real runs.
@@ -362,7 +365,7 @@ export function LiveTryOn({
   const cleanRef = (p: Product) => p.fitting?.image ?? p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0];
 
   async function garmentBlob(p: Product) {
-    if (garment.current?.id === p.id && (!mapOn || garment.current.product)) return garment.current;
+    if (garment.current?.id === refKey(p) && (!mapOn || garment.current.product)) return garment.current;
     const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
     if (pipe.reference !== 'legacy') {
       // The ORIGINAL photo, only trimmed to the product and padded on white (no AI redraw: colours, prints, logo, handles stay as they are).
@@ -372,10 +375,10 @@ export function LiveTryOn({
         p.fitting?.description ? Promise.resolve({ description: p.fitting.description }) : post<{ description?: string }>('/cutout', { productImage: url, describeOnly: true }),
         fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('제품 사진을 불러오지 못했습니다.')))),
       ]);
-      garment.current = { id: p.id, blob: await smallReference(photo, 1280, 0.95), description };
+      garment.current = { id: refKey(p), blob: await smallReference(photo, 1280, 0.95), description };
     } else {
       const { image, description } = await post<{ image: string; description?: string }>('/cutout', { productImage: new URL(p.images[0], base).toString() });
-      garment.current = { id: p.id, blob: await smallReference(await (await fetch(image)).blob()), description };
+      garment.current = { id: refKey(p), blob: await smallReference(await (await fetch(image)).blob()), description };
     }
     if (mapOn) {
       // The product on green (matte) → transparent product for mapping, and its green silhouette for the AI.

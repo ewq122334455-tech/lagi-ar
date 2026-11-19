@@ -89,5 +89,10 @@
     "image": "products/lagi-intarsia-knit-cargo-set/images/fitting.jpg",
     "part": "top",
     "description": "an olive-khaki crew-neck knit sweater in patchwork intarsia blocks of red, blue, yellow, pink, purple and black across body and sleeves, with ONE large embroidered cartoon rat playing a red guitar in a purple burst and the arched white-pink lettering \"ROCK N' RAT\" on the chest, ribbed collar, cuffs and hem"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-intarsia-knit-cargo-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "knee-length cargo shorts in solid mustard-yellow cotton twill with a plain waistband, large flap cargo pockets on both thighs and two silver-buckled straps with a long strap tail across the lower legs"
   }
 }

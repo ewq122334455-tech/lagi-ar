@@ -155,17 +155,22 @@ ok_(); function ok_() {}
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('L5 if the reference photo fails, the session still starts with the plain product photo', (await p.evaluate(() => window.__rtLog)).includes('initialState:with-connect'));
   await p.context().close(); }
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+  await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
+  ok('L6 &pipe=B turns the clothes default off: no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
+  await p.context().close(); }
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
-  ok('L6 default (no flag): no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
+  ok('L6c clothes default (no flag) = pipeline C: the checked reference picture is requested first', p.calls.includes('/realtime/prefit') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(','));
   await p.context().close(); }
 // M. pipelines A/B/C/D, original product photo, carry styles, developer UI hidden from visitors
 const body = (p, u) => { try { return JSON.parse(p.bodies?.[u] || '{}'); } catch { return {}; } };
 const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
   ok('M1 visitors do not see the experimental overlay option or developer settings', (await p.getByTestId('map-toggle').count()) === 0);
+  await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
   await start(p); await live(p);
-  ok('M2 default pipeline B: the ORIGINAL clean photo is used (describe only, nothing redrawn, no prefit)', body(p, '/cutout').describeOnly === true && /drawings\/front\.jpg/.test(body(p, '/cutout').productImage ?? '') && !p.calls.includes('/realtime/prefit'), JSON.stringify(body(p, '/cutout')));
+  ok('M2 pipeline B (&pipe=B): the ORIGINAL clean photo is used (describe only, nothing redrawn, no prefit)', body(p, '/cutout').describeOnly === true && /drawings\/front\.jpg/.test(body(p, '/cutout').productImage ?? '') && !p.calls.includes('/realtime/prefit'), JSON.stringify(body(p, '/cutout')));
   ok('M3 default pipeline asks for lucy-vton-3.6', body(p, '/realtime/token').model === 'lucy-vton-3.6', JSON.stringify(body(p, '/realtime/token')));
   ok('M4 no measurement panel for visitors after the session', (await p.getByTestId('evidence').count()) === 0);
   await p.context().close(); }
@@ -211,7 +216,7 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   const lg = await p.evaluate(() => window.__rtLog);
   ok('O2 the instruction is the clothing one for the fitting part (top) and carries the exact description', lg.some((l) => /^prompt:Substitute the current top with a black oversized short-sleeve cotton tee/.test(l)), lg.filter((l) => l.startsWith('prompt:')).join('|').slice(0, 200));
   ok('O2b the instruction insists on an identical copy (weave, colours, print size/position/lettering, neckline, sleeves), keeps the wearer\'s own body and chest, shows no underwear through the fabric, and stays under 750 characters', lg.some((l) => /identical to the reference image/.test(l) && /print size, position and lettering/.test(l) && /body shape, chest, build/.test(l) && /no underwear and no bare skin/.test(l) && l.length - 7 <= 750), String(Math.max(...lg.filter((l) => l.startsWith('prompt:')).map((l) => l.length - 7)))); await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&debug=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&debug=1&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   await p.waitForSelector('[data-testid=evidence]', { timeout: 40000 }); const ev = await p.getByTestId('evidence').innerText();
   ok('O4 the developer panel shows exactly which picture and which instruction were sent to the model', /AI에게 보낸 지시문/.test(ev) && /Substitute the current top with a black oversized/.test(ev) && /기준 사진/.test(ev) && /fitting\.jpg/.test(ev)); await p.context().close(); }
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);

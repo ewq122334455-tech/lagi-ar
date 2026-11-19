@@ -89,5 +89,10 @@
     "image": "products/lagi-red-stripe-cargo-set/images/fitting.jpg",
     "part": "top",
     "description": "an oversized short-sleeve tee with wide red and white horizontal stripes, a striped crew collar, and a distressed grey and dark graphic with numerals across the centre of the chest"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-red-stripe-cargo-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "wide baggy cargo pants in washed brown cotton with large flap pockets on both thighs, stitched knee seams and an elasticated gathered hem"
   }
 }
