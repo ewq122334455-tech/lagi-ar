@@ -6,6 +6,7 @@ import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { paymentsEnabled } from '@/commerce/payments';
 import { isPublished } from '@/utils/contentStatus';
 import { ProductViews } from '../ProductViews';
+import { ProductInfo } from '../ProductInfo';
 import { ProductCard } from '../ProductCard';
 import { Reviews } from '../Reviews';
 import { fetchReviews } from '../reviewsApi';
@@ -421,6 +422,8 @@ export default function ProductPage() {
               </div>
             </section>
           )}
+
+          {isClothing(p) && <ProductInfo p={p} />}
 
           {maker && <p className="t-caption kr mt-[var(--section)] text-center text-[var(--c-mute)]">협업 브랜드 {maker} · 제품은 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.</p>}
         </div>
