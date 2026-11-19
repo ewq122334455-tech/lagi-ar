@@ -39,6 +39,8 @@ type Evidence = {
   network?: string;
   /** What the camera really delivered (width x height @ fps), so a blurry result can be told apart from a low-resolution camera. */
   camera?: string;
+  /** What the AI actually sent back (width x height): 1080p is requested, the provider may answer with 720p. */
+  output?: string;
   // Exactly what was sent to the model, so a wrong result can be explained: the instruction text and which picture was the reference.
   prompt?: string;
   referenceUsed?: string;
@@ -595,12 +597,15 @@ export function LiveTryOn({
         conn = await client.realtime.connect(stream, {
           model: rtModel,
           mirror: 'auto',
+          // Ask for the sharper 1080p AI output (Decart SDK option; a model without 1080p answers with 720p — the evidence records what came back).
+          resolution: '1080p',
           retries: 1, // a failed first dial is tried once more, not five times (every dial competes for a slot and may be billed)
           initialState: { image: initImage, prompt: { text: initPrompt, enhance: false } },
           onRemoteStream: (remote: MediaStream) => {
             const v = out.current;
             if (!v) return;
             v.srcObject = remote;
+            v.addEventListener('loadedmetadata', () => { ev.output = v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : undefined; }, { once: true });
             // Mobile browsers do not always autoplay a stream attached while the element was off screen.
             void v.play().catch(() => undefined);
           },
@@ -938,6 +943,7 @@ export function LiveTryOn({
             <dl className="t-caption kr mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               <dt>파이프라인</dt><dd>{evidence.pipeline}</dd>
               <dt>카메라 입력</dt><dd>{evidence.camera ?? '-'}</dd>
+              <dt>AI 출력 해상도</dt><dd>{evidence.output ?? '-'}</dd>
               <dt>네트워크 사전 검사</dt><dd>{evidence.network ?? '-'}</dd>
               <dt>기준 사진</dt><dd>{evidence.referenceUsed ?? '-'}</dd>
               <dt>AI에게 보낸 지시문</dt><dd className="break-words">{evidence.prompt ?? '-'}</dd>

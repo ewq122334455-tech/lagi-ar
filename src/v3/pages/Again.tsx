@@ -221,7 +221,7 @@ export default function Again() {
           [
             ['map', '3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
             ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
-            ['live', 'AI 영상 (베타)', '옷 전용 · AI가 다시 그리는 영상 · 20초'],
+            ['live', 'AI 영상', '옷 전용 · AI가 다시 그리는 영상 · 20초'],
           ] as const
         ).map(([m, label, sub]) => (
           <button
