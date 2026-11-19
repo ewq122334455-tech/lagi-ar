@@ -9,8 +9,8 @@ import { ProductViews } from '../ProductViews';
 import { ProductCard } from '../ProductCard';
 import { Reviews } from '../Reviews';
 import { fetchReviews } from '../reviewsApi';
-import { CATEGORY_LABEL, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
-import { responsive } from '../img';
+import { CATEGORY_LABEL, isClothing, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
+import { largeCopy, responsive } from '../img';
 import { usePageMeta } from '../usePageMeta';
 
 
@@ -106,7 +106,7 @@ function useArrivedFromGallery(id: string | undefined) {
 function Fold({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
   return (
-    <div className="border-b border-black/10">
+    <div className="border-b border-[var(--c-blue)] text-[var(--c-blue)]">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between py-3.5 text-left">
         <span className="t-caption kr font-semibold">{title}</span>
         <span aria-hidden="true" className={`text-lg leading-none transition-transform duration-300 ${open ? 'rotate-45' : ''}`}>
@@ -115,7 +115,7 @@ function Fold({ title, children, open: initial = false }: { title: string; child
       </button>
       <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <div className="overflow-hidden">
-          <div className="t-caption kr pb-4 text-[#3a3a3a]">{children}</div>
+          <div className="t-caption kr pb-4">{children}</div>
         </div>
       </div>
     </div>
@@ -212,44 +212,42 @@ export default function ProductPage() {
 
   return (
     <article className="px-page pb-32 pt-[calc(var(--top)-12px)] md:pb-24" data-arrived={arrived || undefined}>
-      {/* 1 · Photos + buy panel */}
-      <div className="grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-8 lg:grid-cols-12">
+      {/* 1 · Editorial opening: small meta line, one big picture, the name in big brand-blue type */}
+      <div className="flex items-baseline justify-between text-[var(--c-blue)]">
+        <Link to="/" className="t-label t-mark hit">LAGI</Link>
+        <nav aria-label="현재 위치" className="t-label t-mark flex gap-3">
+          <Link to="/discover" className="hit">SHOP</Link>
+          {category && (
+            <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hit kr !tracking-normal">
+              {category}
+            </Link>
+          )}
+        </nav>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-10 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <nav aria-label="현재 위치" className="t-caption kr mb-3 flex gap-2 text-[var(--c-mute)]">
-            <Link to="/" className="hit hover:text-[var(--c-ink)]">
-              홈
-            </Link>
-            <span aria-hidden="true">/</span>
-            <Link to="/discover" className="hit hover:text-[var(--c-ink)]">
-              제품
-            </Link>
-            {category && (
-              <>
-                <span aria-hidden="true">/</span>
-                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hit hover:text-[var(--c-ink)]">
-                  {category}
-                </Link>
-              </>
-            )}
-          </nav>
           {current && (
             <figure>
-              <div className={`relative aspect-square overflow-hidden rounded-[var(--radius-card)] ${current.fit === 'contain' ? 'bg-white ring-1 ring-black/5' : 'bg-[var(--c-gray)]'}`}>
+              <div className={`relative aspect-[4/5] overflow-hidden ${current.fit === 'contain' ? 'bg-white ring-1 ring-[var(--c-blue)]/15' : 'bg-[var(--c-gray)]'}`}>
                 <img
                   key={current.src}
-                  {...responsive(current.src, '(max-width: 1023px) 100vw, 50vw')}
+                  {...responsive(current.src, '(max-width: 1023px) 100vw, 58vw')}
                   src={current.src}
                   alt={`${p.name.value ?? ''} — ${current.label}`}
                   data-testid="product-hero"
                   className={`h-full w-full ${current.fit === 'contain' ? 'object-contain p-[6%]' : 'object-cover'} ${arrived && shot === 0 ? 'arrive' : 'rise'}`}
                 />
-                {current.note && <span className="t-label kr absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1">{current.note}</span>}
+                {current.note && <span className="t-label kr absolute left-3 top-3 bg-white/90 px-2.5 py-1 text-[var(--c-blue)]">{current.note}</span>}
               </div>
-              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{current.label}</figcaption>
+              <figcaption className="t-label t-mark mt-2 flex justify-between text-[var(--c-blue)]">
+                <span>{String(Math.min(shot, shots.length - 1) + 1).padStart(2, '0')} / {String(shots.length).padStart(2, '0')}</span>
+                <span className="kr !tracking-normal">{current.label}</span>
+              </figcaption>
             </figure>
           )}
           {shots.length > 1 && (
-            <div className="mt-3 grid grid-cols-6 gap-2 sm:grid-cols-8" role="tablist" aria-label="제품 사진" data-testid="thumbs">
+            <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5" role="tablist" aria-label="제품 사진" data-testid="thumbs">
               {shots.map((s, i) => (
                 <button
                   key={s.src}
@@ -258,9 +256,12 @@ export default function ProductPage() {
                   aria-selected={i === shot}
                   aria-label={s.label}
                   onClick={() => setShot(i)}
-                  className={`aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${i === shot ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 hover:ring-black/40'}`}
+                  className="group text-left"
                 >
-                  <img {...responsive(s.src, '96px')} src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
+                  <span className={`block aspect-[4/5] overflow-hidden bg-white ring-1 transition ${i === shot ? 'ring-2 ring-[var(--c-blue)]' : 'ring-black/10 group-hover:ring-[var(--c-blue)]'}`}>
+                    <img {...responsive(s.src, '120px')} src={s.src} alt="" loading="lazy" className={`h-full w-full ${s.fit === 'contain' ? 'object-contain p-1' : 'object-cover'}`} />
+                  </span>
+                  <span className="t-label t-mark mt-1 block text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}</span>
                 </button>
               ))}
             </div>
@@ -268,17 +269,22 @@ export default function ProductPage() {
         </div>
 
         <aside className="lg:col-span-5" aria-label="구매">
-          <div className="lg:sticky lg:top-[80px]">
-            <h1 className="t-h1 kr !font-bold">{p.name.value}</h1>
+          <div className="lg:sticky lg:top-[88px]">
+            <p className="t-mark text-[clamp(44px,6vw,92px)] font-light leading-none text-[var(--c-blue)]" aria-hidden="true">(1)</p>
+            <h1 className="kr mt-6 text-[clamp(30px,3.6vw,56px)] font-bold leading-[1.08] tracking-[-0.03em] text-[var(--c-blue)]">{p.name.value}</h1>
             {p.setItems && p.setItems.length > 0 && (
-              <p className="t-caption kr mt-4 text-[var(--c-mute)]" data-testid="set-items">
-                {p.setItems.join(' + ')}
-              </p>
+              <ul className="kr mt-5 space-y-1 text-[15px] text-[var(--c-blue)]" data-testid="set-items" aria-label="세트 구성">
+                {p.setItems.map((s, i) => (
+                  <li key={s} className="flex gap-3">
+                    <span className="t-mark text-[12px] leading-[1.9]">{String(i + 1).padStart(2, '0')}</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
             )}
-            <p className="t-h2 kr mt-8 tabular-nums">{price(p.price.value)}</p>
+            <p className="mt-8 text-[clamp(26px,2.6vw,38px)] font-bold tabular-nums tracking-[-0.02em] text-[var(--c-blue)]">{price(p.price.value)}</p>
 
-            {/* Everything a buyer must know, folded into one line that opens on request. */}
-            <div className="mt-12 border-t border-black/10">
+            <div className="mt-10 border-t border-[var(--c-blue)]">
               <Fold title="정보">
                 {size && <p>크기 {size}</p>}
                 {materialText && <p className={size ? 'mt-2' : ''}>소재 {materialText}</p>}
@@ -288,49 +294,47 @@ export default function ProductPage() {
               </Fold>
             </div>
 
-            <div className="mt-8 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-4">
-              <div className="flex items-center justify-between gap-4">
-                <p className="t-caption kr text-[var(--c-mute)]">수량</p>
-                <div className="inline-flex items-center rounded-full border border-black/15 bg-white">
-                  <button type="button" className="h-9 w-9 rounded-full hover:bg-[var(--c-label)]" aria-label="수량 줄이기" onClick={() => setQty((q) => Math.max(1, q - 1))}>
-                    −
-                  </button>
-                  <span className="t-value w-8 text-center tabular-nums" aria-live="polite">
-                    {qty}
-                  </span>
-                  <button type="button" className="h-9 w-9 rounded-full hover:bg-[var(--c-label)]" aria-label="수량 늘리기" onClick={() => setQty((q) => Math.min(20, q + 1))}>
-                    +
-                  </button>
-                </div>
-              </div>
-              <div className="mt-3 flex items-baseline justify-between border-t border-black/10 pt-3">
-                <p className="t-caption kr">총 금액</p>
-                <p className="t-value kr tabular-nums" data-testid="total">
-                  {price((p.price.value ?? 0) * qty)}
-                </p>
+            <div className="mt-6 flex items-center justify-between gap-4">
+              <p className="t-caption kr text-[var(--c-blue)]">수량</p>
+              <div className="inline-flex items-center border border-[var(--c-blue)] text-[var(--c-blue)]">
+                <button type="button" className="h-10 w-10 hover:bg-[var(--c-blue)] hover:text-white" aria-label="수량 줄이기" onClick={() => setQty((q) => Math.max(1, q - 1))}>
+                  −
+                </button>
+                <span className="t-value w-9 text-center tabular-nums" aria-live="polite">
+                  {qty}
+                </span>
+                <button type="button" className="h-10 w-10 hover:bg-[var(--c-blue)] hover:text-white" aria-label="수량 늘리기" onClick={() => setQty((q) => Math.min(20, q + 1))}>
+                  +
+                </button>
               </div>
             </div>
+            <div className="mt-3 flex items-baseline justify-between border-t border-[var(--c-blue)] pt-3 text-[var(--c-blue)]">
+              <p className="t-caption kr">총 금액</p>
+              <p className="kr text-[20px] font-bold tabular-nums" data-testid="total">
+                {price((p.price.value ?? 0) * qty)}
+              </p>
+            </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-5 grid grid-cols-2 gap-2">
               {!onStore ? (
                 <button type="button" className="btn btn-line col-span-2 cursor-not-allowed opacity-60" disabled data-testid="not-for-sale">
                   구매 준비 중
                 </button>
               ) : (
                 <>
-              {online ? (
-                  <button type="button" className="btn btn-primary" {...buyNow}>
-                    바로 구매
+                  {online ? (
+                    <button type="button" className="btn btn-primary" {...buyNow}>
+                      바로 구매
+                    </button>
+                  ) : (
+                    <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
+                      바로 구매 ↗
+                    </a>
+                  )}
+                  <button type="button" className="btn btn-line" onClick={() => addToCart()}>
+                    {added ? '담았습니다 ✓' : '장바구니'}
                   </button>
-                ) : (
-                  <a className="btn btn-primary" data-testid="buy-now-store" {...buyNow}>
-                    바로 구매 ↗
-                  </a>
-                )}
-                <button type="button" className="btn btn-line" onClick={() => addToCart()}>
-                  {added ? '담았습니다 ✓' : '장바구니'}
-                </button>
-                  </>
+                </>
               )}
               {aiTryOnEnabled(p) && (
                 <Link to={`/again?p=${p.id}`} className="btn btn-blue col-span-2" data-testid="fit-button">
@@ -342,13 +346,13 @@ export default function ProductPage() {
                 </Link>
               )}
             </div>
-            <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2 text-[var(--c-blue)]">
               {onStore ? (
-                <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
+                <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4">
                   스마트스토어에서 구매 ↗
                 </a>
               ) : (
-                <span className="text-[var(--c-mute)]">온라인 판매를 준비하고 있어요.</span>
+                <span>온라인 판매를 준비하고 있어요.</span>
               )}
               {added && (
                 <Link to="/cart" className="font-semibold underline underline-offset-4">
@@ -360,8 +364,21 @@ export default function ProductPage() {
         </aside>
       </div>
 
-      {/* 2 · Tabs */}
-      <div className="sticky top-16 z-20 mt-[var(--section)] border-b border-black/10 bg-white lg:top-14" role="tablist" aria-label="제품 정보">
+      {/* 2 · Big statement (the reference's closing line), made for LAGI */}
+      <section className="mt-[var(--section)] text-[var(--c-blue)]" aria-label="LAGI">
+        <p className="t-mark text-[clamp(40px,8.4vw,150px)] font-medium uppercase leading-[0.95] tracking-[-0.01em]">
+          Wear it
+          <br />
+          again.
+        </p>
+        <p className="t-label t-mark mt-6 flex justify-between border-t border-[var(--c-blue)] pt-3">
+          <span>LAGI</span>
+          <span>(2)</span>
+        </p>
+      </section>
+
+      {/* 3 · Tabs */}
+      <div className="sticky top-16 z-20 mt-[calc(var(--section)/2)] border-b border-[var(--c-blue)] bg-white lg:top-14" role="tablist" aria-label="제품 정보">
         <div className="grid grid-cols-3">
           {tabs.map((t) => (
             <button
@@ -370,11 +387,11 @@ export default function ProductPage() {
               role="tab"
               aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`t-caption kr relative py-4 font-semibold transition-colors ${tab === t.key ? 'text-[var(--c-ink)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+              className={`t-caption kr relative py-4 font-semibold transition-colors ${tab === t.key ? 'text-[var(--c-blue)]' : 'text-[var(--c-mute)] hover:text-[var(--c-blue)]'}`}
               data-testid={`tab-${t.key}`}
             >
               {t.label}
-              <span aria-hidden="true" className={`absolute inset-x-0 -bottom-px h-[2px] bg-[var(--c-ink)] transition-transform duration-300 ${tab === t.key ? 'scale-x-100' : 'scale-x-0'}`} />
+              <span aria-hidden="true" className={`absolute inset-x-0 -bottom-px h-[3px] bg-[var(--c-blue)] transition-transform duration-300 ${tab === t.key ? 'scale-x-100' : 'scale-x-0'}`} />
             </button>
           ))}
         </div>
@@ -382,13 +399,37 @@ export default function ProductPage() {
 
       {tab === 'detail' && (
         <div role="tabpanel" aria-label="상세정보">
-          {(p.views || p.drawings?.length) && hero && <ProductViews src={hero} name={p.name.value ?? ''} product={p} />}
+          {isClothing(p) && hero ? (
+            // Clothing: a mosaic of close-ups cut from the real photo (the same pixels, never generated), like a lookbook page.
+            <section className="mt-[var(--section)]" aria-label="디테일" data-testid="detail-mosaic">
+              <div className="grid grid-cols-6 gap-3 md:gap-5">
+                {[
+                  { y: 6, x: 50, zoom: 2.2, span: 'col-span-6 md:col-span-3', ratio: 'aspect-[4/3]' },
+                  { y: 55, x: 50, zoom: 2.4, span: 'col-span-3 md:col-span-3', ratio: 'aspect-[4/5] md:aspect-[4/3]' },
+                  { y: 96, x: 50, zoom: 2.2, span: 'col-span-3 md:col-span-2', ratio: 'aspect-[4/5]' },
+                  { y: 32, x: 50, zoom: 2.0, span: 'col-span-6 md:col-span-4', ratio: 'aspect-[16/9]' },
+                ].map((c, i) => (
+                  <figure key={i} className={c.span}>
+                    <div
+                      className={`${c.ratio} w-full bg-[var(--c-gray)] bg-no-repeat`}
+                      style={{ backgroundImage: `url(${largeCopy(hero)})`, backgroundSize: `${c.zoom * 100}%`, backgroundPosition: `${c.x}% ${c.y}%` }}
+                      role="img"
+                      aria-label={`${p.name.value ?? ''} 디테일 ${i + 1}`}
+                    />
+                    <figcaption className="t-label t-mark mt-1.5 text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          ) : (
+            (p.views || p.drawings?.length) && hero && <ProductViews src={hero} name={p.name.value ?? ''} product={p} />
+          )}
 
           {!!p.styledImages?.length && (
             <section className="mt-[var(--section)]" aria-label="착용 연출 (AI 이미지)">
               <div className="grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
                 {p.styledImages.map((src) => (
-                  <figure key={src} className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]" data-testid="styled-image">
+                  <figure key={src} className="relative overflow-hidden bg-[var(--c-gray)]" data-testid="styled-image">
                     <img {...responsive(src, '(max-width: 767px) 100vw, 50vw')} src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
                     <figcaption className="t-label kr absolute left-2 top-2 rounded-full bg-[var(--c-ink)] px-2.5 py-1 text-[var(--c-white)]">AI 연출 이미지 · 실제와 다를 수 있음</figcaption>
                   </figure>
@@ -425,6 +466,7 @@ export default function ProductPage() {
       {/* 3 · Other products */}
       {related.length > 0 && (
         <section className="mt-[var(--section)]" aria-label="More">
+          <p className="t-label t-mark mb-6 flex justify-between border-t border-[var(--c-blue)] pt-3 text-[var(--c-blue)]"><span>MORE</span><span>(3)</span></p>
           <ul className="grid grid-cols-2 gap-x-[var(--gap)] gap-y-16 md:grid-cols-4">
             {related.map((o) => (
               <li key={o.id}>
