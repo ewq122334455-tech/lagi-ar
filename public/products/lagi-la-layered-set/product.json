@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "'CALIFORNIA Los Angeles' 빈티지 레터링의 레드 반팔 아래로 스트라이프 긴소매가 이어지는 레이어드 티셔츠에, 워싱이 들어간 블랙 와이드 팬츠를 맞춘 세트예요. 발목 밴딩으로 바지 끝이 동그랗게 모입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "오래 입은 듯한 빈티지 감성을 처음부터 갖춘 옷. 한 장으로 레이어드가 완성되는 쉬움이 라기의 기준과 맞았습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {

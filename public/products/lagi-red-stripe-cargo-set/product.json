@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "레드와 아이보리 스트라이프 오버핏 티셔츠 가운데에 빛바랜 그래픽을 얹고, 워싱 브라운 와이드 카고 팬츠를 맞춘 세트예요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "흔한 스트라이프도 그래픽과 워싱으로 전혀 다르게 보일 수 있다는 것. 익숙함 속의 새로움이 이 세트를 고른 이유입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {

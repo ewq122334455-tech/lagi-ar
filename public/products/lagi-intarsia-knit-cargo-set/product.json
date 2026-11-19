@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "기타를 든 'Rock'n'Rat' 캐릭터와 여러 색 조각이 한 장의 그림처럼 펼쳐지는 인타르시아 니트에, 버클 스트랩이 달린 머스터드 옐로 카고 쇼츠를 맞춘 세트예요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "한 벌 안에 이야기가 있는 옷. 니트 한 장에 담긴 그림과 색의 밀도가 라기가 말하는 '설명하지 않아도 먼저 마음이 가는' 옷에 가까웠습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {

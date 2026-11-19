@@ -21,6 +21,9 @@ function Block({ n, en, ko, children }: { n: string; en: string; ko: string; chi
   );
 }
 
+/** Copy LAGI wrote from what the photos show — said on the page, so it is never read as a specification. */
+const BrandCopy = () => <p className="mt-2 text-[12px] text-[var(--c-mute)]">라기 작성 소개 · 제품 사진을 보고 쓴 글입니다</p>;
+
 const Pending = () => <p className="text-[var(--c-mute)]" data-pending="true">{PENDING}</p>;
 
 /**
@@ -41,8 +44,8 @@ export function ProductInfo({ p }: { p: Product }) {
   const notice = p.notice ?? {};
   return (
     <div className="mt-[var(--section)] space-y-14" data-testid="product-info">
-      <Block n="01" en="STORY" ko="이 옷의 이야기">{story ? <p className="whitespace-pre-line">{story}</p> : <Pending />}</Block>
-      <Block n="02" en="WHY WE SELECTED" ko="라기가 고른 이유">{reason ? <p className="whitespace-pre-line">{reason}</p> : <Pending />}</Block>
+      <Block n="01" en="STORY" ko="이 옷의 이야기">{story ? <><p className="whitespace-pre-line">{story}</p>{p.story.status === 'BRAND_COPY' && <BrandCopy />}</> : <Pending />}</Block>
+      <Block n="02" en="WHY WE SELECTED" ko="라기가 고른 이유">{reason ? <><p className="whitespace-pre-line">{reason}</p>{p.lagiSelectionReason.status === 'BRAND_COPY' && <BrandCopy />}</> : <Pending />}</Block>
       <Block n="03" en="MADE BY" ko="어디서, 어떻게 만들어졌나">
         <dl className="grid grid-cols-[7rem_1fr] gap-y-2">
           <dt className="text-[var(--c-mute)]">제조국</dt><dd>{country ?? PENDING}</dd>

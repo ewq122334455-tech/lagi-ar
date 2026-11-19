@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "브라운 반팔 티셔츠 위에 옐로 체크 캐미 원피스를 겹치고, 연한 그린 그레이 워싱의 와이드 데님을 맞춘 레이어드 세트예요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "체크와 데님, 브라운과 옐로. 따뜻한 색끼리의 조합이 계절을 넘나들며 다시 입게 만드는 세트라 골랐습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {

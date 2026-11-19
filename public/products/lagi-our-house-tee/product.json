@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "'Madness'와 'our house' 손글씨, 아이 그림 같은 집 일러스트가 들어간 크림 티셔츠 아래로 꽃무늬 긴소매를 레이어드하고, 같은 꽃무늬 미니스커트를 맞췄어요.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "어린 시절의 낙서를 다시 꺼내 본 듯한 그래픽. 같은 꽃무늬를 위아래로 반복해 한 벌의 이야기로 완성했다는 점을 골랐습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {
