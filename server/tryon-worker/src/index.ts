@@ -126,6 +126,8 @@ export interface TryOnRequest {
    * instead of from the AI-redrawn cut-out. Only used with prompt v2; same-origin only.
    */
   faces?: string[];
+  /** Clothing only: top | bottom | set | outer | dress. Then the picture is a clean garment photo (no bag cut-out step) and the garment instruction is used. */
+  garment?: string;
   /** "v2" asks for the improved prompt on this request (otherwise the PROMPT_VERSION setting decides; default v1). */
   promptVersion?: string;
 }
@@ -1422,7 +1424,9 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
 
   // Falls back to the original photo if the cut-out could not be made this time.
   const budget: Budget = { ip };
-  const { cut: cutout, busy, quota } = await productCutout(env, body.productImage, product, budget);
+  const garment = ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment ?? '') ? (body.garment as string) : '';
+  // Clothes: the clean garment photo goes in as it is — the bag-centred cut-out step would redraw it as an object.
+  const { cut: cutout, busy, quota } = garment ? { cut: null, busy: false, quota: undefined } : await productCutout(env, body.productImage, product, budget);
   if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
@@ -1438,7 +1442,7 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   const out = await geminiImage(
     env,
     [
-      { text: v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
+      { text: garment ? buildGarmentPrompt(body.productName ?? '', garment) : v2 ? buildPromptV2(body, !!cutout, faces.length) : buildPrompt(body, !!cutout) },
       { inline_data: { mime_type: person.mime, data: person.data } },
       { inline_data: { mime_type: ref.mime, data: ref.data } },
       ...faces.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
