@@ -242,7 +242,7 @@ export function LiveTryOn({
   // photo) and no green-screen overlay. Address flags go back to the old way: &model=lucy-2.6 and &map=1.
   const flags = typeof window !== 'undefined' ? window.location.hash : '';
   const devMode = /[?&](debug|pipe|prefit|provider|map|model)=/.test(flags);
-  const pipe = parsePipeline(flags, isGarment(garmentOf(product.fitting?.part ?? product.category.value)));
+  const pipe = parsePipeline(flags, isGarment(garmentOf(product?.fitting?.part ?? product?.category.value)));
   const wantModel = pipe.model;
   // Anywear's step for bags (Decart's examples): first make one still of THIS visitor holding THIS product and use it as the
   // reference, instead of the bare product photo. Opt-in with &prefit=1 until it has been checked on real runs.
