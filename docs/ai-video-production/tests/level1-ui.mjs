@@ -12,7 +12,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
     sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: m };
     if (d) navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('denied', 'NotAllowedError'); };
     const orig = navigator.mediaDevices.getUserMedia?.bind(navigator.mediaDevices); window.__tracks = [];
-    if (!d && orig) navigator.mediaDevices.getUserMedia = async (c) => { const s = await orig(c); window.__tracks.push(...s.getTracks()); return s; };
+    if (!d && orig) navigator.mediaDevices.getUserMedia = async (c) => { window.__gum = c; const s = await orig(c); window.__tracks.push(...s.getTracks()); return s; };
   }, [mock, deny]);
   const p = await ctx.newPage(); p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message)); p.calls = [];
   const cors = { 'Access-Control-Allow-Origin': 'http://localhost:4195', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' };
@@ -210,7 +210,7 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   ok('O1 no server description request for a product that has its own description (nothing to pay for)', !p.calls.includes('/cutout'), p.calls.join(','));
   const lg = await p.evaluate(() => window.__rtLog);
   ok('O2 the instruction is the clothing one for the fitting part (top) and carries the exact description', lg.some((l) => /^prompt:Substitute the current top with a black oversized short-sleeve cotton tee/.test(l)), lg.filter((l) => l.startsWith('prompt:')).join('|').slice(0, 200));
-  ok('O2b the instruction insists on an identical copy (weave, colours, print size/position/lettering, neckline, sleeves), keeps the wearer\'s own body and chest, and stays under 750 characters', lg.some((l) => /identical to the reference image/.test(l) && /print size, position and lettering/.test(l) && /body shape, chest and build/.test(l) && l.length - 7 <= 750), String(Math.max(...lg.filter((l) => l.startsWith('prompt:')).map((l) => l.length - 7)))); await p.context().close(); }
+  ok('O2b the instruction insists on an identical copy (weave, colours, print size/position/lettering, neckline, sleeves), keeps the wearer\'s own body and chest, shows no underwear through the fabric, and stays under 750 characters', lg.some((l) => /identical to the reference image/.test(l) && /print size, position and lettering/.test(l) && /body shape, chest, build/.test(l) && /no underwear and no bare skin/.test(l) && l.length - 7 <= 750), String(Math.max(...lg.filter((l) => l.startsWith('prompt:')).map((l) => l.length - 7)))); await p.context().close(); }
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-fit&m=live&debug=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p); await live(p);
   await p.waitForSelector('[data-testid=evidence]', { timeout: 40000 }); const ev = await p.getByTestId('evidence').innerText();
   ok('O4 the developer panel shows exactly which picture and which instruction were sent to the model', /AI에게 보낸 지시문/.test(ev) && /Substitute the current top with a black oversized/.test(ev) && /기준 사진/.test(ev) && /fitting\.jpg/.test(ev)); await p.context().close(); }
@@ -220,6 +220,7 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
 // P. starting again right after a session: the slot is freed at once (or the button shows a countdown instead of failing)
 { const p = await open({ seconds: 5, release: 'ok' }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'ended', null, { timeout: 40000 });
+  await p.waitForFunction(() => true, null, { timeout: 100 }); for (let i = 0; i < 30 && !p.calls.includes('/realtime/release'); i++) await p.waitForTimeout(100); // the call is sent just as the session ends; give it a moment to reach the server mock
   ok('P1 when the session ends the page tells the server (frees the slot)', p.calls.includes('/realtime/release'), p.calls.join(','));
   await p.waitForTimeout(700);
   const b = p.getByTestId('start-button');
@@ -232,6 +233,15 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   ok('P4 if the server cannot free the slot, the button shows a countdown ("N초 후 다시 시작") instead of letting the visitor hit a refusal', (await b.isDisabled()) && /초 후 다시 시작/.test(await b.innerText()), (await b.innerText()).trim());
   const t1 = Number(/(\d+)초/.exec(await b.innerText())?.[1]); await p.waitForTimeout(2200); const t2 = Number(/(\d+)초/.exec(await b.innerText())?.[1]);
   ok('P5 the countdown moves down', t2 < t1, `${t1} -> ${t2}`); await p.context().close(); }
+// Q. camera quality and the size of the AGAIN title
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&debug=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+  const fs = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('h1')).fontSize));
+  ok('Q1 the AGAIN title is much smaller than before (it was about 70-92 px; now at most 52 px)', fs <= 52 && fs >= 28, fs + 'px');
+  await start(p); await live(p);
+  const gum = await p.evaluate(() => window.__gum);
+  ok('Q2 the camera is asked for the best picture: ideal 1920x1080 (the browser picks the closest the device has)', gum?.video?.width?.ideal === 1920 && gum?.video?.height?.ideal === 1080, JSON.stringify(gum?.video).slice(0, 160));
+  await p.waitForSelector('[data-testid=evidence]', { timeout: 40000 });
+  ok('Q3 the developer panel records what the camera really delivered (width x height)', /카메라 입력/.test(await p.getByTestId('evidence').innerText()) && /\d+×\d+/.test(await p.getByTestId('evidence').innerText())); await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 previous session still being wrapped up', { token: 'busy' }, 'limited', /정리하는 중/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
