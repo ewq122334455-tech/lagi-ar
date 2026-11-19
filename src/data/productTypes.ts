@@ -171,7 +171,7 @@ export interface Product {
   /** Where and how it is made (owner-supplied facts only; never guessed). */
   making?: { country?: VerifiableField<string>; maker?: VerifiableField<string>; how?: VerifiableField<string> };
   /** Size chart in cm: one row per size, one value per column (e.g. 총장, 어깨너비, 가슴단면). */
-  sizeChart?: { unit: 'cm'; columns: string[]; rows: { size: string; values: (number | string | null)[] }[]; note?: string; source?: string };
+  sizeChart?: { unit: 'cm'; columns: string[]; rows: { size: string; values: (number | string | null)[] }[]; note?: string; source?: string; status?: 'VERIFIED' | 'BRAND_COPY' | 'AI_DRAFT' };
   /** 상품정보제공고시 (의류): the information Korean e-commerce law requires on a clothing page. Keyed by the official item names. */
   notice?: Record<string, VerifiableField<string>>;
   /** How the store photo is shown on the page: what it depicts, and two close-up points (% of the photo). */

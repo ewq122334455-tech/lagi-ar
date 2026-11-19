@@ -40,8 +40,57 @@
   "shipping": {
     "fee": 0
   },
-  "materials": [],
-  "process": [],
+  "materials": [
+    {
+      "name": {
+        "value": "폐현수막·타프 업사이클링 원단",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "characteristics": {
+        "value": "가볍고 물에 강한 원단",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "productLocation": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      },
+      "reasonForUse": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      }
+    }
+  ],
+  "process": [
+    {
+      "order": 1,
+      "title": "수거",
+      "description": {
+        "value": "버려진 원단을 모읍니다.",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      }
+    },
+    {
+      "order": 2,
+      "title": "세척·재단",
+      "description": {
+        "value": "세척 후 패턴대로 자릅니다.",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      }
+    },
+    {
+      "order": 3,
+      "title": "봉제",
+      "description": {
+        "value": "한 개씩 손으로 봉제합니다.",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      }
+    }
+  ],
   "details": [],
   "story": {
     "value": "피크닉을 갈 때마다 가방과 돗자리를 따로 챙기는 건 번거로워요. 오리가미 피크닉백은 종이접기처럼 접고 펼쳐, 하나의 물건을 두 가지로 씁니다.",
@@ -206,5 +255,69 @@
       }
     ],
     "source": "고객 제공 실물 사진으로 만든 단순화 3D (근사치)"
+  },
+  "making": {
+    "country": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "maker": {
+      "value": "POPSICLUS (협업 브랜드)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "how": {
+      "value": "버려진 소재를 모아 세척·재단한 뒤 하나씩 봉제해 만듭니다. 소재마다 무늬와 글자 위치가 달라 같은 제품이 없습니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "notice": {
+    "종류": {
+      "value": "가방",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "소재": {
+      "value": "폐현수막·타프 업사이클링 원단",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "색상": {
+      "value": "소재 원래 색상 (제품마다 다름)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "크기": {
+      "value": "가로 60 × 세로 33 × 폭 14 cm",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조자 / 수입자": {
+      "value": "POPSICLUS (협업 브랜드)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조국": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "취급시 주의사항": {
+      "value": "오염은 물에 적신 천으로 가볍게 닦아 주세요. 돗자리로 쓴 뒤에는 흙과 물기를 털고 말린 다음 접어 주세요.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "품질보증기준": {
+      "value": "관련 법 및 소비자분쟁해결기준에 따라 교환·환불·보상해 드립니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "A/S 책임자와 전화번호": {
+      "value": "라기(LAGI) 고객 문의 · 인스타그램 @lagi.official DM",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
   }
 }
