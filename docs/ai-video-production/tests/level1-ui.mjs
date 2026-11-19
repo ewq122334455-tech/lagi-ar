@@ -157,11 +157,11 @@ ok_(); function ok_() {}
   await p.context().close(); }
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=B'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
-  ok('L6 &pipe=B turns the clothes default off: no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
+  ok('L6 default (no flag): no prefit request, no extra step', !p.calls.includes('/realtime/prefit') && !(await p.getByTestId('live-steps').innerText()).includes('참조 사진'), p.calls.join(','));
   await p.context().close(); }
-{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&pipe=C'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]'); await start(p);
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
-  ok('L6c clothes default (no flag) = pipeline C: the checked reference picture is requested first', p.calls.includes('/realtime/prefit') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(','));
+  ok('L6c &pipe=C: the checked reference picture is requested first', p.calls.includes('/realtime/prefit') && p.calls.indexOf('/realtime/prefit') < p.calls.indexOf('/realtime/token'), p.calls.join(','));
   await p.context().close(); }
 // M. pipelines A/B/C/D, original product photo, carry styles, developer UI hidden from visitors
 const body = (p, u) => { try { return JSON.parse(p.bodies?.[u] || '{}'); } catch { return {}; } };
