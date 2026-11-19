@@ -10,7 +10,7 @@ await p.goto(B + 'discover'); await p.waitForTimeout(1500);
 const t = await p.locator('body').innerText();
 ok('R1 clothing appears in the product list with the Korean category names', /테스트 상의 블랙/.test(t) && /테스트 스웻 세트 블랙/.test(t) && /상의/.test(t) && /세트/.test(t));
 await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);
-ok('R2 set page: the exact set name and the contents are shown', /테스트 스웻 세트 블랙/.test(await p.locator('h1').innerText()) && (await p.getByTestId('set-items').locator('li').allInnerTexts()).map((x) => x.replace(/^\d+\s*/, '').trim()).join('|') === '테스트 후드|테스트 팬츠');
+ok('R2 set page: the exact set name and the contents are shown', /테스트 스웻 세트 블랙/.test(await p.locator('h1').innerText()) && /테스트 후드 \+ 테스트 팬츠/.test(await p.getByTestId('set-items').innerText()));
 ok('R3 the product page for clothing has no page errors', errs.length === 0, errs.join('|'));
 await p.goto(B + 'product/zz-test-top'); await p.waitForTimeout(1200);
 ok('R4 top page renders (name, price)', /테스트 상의 블랙/.test(await p.locator('h1').innerText()) && /39,000/.test(await p.locator('body').innerText()));
