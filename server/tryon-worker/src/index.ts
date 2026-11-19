@@ -1234,6 +1234,34 @@ const UNITS_PER_IP_DEFAULT = 24;
 /** Who is being charged for a Gemini call. */
 interface Budget {
   ip: string;
+  /** Output picture shape ("3:4" …) so the result keeps the visitor photo's shape. */
+  aspect?: string;
+}
+
+const GEMINI_ASPECTS: [string, number][] = [['1:1', 1], ['2:3', 2 / 3], ['3:2', 3 / 2], ['3:4', 3 / 4], ['4:3', 4 / 3], ['4:5', 4 / 5], ['5:4', 5 / 4], ['9:16', 9 / 16], ['16:9', 16 / 9], ['21:9', 21 / 9]];
+/** Width/height of a JPEG or PNG (base64), or null. Used only to pick the nearest output shape. */
+export function imageAspect(b64: string): string | null {
+  try {
+    const b = Uint8Array.from(atob(b64.slice(0, 200000)), (c) => c.charCodeAt(0));
+    let w = 0, h = 0;
+    if (b[0] === 0x89 && b[1] === 0x50) {
+      w = (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19];
+      h = (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23];
+    } else if (b[0] === 0xff && b[1] === 0xd8) {
+      let i = 2;
+      while (i + 9 < b.length) {
+        if (b[i] !== 0xff) { i++; continue; }
+        const m = b[i + 1];
+        if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) { h = (b[i + 5] << 8) | b[i + 6]; w = (b[i + 7] << 8) | b[i + 8]; break; }
+        i += 2 + ((b[i + 2] << 8) | b[i + 3]);
+      }
+    }
+    if (!w || !h) return null;
+    const r = w / h;
+    return GEMINI_ASPECTS.reduce((a, c) => (Math.abs(Math.log(c[1] / r)) < Math.abs(Math.log(a[1] / r)) ? c : a))[0];
+  } catch {
+    return null;
+  }
 }
 
 type QuotaFail = 'site_limit' | 'daily_limit' | 'quota_unavailable';
@@ -1423,10 +1451,10 @@ async function tryOn(request: Request, env: Env, headers: Record<string, string>
   if ('error' in product) return json({ error: product.error }, product.status, headers);
 
   // Falls back to the original photo if the cut-out could not be made this time.
-  const budget: Budget = { ip };
+  const budget: Budget = { ip, aspect: imageAspect(person.data) ?? undefined };
   const garment = ['top', 'bottom', 'set', 'outer', 'dress'].includes(body.garment ?? '') ? (body.garment as string) : '';
   // Clothes: the clean garment photo goes in as it is — the bag-centred cut-out step would redraw it as an object.
-  const { cut: cutout, busy, quota } = garment ? { cut: null, busy: false, quota: undefined } : await productCutout(env, body.productImage, product, budget);
+  const { cut: cutout, busy, quota } = garment ? { cut: null, busy: false, quota: undefined } : await productCutout(env, body.productImage, product, { ip });
   if (quota) return json({ error: QUOTA_MESSAGE[quota], reason: quota }, quota === 'quota_unavailable' ? 503 : 429, headers);
   // Gemini is over its limit right now — asking again for the fitting would only wait longer.
   if (busy) return json({ error: 'AI 서버가 잠시 바쁩니다. 1분 뒤에 다시 시도해 주세요.', reason: 'busy' }, 503, headers);
@@ -1591,7 +1619,7 @@ async function geminiImage(env: Env, parts: GeminiPart[], budget: Budget): Promi
         env,
         JSON.stringify({
           contents: [{ role: 'user', parts: askParts }],
-          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'] },
+          generationConfig: { responseModalities: attempt === 0 ? ['IMAGE'] : ['TEXT', 'IMAGE'], ...(budget.aspect ? { imageConfig: { aspectRatio: budget.aspect } } : {}) },
           safetySettings: SAFETY,
         }),
         env.GEMINI_MODEL,
