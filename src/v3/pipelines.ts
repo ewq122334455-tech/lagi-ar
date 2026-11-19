@@ -2,8 +2,8 @@
  * The realtime fitting pipelines that can be compared under the same conditions (address flag `&pipe=`).
  *
  *   A   Gemini-redrawn product cut-out      + lucy-vton-3.6   (the old way)
- *   B   the ORIGINAL clean product photo    + lucy-vton-3.6   (default for bags and other goods: nothing is redrawn)
- *   C   Extreme Precision reference picture + lucy-vton-3.6   (default for CLOTHES: the visitor already wearing it, checked before use)
+ *   B   the ORIGINAL clean product photo    + lucy-vton-3.6   (default: nothing is redrawn)
+ *   C   Extreme Precision reference picture + lucy-vton-3.6   (opt-in: the visitor already wearing it, checked before use)
  *   D   the ORIGINAL clean product photo    + lucy-2.6
  *   DC  Extreme Precision reference picture + lucy-2.6
  *
@@ -31,8 +31,8 @@ const TABLE: Record<PipeId, { reference: Reference; model: RealtimeModel }> = {
 
 export function parsePipeline(flags: string, clothing = false): Pipeline {
   const pipe = /[?&]pipe=(A|B|C|DC|D)(&|$)/i.exec(flags)?.[1]?.toUpperCase() as PipeId | undefined;
-  // Clothes default to C (a checked reference picture of the visitor already wearing it, then the live video); `&pipe=B` turns it off.
-  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) || clothing ? 'C' : 'B');
+  // Default B for everything (the original clean photo, nothing redrawn). C (checked reference picture of the visitor already wearing it) is opt-in with `&pipe=C` until real runs prove it.
+  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) ? 'C' : 'B');
   const model = (/[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1] as RealtimeModel | undefined) ?? TABLE[id].model;
   const provider = /[?&]provider=(fal|gemini)(&|$)/.exec(flags)?.[1] as 'fal' | 'gemini' | undefined;
   return { id, reference: TABLE[id].reference, model, provider };
