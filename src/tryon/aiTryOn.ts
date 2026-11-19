@@ -1,4 +1,5 @@
 import type { CarryStyle, Product } from '@/data/productTypes';
+import { garmentOf, isGarment } from '@/v3/pipelines';
 
 /** URL of the AI try-on Worker (server/tryon-worker). The build variable can override the deployed default. */
 export const AI_TRYON_URL: string = import.meta.env.VITE_TRYON_API_URL || 'https://lagi-tryon.lagi-official.workers.dev';
@@ -69,13 +70,19 @@ export async function requestAiTryOn({ person, product, style, signal }: AiTryOn
   const base = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}`;
   const d = product.dimensions;
   const size = d.widthCm ? `W${d.widthCm * 10} × H${(d.heightCm ?? 0) * 10} × D${(d.depthCm ?? 0) * 10} mm` : undefined;
+  // Clothes: the clean garment photo (never the styled model photo, which may show a backpack or other clothes) and the garment kind.
+  const garment = garmentOf(product.category.value);
+  const clothing = isGarment(garment);
+  const front = product.drawings?.find((d) => d.group === 'view')?.src;
+  const picture = clothing ? (garment === 'set' ? front : (product.fitting?.image ?? front)) ?? product.images[0] : product.images[0];
   const res = await fetch(AI_TRYON_URL, {
     method: 'POST',
     signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       person,
-      productImage: new URL(product.images[0], base).toString(),
+      productImage: new URL(picture, base).toString(),
+      garment: clothing ? garment : undefined,
       productName: product.name.value ?? 'LAGI product',
       category: product.category.value ?? undefined,
       size,
