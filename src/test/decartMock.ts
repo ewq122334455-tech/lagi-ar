@@ -28,9 +28,10 @@ export function createDecartClient(opts: { apiKey: string }) {
         log('preflight');
         return window.__rtMock?.mode === 'netfail' ? { quality: 'critical', metrics: { transport: 'failed', rttMs: null }, reasons: [] } : { quality: 'good', metrics: { transport: 'udp', rttMs: 30 }, reasons: [] };
       },
-      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string; initialState?: { image?: Blob; prompt?: { text: string } } }) {
+      async connect(input: MediaStream, o: { onRemoteStream: (s: MediaStream) => void; model?: { name: string }; speed?: string; resolution?: string; initialState?: { image?: Blob; prompt?: { text: string } } }) {
         const mode = window.__rtMock?.mode ?? 'ok';
         log(`connect:${mode}`);
+        log(`resolution:${o.resolution ?? 'default'}`);
         log(`model:${o.model?.name}`);
         log(`retries:${(o as { retries?: number }).retries}`);
         log(`prompt:${o.initialState?.prompt?.text ?? ''}`);

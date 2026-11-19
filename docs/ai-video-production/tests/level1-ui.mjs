@@ -42,7 +42,7 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
 // A. before start
 { const p = await open(); ok('A1 start state: step "before" and the start button is locked until consent', (await step(p)) === 'before' && await p.getByRole('button', { name: '실시간 착용 시작' }).isDisabled());
   await p.getByLabel(/카메라 영상이 AI 서버/).check(); ok('A2 product + consent → step "ready"', (await step(p)) === 'ready');
-  ok('A3 the beta label stays on the tab', (await p.getByRole('tab', { name: /AI 영상 \(베타\)/ }).count()) === 1);
+  ok('A3 the tab is labelled "AI 영상" (no beta label any more)', (await p.getByRole('tab', { name: /^AI 영상/ }).count()) === 1 && !/베타/.test(await p.getByRole('tablist').first().innerText()));
   ok('A4 no paid request before the visitor starts', p.calls.length === 0, p.calls.join(',')); await p.context().close(); }
 
 // B. camera denied → nothing paid
@@ -55,6 +55,7 @@ const step = (p) => p.getByTestId('live-steps').getAttribute('data-step');
   await p.waitForFunction(() => document.querySelector('[data-testid=live-steps]')?.getAttribute('data-step') === 'live', null, { timeout: 40000 });
   ok('C1 steps reach "live"', true);
   const order = p.calls.filter((c) => c !== '/cutout(matte)'); ok('C2 order: cut-out first, token after (camera already on)', p.calls.indexOf('/cutout') < p.calls.indexOf('/realtime/token') && p.calls.includes('/realtime/token'), p.calls.join(' > '));
+  ok('C3b the sharper 1080p AI output is requested from the model', (await p.evaluate(() => window.__rtLog)).includes('resolution:1080p'));
   ok('C3 product reference sent to the (mock) model', (await p.evaluate(() => window.__rtLog)).some((l) => l.startsWith('setImage:')), (await p.evaluate(() => window.__rtLog)).join(' | '));
   ok('C4 countdown shown', /\d/.test(await p.getByTestId('countdown').innerText()));
   ok('C5 recording indicator shown (local only)', await p.getByTestId('rec-on').waitFor({ timeout: 6000 }).then(() => true).catch(() => false));
