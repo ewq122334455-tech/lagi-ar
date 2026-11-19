@@ -208,7 +208,7 @@ export default function Again() {
   return (
     <div className="px-page pb-32 pt-page">
       <header className="text-center">
-        <h1 className="t-display t-mark">AGAIN</h1>
+        <h1 className="t-mark text-[clamp(30px,3.6vw,52px)] font-bold leading-none tracking-[-0.01em]">AGAIN</h1>
         <p className="t-caption kr mt-4 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
       </header>
 

@@ -37,6 +37,8 @@ type Evidence = {
   // Try-on reference photo (Decart's step for bags): did we make one for this visitor, how long it took, why not.
   prefit: { used: boolean; ms: number | null; note: string | null; checks?: string | null };
   network?: string;
+  /** What the camera really delivered (width x height @ fps), so a blurry result can be told apart from a low-resolution camera. */
+  camera?: string;
   // Exactly what was sent to the model, so a wrong result can be explained: the instruction text and which picture was the reference.
   prompt?: string;
   referenceUsed?: string;
@@ -515,12 +517,19 @@ export function LiveTryOn({
       const model = sdk.models.realtime('lucy-2.6');
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: facing, frameRate: model.fps, width: model.width, height: model.height },
+        // The best picture the camera can give: ask for 1080p (the browser picks the closest the device has, never failing for a
+        // camera that stops at 720p), at the model's frame rate. The model itself works at 1280x720, so a sharper source simply
+        // gives it more to work from.
+        video: { facingMode: facing, frameRate: model.fps, width: { ideal: Math.max(1920, model.width) }, height: { ideal: Math.max(1080, model.height) } },
       });
       if (local.current) local.current.srcObject = stream;
       // 2. Check what will be sent: the camera really delivers video, and the product reference is ready.
       setStage('checking');
       const track = stream.getVideoTracks()[0];
+      {
+        const st = track?.getSettings?.() ?? {};
+        ev.camera = st.width && st.height ? `${st.width}×${st.height}${st.frameRate ? ` @ ${Math.round(st.frameRate)}fps` : ''}` : undefined;
+      }
       if (!track || track.readyState !== 'live') throw new Error('카메라 영상이 들어오지 않습니다. 다른 앱이 카메라를 쓰고 있지 않은지 확인해 주세요.');
       // 2a. The network, before anything is paid for: gather ICE candidates (a free STUN probe, no Decart session is opened). A network
       //     that cannot carry realtime video at all (transport "failed", e.g. a blocking mobile network or office firewall) stops here with a
@@ -925,6 +934,7 @@ export function LiveTryOn({
             )}
             <dl className="t-caption kr mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               <dt>파이프라인</dt><dd>{evidence.pipeline}</dd>
+              <dt>카메라 입력</dt><dd>{evidence.camera ?? '-'}</dd>
               <dt>네트워크 사전 검사</dt><dd>{evidence.network ?? '-'}</dd>
               <dt>기준 사진</dt><dd>{evidence.referenceUsed ?? '-'}</dd>
               <dt>AI에게 보낸 지시문</dt><dd className="break-words">{evidence.prompt ?? '-'}</dd>

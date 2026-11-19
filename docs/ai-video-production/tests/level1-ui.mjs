@@ -12,7 +12,7 @@ async function open({ token = 'ok', mock = 'ok', deny = false, seconds = 5, mode
     sessionStorage.setItem('lagi-intro-seen', '1'); window.__rtMock = { mode: m };
     if (d) navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('denied', 'NotAllowedError'); };
     const orig = navigator.mediaDevices.getUserMedia?.bind(navigator.mediaDevices); window.__tracks = [];
-    if (!d && orig) navigator.mediaDevices.getUserMedia = async (c) => { const s = await orig(c); window.__tracks.push(...s.getTracks()); return s; };
+    if (!d && orig) navigator.mediaDevices.getUserMedia = async (c) => { window.__gum = c; const s = await orig(c); window.__tracks.push(...s.getTracks()); return s; };
   }, [mock, deny]);
   const p = await ctx.newPage(); p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message)); p.calls = [];
   const cors = { 'Access-Control-Allow-Origin': 'http://localhost:4195', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' };
@@ -233,6 +233,15 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   ok('P4 if the server cannot free the slot, the button shows a countdown ("N초 후 다시 시작") instead of letting the visitor hit a refusal', (await b.isDisabled()) && /초 후 다시 시작/.test(await b.innerText()), (await b.innerText()).trim());
   const t1 = Number(/(\d+)초/.exec(await b.innerText())?.[1]); await p.waitForTimeout(2200); const t2 = Number(/(\d+)초/.exec(await b.innerText())?.[1]);
   ok('P5 the countdown moves down', t2 < t1, `${t1} -> ${t2}`); await p.context().close(); }
+// Q. camera quality and the size of the AGAIN title
+{ const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&debug=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
+  const fs = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('h1')).fontSize));
+  ok('Q1 the AGAIN title is much smaller than before (it was about 70-92 px; now at most 52 px)', fs <= 52 && fs >= 28, fs + 'px');
+  await start(p); await live(p);
+  const gum = await p.evaluate(() => window.__gum);
+  ok('Q2 the camera is asked for the best picture: ideal 1920x1080 (the browser picks the closest the device has)', gum?.video?.width?.ideal === 1920 && gum?.video?.height?.ideal === 1080, JSON.stringify(gum?.video).slice(0, 160));
+  await p.waitForSelector('[data-testid=evidence]', { timeout: 40000 });
+  ok('Q3 the developer panel records what the camera really delivered (width x height)', /카메라 입력/.test(await p.getByTestId('evidence').innerText()) && /\d+×\d+/.test(await p.getByTestId('evidence').innerText())); await p.context().close(); }
 // D. failures
 for (const [name, opt, kind, re] of [['D1 daily limit', { token: 'daily' }, 'limited', /하루 3번/], ['D2 previous session still being wrapped up', { token: 'busy' }, 'limited', /정리하는 중/], ['D3 provider not configured', { token: 'down' }, 'failed', /준비 중/]]) {
   const p = await open(opt); await start(p); await p.waitForSelector('[data-testid=live-error]');
