@@ -423,7 +423,7 @@ export default function ProductPage() {
             </section>
           )}
 
-          {isClothing(p) && <ProductInfo p={p} />}
+          <ProductInfo p={p} />
 
           {maker && <p className="t-caption kr mt-[var(--section)] text-center text-[var(--c-mute)]">협업 브랜드 {maker} · 제품은 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.</p>}
         </div>

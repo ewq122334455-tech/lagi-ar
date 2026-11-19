@@ -35,5 +35,9 @@ await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);
 { const info = p.getByTestId('product-info'); const t = await info.innerText();
   ok('R15 clothing page has the written sections: story, why selected, made by, fabric, size, 상품 정보 제공 고시', ['STORY', 'WHY WE SELECTED', 'MADE BY', 'FABRIC', 'SIZE', 'INFORMATION'].every((k) => t.toUpperCase().includes(k)) && /상품 정보 제공 고시/.test(t));
   ok('R16 the legally required items are all listed, and nothing unknown is invented (shown as 정보 준비 중)', ['제품 소재', '색상', '치수', '제조국', '세탁방법', '제조연월', '품질보증기준', 'A/S'].every((k) => t.includes(k)) && (await p.locator('[data-testid=notice] dd').allInnerTexts()).every((x) => x === '정보 준비 중')); }
+await p.goto(B + 'product/daily-tote'); await p.waitForTimeout(1500);
+{ const t = await p.getByTestId('product-info').innerText();
+  ok('R17 bags get the same written sections with the 가방 notice items (종류, 소재, 크기 …) and the real size from the product data', /종류/.test(t) && /크기/.test(t) && /MATERIAL/i.test(t) && /28/.test(await p.getByTestId('size-chart').innerText()));
+  ok('R18 example values are labelled "예시 정보 · 확인 전" (never shown as checked facts)', (await p.locator('[data-draft=true]').count()) > 0); }
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();

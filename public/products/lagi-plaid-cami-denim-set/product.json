@@ -30,13 +30,73 @@
   ],
   "gallery": [],
   "colors": [],
-  "variants": [],
+  "variants": [
+    {
+      "id": "lagi-plaid-cami-denim-set-s",
+      "size": "S",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-plaid-cami-denim-set-m",
+      "size": "M",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-plaid-cami-denim-set-l",
+      "size": "L",
+      "color": null,
+      "stock": null
+    }
+  ],
   "dimensions": {},
   "shipping": {
     "fee": 3000,
     "freeOver": 50000
   },
-  "materials": [],
+  "materials": [
+    {
+      "name": {
+        "value": "상의: 면 100%",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "characteristics": {
+        "value": "가벼운 체크 코튼 (캐미), 코튼 저지 (반팔 티)",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "productLocation": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      },
+      "reasonForUse": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      }
+    },
+    {
+      "name": {
+        "value": "하의: 면 100% (데님)",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "characteristics": {
+        "value": "라이트 워싱 데님",
+        "status": "AI_DRAFT",
+        "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      },
+      "productLocation": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      },
+      "reasonForUse": {
+        "value": null,
+        "status": "CONTENT_REQUIRED"
+      }
+    }
+  ],
   "process": [],
   "details": [],
   "story": {
@@ -97,5 +157,163 @@
     "image": "products/lagi-plaid-cami-denim-set/images/fitting-bottom.jpg",
     "part": "bottom",
     "description": "high-waisted extra-wide straight jeans in faded sage green-grey denim with a light yellowish wash, five-pocket styling and a long loose leg"
+  },
+  "care": {
+    "value": "찬물 세탁, 캐미는 세탁망 사용. 데님은 단독 세탁.",
+    "status": "AI_DRAFT",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+  },
+  "making": {
+    "country": {
+      "value": "중국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "maker": {
+      "value": "라기(LAGI) 협력 의류 공방",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "how": {
+      "value": "패턴 제작 → 원단 재단 → 봉제 → 워싱·프린트 → 검품 순서로 소량 생산합니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "sizeChart": {
+    "unit": "cm",
+    "columns": [
+      "총장",
+      "가슴단면",
+      "허리단면",
+      "엉덩이단면",
+      "허벅지단면",
+      "밑위",
+      "밑단단면"
+    ],
+    "rows": [
+      {
+        "size": "상의 S",
+        "values": [
+          52,
+          44,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "size": "상의 M",
+        "values": [
+          54,
+          46,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "size": "상의 L",
+        "values": [
+          56,
+          48,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "size": "하의 S",
+        "values": [
+          100,
+          null,
+          33,
+          52,
+          34,
+          32,
+          24
+        ]
+      },
+      {
+        "size": "하의 M",
+        "values": [
+          102,
+          null,
+          35,
+          54,
+          35,
+          33,
+          25
+        ]
+      },
+      {
+        "size": "하의 L",
+        "values": [
+          104,
+          null,
+          37,
+          56,
+          36,
+          34,
+          26
+        ]
+      }
+    ],
+    "note": "예시 치수입니다. 단면 기준이며 재는 방법에 따라 1~3cm 차이가 있을 수 있습니다.",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요",
+    "status": "AI_DRAFT"
+  },
+  "notice": {
+    "제품 소재": {
+      "value": "상의: 면 100% / 하의: 면 100% (데님)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "색상": {
+      "value": "옐로 체크·브라운 / 그린 그레이",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "치수": {
+      "value": "S, M, L (사이즈표 참고)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조자 / 수입자": {
+      "value": "라기(LAGI) 협력 의류 공방",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조국": {
+      "value": "중국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "세탁방법 및 취급시 주의사항": {
+      "value": "찬물 세탁, 캐미는 세탁망 사용. 데님은 단독 세탁.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조연월": {
+      "value": "2026년 10월",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "품질보증기준": {
+      "value": "관련 법 및 소비자분쟁해결기준에 따라 교환·환불·보상해 드립니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "A/S 책임자와 전화번호": {
+      "value": "라기(LAGI) 고객 문의 · 인스타그램 @lagi.official DM",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
   }
 }
