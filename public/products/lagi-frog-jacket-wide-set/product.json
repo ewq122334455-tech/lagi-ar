@@ -89,5 +89,10 @@
     "image": "products/lagi-frog-jacket-wide-set/images/fitting.jpg",
     "part": "top",
     "description": "a stone-beige stand-collar zip bomber jacket with five matching knotted frog-button closures down the front, side pockets, elastic cuffs and hem, and a small white embroidered logo on the left chest"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-frog-jacket-wide-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "high-waisted wide barrel-leg trousers in plain black cotton, curved inward at the ankle, with a row of four silver snap buttons down the front and no print"
   }
 }

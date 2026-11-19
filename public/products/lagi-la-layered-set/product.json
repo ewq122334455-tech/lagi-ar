@@ -90,5 +90,10 @@
     "image": "products/lagi-la-layered-set/images/fitting.jpg",
     "part": "top",
     "description": "a red oversized short-sleeve tee with a black collar and dark side stripes, arched white \"CALIFORNIA\" lettering above yellow script \"Los Angeles\" and small white \"ATHL. WEST LEAGUE DEPT. SINCE 1882 UNIVERSITY CHAMPS.\" text, layered over a long-sleeve tee with fine grey, orange and cream stripes"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-la-layered-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "wide-leg baggy pants in washed black-grey denim with an elastic drawstring waist and elasticated cuffs gathering the ankles, with a faded pale wash"
   }
 }

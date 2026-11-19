@@ -90,5 +90,10 @@
     "image": "products/lagi-alien-vest-sweat-set/images/fitting.jpg",
     "part": "top",
     "description": "a washed charcoal-grey oversized short-sleeve tee with ONE large olive-green hand-drawn alien (antennae, big round eyes, wide toothy smile, one arm waving) filling the chest and hand-lettered \"ACT NORMAL\" below it, layered over a blue and white gingham long-sleeve shirt with a collar and chest pocket"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-alien-vest-sweat-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "wide knee-length shorts in plain heather-grey cotton fleece with a wide elastic waistband and a flat drawstring, slim side pockets, a relaxed straight cut and a raw cut hem with a thin off-white edge"
   }
 }

@@ -2,8 +2,8 @@
  * The realtime fitting pipelines that can be compared under the same conditions (address flag `&pipe=`).
  *
  *   A   Gemini-redrawn product cut-out      + lucy-vton-3.6   (the old way)
- *   B   the ORIGINAL clean product photo    + lucy-vton-3.6   (default: nothing is redrawn)
- *   C   Extreme Precision reference picture + lucy-vton-3.6   (the visitor carrying the product, checked before use)
+ *   B   the ORIGINAL clean product photo    + lucy-vton-3.6   (default for bags and other goods: nothing is redrawn)
+ *   C   Extreme Precision reference picture + lucy-vton-3.6   (default for CLOTHES: the visitor already wearing it, checked before use)
  *   D   the ORIGINAL clean product photo    + lucy-2.6
  *   DC  Extreme Precision reference picture + lucy-2.6
  *
@@ -29,9 +29,10 @@ const TABLE: Record<PipeId, { reference: Reference; model: RealtimeModel }> = {
   DC: { reference: 'prefit', model: 'lucy-2.6' },
 };
 
-export function parsePipeline(flags: string): Pipeline {
+export function parsePipeline(flags: string, clothing = false): Pipeline {
   const pipe = /[?&]pipe=(A|B|C|DC|D)(&|$)/i.exec(flags)?.[1]?.toUpperCase() as PipeId | undefined;
-  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) ? 'C' : 'B');
+  // Clothes default to C (a checked reference picture of the visitor already wearing it, then the live video); `&pipe=B` turns it off.
+  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) || clothing ? 'C' : 'B');
   const model = (/[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1] as RealtimeModel | undefined) ?? TABLE[id].model;
   const provider = /[?&]provider=(fal|gemini)(&|$)/.exec(flags)?.[1] as 'fal' | 'gemini' | undefined;
   return { id, reference: TABLE[id].reference, model, provider };
@@ -64,8 +65,8 @@ export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'sh
   const { model, carry, kind, description, prefit, garment } = opts;
   if (garment && isGarment(garment)) {
     // Clothing — what the VTON models were made for. Decart's two patterns: "Substitute the current <part> with …" (20-30 words: colour, material, pattern, fit).
-    const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'pants' : garment === 'outer' ? 'top layer' : 'outfit';
-    const what = description ? description.slice(0, 380) : garment === 'set' ? 'the matching set shown in the reference image' : `the ${garment === 'bottom' ? 'pants' : 'garment'} shown in the reference image`;
+    const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'bottoms' : garment === 'outer' ? 'top layer' : 'outfit';
+    const what = description ? description.slice(0, 380) : garment === 'set' ? 'the matching set shown in the reference image' : `the ${garment === 'bottom' ? 'bottoms' : 'garment'} shown in the reference image`;
     // The strongest wording that still stays inside Decart's guide (one action, only what the reference shows, well under 750 characters in all).
     const exact =
       'It must look identical to the reference image: the same weave and texture, colours, print size, position and lettering, neckline, sleeve length and fit. Do not simplify, restyle, shrink or move any graphic, and do not add details. Keep the wearer\'s own face, hair, body shape, chest, build and the background unchanged. Show no underwear and no bare skin through the fabric.';

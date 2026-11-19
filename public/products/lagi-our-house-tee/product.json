@@ -89,5 +89,10 @@
   "setItems": [
     "아워 하우스 핸드페인팅 그래픽 티셔츠 (아이보리, 플라워 긴팔 레이어드)",
     "플라워 프린트 미니 스커트"
-  ]
+  ],
+  "fittingBottom": {
+    "image": "products/lagi-our-house-tee/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "a low-rise mini skirt in a large bold flower print: red, orange, yellow and blue flowers with black centres on a red-and-black ground"
+  }
 }

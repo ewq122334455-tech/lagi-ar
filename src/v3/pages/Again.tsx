@@ -52,6 +52,10 @@ export default function Again() {
   const product = products.find((p) => p.id === productId);
   // The realtime AI fitting (video) is for clothing only; the other two ways keep every product.
   const pickable = mode === 'live' ? products.filter(isClothing) : products;
+  // Sets: try the top or the bottom (each has its own clean reference picture and exact description).
+  const [part, setPart] = useState<'top' | 'bottom'>('top');
+  useEffect(() => setPart('top'), [productId]);
+  const liveProduct = product && part === 'bottom' && product.fittingBottom ? { ...product, fitting: product.fittingBottom } : product;
   const liveBlocked = mode === 'live' && !!product && !isClothing(product);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
@@ -301,7 +305,16 @@ export default function Again() {
           <p className="t-caption kr mt-2 text-[var(--c-mute)]">가방은 3D 착용이나 사진 합성으로 먼저 해 보세요.</p>
         </div>
       )}
-      {mode === 'live' && !liveBlocked && pickable.length > 0 && <LiveTryOn product={product} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+      {mode === 'live' && !liveBlocked && product?.fittingBottom && (
+        <div className="mb-3 flex items-center gap-2" role="group" aria-label="입어 볼 부분" data-testid="part-toggle">
+          {([['top', '상의'], ['bottom', '하의']] as const).map(([k, label]) => (
+            <button key={k} type="button" className="chip" aria-pressed={part === k} onClick={() => setPart(k)} data-testid={`part-${k}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode === 'live' && !liveBlocked && pickable.length > 0 && <LiveTryOn product={liveProduct} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
       <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">

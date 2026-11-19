@@ -90,5 +90,10 @@
     "image": "products/lagi-pleats-cami-bolero-set/images/fitting.jpg",
     "part": "top",
     "description": "a cream pleated button-front camisole with a gathered waist and thin straps, worn over a plain light-olive tank top, under a cropped taupe-brown chunky rib-knit bolero with long puffed sleeves"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-pleats-cami-bolero-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "black balloon-shaped trousers in a soft plain fabric with an elastic drawstring waist, gathered folds and a tapered gathered hem"
   }
 }

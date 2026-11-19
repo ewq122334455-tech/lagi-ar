@@ -89,5 +89,10 @@
     "image": "products/lagi-navy-jersey-camo-set/images/fitting.jpg",
     "part": "top",
     "description": "a navy short-sleeve football jersey tee with a yellow ringer collar and yellow cuffs, three yellow stripes running down each sleeve, a small round crest with an S on the left chest and bold yellow italic lettering \"Lindejacob\" across the chest"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-navy-jersey-camo-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "baggy wide-leg cargo pants in dark green-and-brown camouflage print cotton with large flap pockets on both thighs, a relaxed fit and drawcord toggles gathering the ankles"
   }
 }

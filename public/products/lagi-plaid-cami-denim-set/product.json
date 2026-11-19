@@ -90,5 +90,10 @@
     "image": "products/lagi-plaid-cami-denim-set/images/fitting.jpg",
     "part": "top",
     "description": "a yellow-green plaid gathered camisole dress with thin straps worn over a short-sleeve chocolate-brown tee"
+  },
+  "fittingBottom": {
+    "image": "products/lagi-plaid-cami-denim-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "high-waisted extra-wide straight jeans in faded sage green-grey denim with a light yellowish wash, five-pocket styling and a long loose leg"
   }
 }

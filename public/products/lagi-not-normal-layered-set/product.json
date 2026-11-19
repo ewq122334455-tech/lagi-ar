@@ -89,5 +89,10 @@
   "instagramUrl": "https://www.instagram.com/lagi.official/",
   "arAvailable": false,
   "threeDAvailable": false,
-  "featured": false
+  "featured": false,
+  "fittingBottom": {
+    "image": "products/lagi-not-normal-layered-set/images/fitting-bottom.jpg",
+    "part": "bottom",
+    "description": "a flared knee-length skirt in plain heather-grey cotton fleece with a wide elastic waistband and a flat drawstring, falling in soft folds to a curved hem with a thin white edge"
+  }
 }
