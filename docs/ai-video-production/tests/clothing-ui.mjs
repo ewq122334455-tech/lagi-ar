@@ -31,5 +31,9 @@ await p.getByTestId('part-bottom').click(); await p.waitForTimeout(300);
 ok('R13 choosing 하의 selects it and unselects 상의', (await p.getByTestId('part-bottom').getAttribute('aria-pressed')) === 'true' && (await p.getByTestId('part-top').getAttribute('aria-pressed')) === 'false');
 await p.goto(B + 'again?p=zz-test-top&m=live'); await p.waitForTimeout(1500);
 ok('R14 a single top has no 상의 / 하의 choice', await p.getByTestId('part-toggle').count() === 0);
+await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);
+{ const info = p.getByTestId('product-info'); const t = await info.innerText();
+  ok('R15 clothing page has the written sections: story, why selected, made by, fabric, size, 상품 정보 제공 고시', ['STORY', 'WHY WE SELECTED', 'MADE BY', 'FABRIC', 'SIZE', 'INFORMATION'].every((k) => t.toUpperCase().includes(k)) && /상품 정보 제공 고시/.test(t));
+  ok('R16 the legally required items are all listed, and nothing unknown is invented (shown as 정보 준비 중)', ['제품 소재', '색상', '치수', '제조국', '세탁방법', '제조연월', '품질보증기준', 'A/S'].every((k) => t.includes(k)) && (await p.locator('[data-testid=notice] dd').allInnerTexts()).every((x) => x === '정보 준비 중')); }
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();

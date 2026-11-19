@@ -40,12 +40,14 @@
   "process": [],
   "details": [],
   "story": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "노란 링거 칼라와 소매의 세 줄 스트라이프, 가슴의 굵은 'Lindejacob' 레터링이 들어간 네이비 풋볼 저지에 그린·브라운 카모 카고 팬츠를 맞췄어요. 발목 스트링으로 바지 끝의 실루엣을 바꿀 수 있습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "lagiSelectionReason": {
-    "value": null,
-    "status": "CONTENT_REQUIRED"
+    "value": "경기장 유니폼의 에너지를 일상으로 가져온 조합이에요. 스포츠 저지와 밀리터리 카고, 서로 다른 두 세계를 한 벌로 묶었다는 점이 라기의 눈에 들어왔습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 (제품 사진 기준 소개 글, 소재·제조 정보 아님)"
   },
   "drawings": [
     {
