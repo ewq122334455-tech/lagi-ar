@@ -37,3 +37,11 @@ ok('an unknown garment value is ignored (old bag path: cut-out + compose)', call
 e = env(); calls = [];
 r = await post(e, base, '3.3.3.3'); await r.json();
 ok('no garment: old path unchanged (cut-out + compose)', calls.length === 2);
+
+// Output keeps the visitor photo's shape (aspect ratio sent to Gemini on the compose call only, never on the cut-out)
+e = env(); calls = [];
+r = await post(e, { ...base, garment: 'set' }, '4.4.4.4'); await r.json();
+ok('compose call asks for the visitor photo\'s shape (aspectRatio present)', typeof calls[0].generationConfig.imageConfig?.aspectRatio === 'string', JSON.stringify(calls[0].generationConfig.imageConfig));
+e = env(); calls = [];
+r = await post(e, base, '5.5.5.5'); await r.json();
+ok('bag path: cut-out call has NO aspect, compose call has it', !calls[0].generationConfig.imageConfig && !!calls[1].generationConfig.imageConfig);
