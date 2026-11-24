@@ -261,6 +261,8 @@ export interface Product {
   detailImages?: { src: string; alt: string }[];
   /** Set products only: the exact names of the pieces the set contains. */
   setItems?: string[];
+  /** The same pieces in English — shown on the product page. */
+  setItemsEn?: string[];
 
   shopUrl: VerifiableField<string>;
   instagramUrl: string;

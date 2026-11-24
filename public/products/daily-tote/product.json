@@ -257,9 +257,9 @@
   },
   "making": {
     "country": {
-      "value": "인도네시아 (협업 브랜드 소재지 기준 추정)",
-      "status": "AI_DRAFT",
-      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      "value": "인도네시아 또는 대한민국",
+      "status": "BRAND_COPY",
+      "source": "라기 확인 (2026-11-24)"
     },
     "maker": {
       "value": "POPSICLUS (팝시클루스) — 2022 UNESCO Indonesia Handicraft Awards 수상 이력이 있는 인도네시아 업사이클링 브랜드",
@@ -299,9 +299,9 @@
       "source": "LAGI 제공 상세 이미지 (데일리토트백 상세 페이지 16장, 2026-11-24)"
     },
     "제조국": {
-      "value": "인도네시아 (협업 브랜드 소재지 기준 추정)",
-      "status": "AI_DRAFT",
-      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+      "value": "인도네시아 또는 대한민국",
+      "status": "BRAND_COPY",
+      "source": "라기 확인 (2026-11-24)"
     },
     "취급시 주의사항": {
       "value": "제품별 취급 및 관리 안내 참조",
