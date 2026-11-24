@@ -6,8 +6,8 @@ import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
 import { isClothing, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
-import { MapTryOn } from '../MapTryOn';
 import { cleanImage } from '../ProductCard';
+import { FRAME, LEFT, RIGHT, STAGE } from '../againLayout';
 import { responsive } from '../img';
 
 /** Ways of wearing a product — kept to the few that every mode (3D, photo AI) can show accurately. */
@@ -42,12 +42,8 @@ export default function Again() {
   const [params, setParams] = useSearchParams();
   const productId = params.get('p');
   // Realtime try-on (video) or photo compositing. Realtime is the default.
-  type Mode = 'map' | 'photo' | 'live';
-  // Products with a 3D model open in the 3D live try-on; others in the AI video.
-  const m = params.get('m');
-  // Live 3D only for products that have a real 3D model; the others open in photo compositing.
-  const has3d = !!products.find((x) => x.id === productId)?.model3d;
-  const mode: Mode = m === 'photo' || m === 'live' || m === 'map' ? m : has3d ? 'map' : 'photo';
+  type Mode = 'photo' | 'live';
+  const mode: Mode = params.get('m') === 'live' ? 'live' : 'photo';
   const product = products.find((p) => p.id === productId);
   // The realtime AI fitting (video) is for clothing only; the other two ways keep every product.
   const pickable = mode === 'live' ? products.filter(isClothing) : products;
@@ -197,7 +193,7 @@ export default function Again() {
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 
   const chips = (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2">
       {styles.map((s) => (
         <button key={s.key} type="button" aria-pressed={style === s.key} onClick={() => setStyle(s.key)} className="chip">
           {style === s.key && <span aria-hidden="true">✓</span>}
@@ -208,55 +204,39 @@ export default function Again() {
   );
   const setMode = (next: Mode) => setParams({ ...(productId ? { p: productId } : {}), m: next }, { replace: true });
 
-  return (
-    <div className="px-page pb-32 pt-page">
-      <h1 className="sr-only">Again</h1>
-
-      <div className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
+  // Right column, top: the two ways (photo / AI video) and the products, all visible at once.
+  const picker = (
+    <>
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-[var(--c-gray)] p-1" role="tablist" aria-label="체험 방식">
         {(
           [
-            ['map', '3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
-            ['photo', '사진 합성', 'AI 실사 사진 · 10~40초'],
-            ['live', 'AI 영상', '옷 전용 · AI가 다시 그리는 영상 · 20초'],
+            ['photo', '사진 합성'],
+            ['live', 'AI 영상'],
           ] as const
-        ).map(([m, label, sub]) => (
+        ).map(([m, label]) => (
           <button
             key={m}
             type="button"
             role="tab"
             aria-selected={mode === m}
             onClick={() => setMode(m)}
-            className={`whitespace-nowrap rounded-xl px-2 py-3 text-center text-[13px] transition-all sm:px-4 sm:text-left sm:text-base ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-center text-[14px] transition-all ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
           >
-            <span className="t-value kr block !text-[inherit]">{label}</span>
+            <span className="kr font-semibold">{label}</span>
           </button>
         ))}
       </div>
-
-
-      {/* 01 Product */}
-      <section className="mt-10" aria-labelledby="s1">
+      <section aria-labelledby="s1">
         <h2 id="s1" className="sr-only">제품을 고르세요</h2>
         {loading ? (
-          <p className="t-caption kr mt-4">불러오는 중…</p>
+          <p className="t-caption kr">불러오는 중…</p>
         ) : (
-          <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10" data-testid="product-strip">
+          <ul className="grid grid-cols-7 gap-1 sm:grid-cols-10 lg:grid-cols-8" data-testid="product-strip">
             {pickable.map((p) => (
               <li key={p.id}>
-                <button
-                  type="button"
-                  aria-pressed={p.id === productId}
-                  onClick={() => choose(p)}
-                  className="group block w-full text-left"
-                  aria-label={p.name.value ?? ''}
-                >
-                  <span className={`relative block aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
-                    <img {...responsive(cleanImage(p), '160px')} src={cleanImage(p)} alt="" className="h-full w-full object-contain p-2" />
-                    {p.id === productId && (
-                      <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--c-ink)] text-[12px] text-white">
-                        ✓
-                      </span>
-                    )}
+                <button type="button" aria-pressed={p.id === productId} onClick={() => choose(p)} className="group block w-full" aria-label={p.name.value ?? ''}>
+                  <span className={`relative block aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
+                    <img {...responsive(cleanImage(p), '96px')} src={cleanImage(p)} alt="" className="h-full w-full object-contain p-1" />
                   </span>
                 </button>
               </li>
@@ -264,45 +244,8 @@ export default function Again() {
           </ul>
         )}
       </section>
-
-      {mode === 'map' && product && !product.model3d && (
-        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="no-3d">
-          <p className="t-value kr">이 제품은 3D 모델을 준비하고 있어요.</p>
-          <p className="t-caption kr mt-2 text-[var(--c-mute)]">
-            실시간 3D 착용은 {products.filter((x) => x.model3d).map((x) => x.name.value).join(' · ')}에서 해 볼 수 있어요. 이 제품은 사진 합성으로 착용 모습을 볼 수 있습니다.
-          </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            <button type="button" className="btn btn-primary" onClick={() => setMode('photo')}>
-              사진 합성으로 보기
-            </button>
-          </div>
-        </div>
-      )}
-      {mode === 'map' && product?.model3d && <MapTryOn product={product} styleKey={style} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
-      {mode === 'live' && liveBlocked && (
-        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="live-clothing-only">
-          <p className="t-value kr">실시간 AI 피팅은 옷만 가능해요.</p>
-          <p className="t-caption kr mt-2 text-[var(--c-mute)]">가방과 소품은 3D 착용이나 사진 합성으로 착용 모습을 볼 수 있습니다.</p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {product?.model3d && (
-              <button type="button" className="btn btn-primary" onClick={() => setMode('map')}>
-                3D 착용으로 보기
-              </button>
-            )}
-            <button type="button" className="btn btn-primary" onClick={() => setMode('photo')}>
-              사진 합성으로 보기
-            </button>
-          </div>
-        </div>
-      )}
-      {mode === 'live' && !liveBlocked && pickable.length === 0 && !loading && (
-        <div className="mt-10 rounded-[calc(var(--radius-card)*2)] bg-[var(--c-gray)] px-6 py-12 text-center" data-testid="live-no-clothes">
-          <p className="t-value kr">입어 볼 수 있는 옷을 준비하고 있어요.</p>
-          <p className="t-caption kr mt-2 text-[var(--c-mute)]">가방은 3D 착용이나 사진 합성으로 먼저 해 보세요.</p>
-        </div>
-      )}
       {mode === 'live' && !liveBlocked && product?.fittingBottom && (
-        <div className="mb-3 flex items-center gap-2" role="group" aria-label="입어 볼 부분" data-testid="part-toggle">
+        <div className="flex items-center gap-2" role="group" aria-label="입어 볼 부분" data-testid="part-toggle">
           {([['top', '상의'], ['bottom', '하의']] as const).map(([k, label]) => (
             <button key={k} type="button" className="chip" aria-pressed={part === k} onClick={() => setPart(k)} data-testid={`part-${k}`}>
               {label}
@@ -310,13 +253,33 @@ export default function Again() {
           ))}
         </div>
       )}
-      {mode === 'live' && !liveBlocked && pickable.length > 0 && <LiveTryOn product={liveProduct} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
+    </>
+  );
+
+  return (
+    <div className="px-page pb-10 pt-page">
+      <h1 className="sr-only">Again</h1>
+
+      {mode === 'live' && (liveBlocked || (pickable.length === 0 && !loading)) && (
+        <div className={FRAME}>
+          <div className={LEFT}>
+            <div className={`${STAGE} flex-col bg-[var(--c-gray)] px-6 text-center`} data-testid={liveBlocked ? 'live-clothing-only' : 'live-no-clothes'}>
+              <p className="t-value kr">{liveBlocked ? '실시간 AI 피팅은 옷만 가능해요.' : '입어 볼 수 있는 옷을 준비하고 있어요.'}</p>
+              <button type="button" className="btn btn-primary mt-5" onClick={() => setMode('photo')}>
+                사진 합성으로 보기
+              </button>
+            </div>
+          </div>
+          <div className={RIGHT}>{picker}</div>
+        </div>
+      )}
+      {mode === 'live' && !liveBlocked && pickable.length > 0 && <LiveTryOn side={picker} product={liveProduct} stylePrompt={styles.find((s) => s.key === style)?.prompt ?? styles[0].prompt} styleChips={chips} />}
 
       {mode === 'photo' && (
-      <div className="mt-14 grid grid-cols-1 gap-x-[var(--gap)] gap-y-12 lg:grid-cols-12">
+      <div className={FRAME}>
         {/* Preview */}
-        <div className="lg:col-span-7" ref={resultRef}>
-          <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]">
+        <div className={LEFT} ref={resultRef}>
+          <div className={`${STAGE} bg-[var(--c-gray)]`}>
             {result && !before ? (
               <img src={result} alt="AI가 합성한 이미지" className="h-full w-full object-contain" data-testid="ai-result" />
             ) : photo ? (
@@ -340,7 +303,7 @@ export default function Again() {
             )}
           </div>
           {result && (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 className="chip"
@@ -363,14 +326,13 @@ export default function Again() {
         </div>
 
         {/* Controls */}
-        <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
+        <div className={RIGHT}>
+          {picker}
           <section aria-labelledby="s2">
-            <h2 id="s2" className="t-h3 kr">
-              사진
-            </h2>
+<h2 id="s2" className="sr-only">사진</h2>
             <input ref={albumRef} type="file" accept="image/*" className="hidden" onChange={onPick} data-testid="photo-input" />
             <input ref={captureRef} type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button type="button" className="btn btn-line" onClick={() => albumRef.current?.click()}>
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                   <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -398,21 +360,16 @@ export default function Again() {
                 카메라로 촬영
               </button>
             </div>
-            <p className="t-caption kr mt-2 text-[var(--c-mute)]">15MB 이하 사진 · 정면 전신 또는 상반신 사진이 가장 잘 나옵니다</p>
           </section>
 
           <section aria-labelledby="s3">
-            <h2 id="s3" className="t-h3 kr">
-              착용 방식
-            </h2>
+<h2 id="s3" className="sr-only">착용 방식</h2>
             {chips}
           </section>
 
           <section aria-labelledby="s4">
-            <h2 id="s4" className="t-h3 kr">
-              합성
-            </h2>
-            <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
+<h2 id="s4" className="sr-only">합성</h2>
+            <label className="t-caption kr flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
               <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               <span>
                 합성을 위해 내 사진이 AI 서버(Cloudflare를 거쳐 Google Gemini)로 한 번 전송되는 것에 동의합니다. 라기는 사진과 결과를 저장하지 않습니다.
@@ -422,7 +379,7 @@ export default function Again() {
               type="button"
               onClick={run}
               disabled={!photo || !product || busy || !consent}
-              className="btn btn-primary mt-4 w-full"
+              className="btn btn-primary mt-3 w-full"
             >
               {busy ? '합성 중…' : result ? '같은 사진으로 다시 합성' : 'AI 이미지 합성하기'}
             </button>

@@ -44,7 +44,7 @@
   font-family: 'posterama-2001', 'Posterama 2001', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   --font-kr: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   color: var(--c-ink);
-  background: var(--c-blue);
+  background: var(--c-white);
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
 }
@@ -125,13 +125,11 @@
 /* A block that used to run edge to edge, now inset by the page margins with soft corners. */
 .v3 .inset { margin-left: var(--page-x); margin-right: var(--page-x); border-radius: calc(var(--radius-card) * 2); overflow: hidden; }
 
-/* Content sheet that slides off the fixed footer (reference: white sheet, 50px bottom corners). */
+/* Content sheet: white, the whole page (no footer under it). */
 .v3 .sheet {
   position: relative;
   z-index: 2;
   background: var(--c-white);
-  border-bottom-left-radius: var(--radius-sheet);
-  border-bottom-right-radius: var(--radius-sheet);
   min-height: 100svh;
 }
 

@@ -347,14 +347,8 @@ export function CurvedGallery({
         >
           <p className="t-caption tabular-nums">{price(current.price.value)}</p>
           <div className={`pointer-events-auto mt-3 flex gap-1 t-nav ${scrollMode ? 'justify-end' : 'md:justify-end'}`}>
-            <button type="button" className="tag" onClick={() => step(-1)} aria-label="이전 제품">
-              ←
-            </button>
-            <button type="button" className="tag" onClick={() => step(1)} aria-label="다음 제품">
-              →
-            </button>
-            <button type="button" className="tag tag-ink kr ml-2 whitespace-nowrap" onClick={() => open(front)}>
-              View →
+            <button type="button" className="tag tag-ink whitespace-nowrap" onClick={() => open(front)}>
+              View
             </button>
           </div>
         </div>

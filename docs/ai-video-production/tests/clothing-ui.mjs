@@ -25,7 +25,8 @@ ok('R8 clothing has one way to try it on, so no way-of-wearing choice is shown (
 await p.goto(B + 'again?p=plano-bag&m=photo'); await p.waitForTimeout(1200);
 ok('R9 the photo compositing still lists bags', /플라노/.test((await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|')));
 await p.goto(B + 'again?p=plano-bag&m=map'); await p.waitForTimeout(1200);
-ok('R10 the 3D try-on tab is kept for bags', /3D/.test(await p.locator('body').innerText()));
+{ const tabs = (await p.locator('[role=tablist][aria-label="체험 방식"] [role=tab]').allInnerTexts()).join('|');
+  ok('R10 the 3D try-on is gone: only 사진 합성 and AI 영상, and an old 3D link opens the photo compositing', tabs === '사진 합성|AI 영상' && (await p.getByTestId('photo-input').count()) === 1, tabs); }
 await p.goto(B + 'again?p=lagi-star-knit-denim-set&m=live'); await p.waitForTimeout(1500);
 ok('R12 a set offers 상의 / 하의 for the live fitting (top selected first)', await p.getByTestId('part-toggle').count() === 1 && (await p.getByTestId('part-top').getAttribute('aria-pressed')) === 'true');
 await p.getByTestId('part-bottom').click(); await p.waitForTimeout(300);
