@@ -241,7 +241,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
     const t = q.trim().toLowerCase();
     if (!t) return [];
     return products.filter((p) =>
-      [p.name.value, p.shortDescription.value, p.category.value, CATEGORY_LABEL[p.category.value ?? ''], p.brandLabel]
+      [p.name.value, p.nameEn, p.shortDescription.value, p.category.value, CATEGORY_LABEL[p.category.value ?? ''], p.brandLabel]
         .filter(Boolean)
         .some((s) => String(s).toLowerCase().includes(t)),
     );

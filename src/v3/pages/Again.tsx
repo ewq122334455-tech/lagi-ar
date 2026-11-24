@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
-import { isClothing, useRealProducts } from '../data';
+import { CATEGORY_EN, isClothing, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
 import { cleanImage } from '../ProductCard';
 import { FRAME, LEFT, RIGHT, STAGE } from '../againLayout';
@@ -47,6 +47,14 @@ export default function Again() {
   const product = products.find((p) => p.id === productId);
   // The realtime AI fitting (video) is for clothing only; the other two ways keep every product.
   const pickable = mode === 'live' ? products.filter(isClothing) : products;
+  // Products are shown one kind at a time (bags / goods / sets), so each picture can be bigger.
+  const kinds = [...new Set(pickable.map((p) => p.category.value).filter(Boolean))] as string[];
+  const [kindPick, setKindPick] = useState<string | null>(null);
+  // A new product or a new way (photo / video) opens on that product's kind again.
+  useEffect(() => setKindPick(null), [productId, mode]);
+  const productKind = products.find((p) => p.id === productId)?.category.value ?? null;
+  const kind = kinds.length < 2 ? null : kindPick && kinds.includes(kindPick) ? kindPick : productKind && kinds.includes(productKind) ? productKind : kinds[0];
+  const shown = kind ? pickable.filter((p) => p.category.value === kind) : pickable;
   // Sets: try the top or the bottom (each has its own clean reference picture and exact description).
   const [part, setPart] = useState<'top' | 'bottom'>('top');
   useEffect(() => setPart('top'), [productId]);
@@ -231,8 +239,18 @@ export default function Again() {
         {loading ? (
           <p className="t-caption kr">불러오는 중…</p>
         ) : (
-          <ul className="grid grid-cols-7 gap-1 sm:grid-cols-10 lg:grid-cols-8" data-testid="product-strip">
-            {pickable.map((p) => (
+          <>
+          {kinds.length > 1 && (
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="종류">
+              {kinds.map((k) => (
+                <button key={k} type="button" className="chip !min-h-[32px] !px-3 !text-[13px]" aria-pressed={kind === k} onClick={() => setKindPick(k)} data-testid={`kind-${k}`}>
+                  {CATEGORY_EN[k] ?? k}
+                </button>
+              ))}
+            </div>
+          )}
+          <ul className={`grid gap-1.5 sm:grid-cols-8 ${shown.length > 10 ? 'grid-cols-6 lg:grid-cols-6' : 'grid-cols-5 lg:grid-cols-5'}`} data-testid="product-strip">
+            {shown.map((p) => (
               <li key={p.id}>
                 <button type="button" aria-pressed={p.id === productId} onClick={() => choose(p)} className="group block w-full" aria-label={p.name.value ?? ''}>
                   <span className={`relative block aspect-square overflow-hidden rounded-[6px] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
@@ -242,6 +260,7 @@ export default function Again() {
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
       {mode === 'live' && !liveBlocked && product?.fittingBottom && (
@@ -284,8 +303,14 @@ export default function Again() {
               <img src={result} alt="AI가 합성한 이미지" className="h-full w-full object-contain" data-testid="ai-result" />
             ) : photo ? (
               <img src={photo} alt="올린 사진" className="h-full w-full object-contain" />
+            ) : product ? (
+              // Before a photo: the chosen product, large, so it is easy to see what will be put on.
+              <img {...responsive(cleanImage(product), '(max-width: 1023px) 90vw, 60vw')} src={cleanImage(product)} alt={product.name.value ?? ''} className="h-full w-full object-contain p-[8%]" data-testid="stage-product" />
             ) : (
-              <p className="t-body kr px-8 text-center text-[var(--c-mute)]">정면에서 찍은 전신 또는 상반신 사진이 가장 잘 나옵니다.</p>
+              <p className="t-body kr px-8 text-center text-[var(--c-mute)]">제품을 고르세요.</p>
+            )}
+            {photo && product && !busy && (
+              <img {...responsive(cleanImage(product), '96px')} src={cleanImage(product)} alt="" className="absolute right-3 top-3 h-20 w-20 rounded-[6px] bg-white object-contain p-1 shadow-[0_2px_10px_rgba(0,0,0,0.12)] lg:h-24 lg:w-24" />
             )}
             {result && (
               <span className="t-label t-mark absolute left-3 top-3 bg-[var(--c-blue)] px-2 py-1 text-[var(--c-white)]">

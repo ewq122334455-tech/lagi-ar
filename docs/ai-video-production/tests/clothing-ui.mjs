@@ -8,7 +8,7 @@ const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.pu
 const B = 'http://localhost:4195/#/';
 await p.goto(B + 'discover'); await p.waitForTimeout(1500);
 const t = await p.locator('body').innerText(); const alts = (await p.locator('[data-testid=product-card] img[alt]').evaluateAll((a) => a.map((i) => i.alt))).join('|');
-ok('R1 clothing appears in the product list (named on the picture, not as text under it) with the Korean category filters', /테스트 상의 블랙/.test(alts) && /테스트 스웻 세트 블랙/.test(alts) && !/테스트 상의 블랙/.test(t) && /상의/.test(t) && /세트/.test(t));
+ok('R1 clothing appears in the product list (named on the picture, not as text under it) with English category filters', /테스트 상의 블랙/.test(alts) && /테스트 스웻 세트 블랙/.test(alts) && !/테스트 상의 블랙/.test(t) && /\bTop\b/.test(t) && /\bSet\b/.test(t) && /\bAll\b/.test(t));
 await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);
 ok('R2 set page: the exact set name and the contents are shown', /테스트 스웻 세트 블랙/.test(await p.locator('h1').innerText()) && /테스트 후드 \+ 테스트 팬츠/.test(await p.getByTestId('set-items').innerText()));
 ok('R3 the product page for clothing has no page errors', errs.length === 0, errs.join('|'));
@@ -17,8 +17,10 @@ ok('R4 top page renders (name, price)', /테스트 상의 블랙/.test(await p.l
 // AI video tab: clothing only
 await p.goto(B + 'again?p=plano-bag&m=live'); await p.waitForTimeout(1500);
 ok('R5 live tab with a bag selected says realtime fitting is clothing only and offers 3D / photo', await p.getByTestId('live-clothing-only').count() === 1 && /옷만 가능/.test(await p.getByTestId('live-clothing-only').innerText()));
-{ const picks = (await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|');
-  ok('R6 no bag in the live picker, only clothing', !/플라노/.test(picks) && /테스트 상의 블랙/.test(picks)); }
+{ const labels = async () => (await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|');
+  let picks = await labels(); const kinds = await p.locator('[data-testid^=kind-]').all();
+  for (const k of kinds) { await k.click(); await p.waitForTimeout(150); picks += '|' + (await labels()); }
+  ok('R6 no bag in the live picker (no Bag button either), only clothing', !/플라노/.test(picks) && /테스트 상의 블랙/.test(picks) && (await p.getByTestId('kind-Bag').count()) === 0); }
 await p.goto(B + 'again?p=zz-test-set&m=live'); await p.waitForTimeout(1500);
 ok('R7 clothing set opens in the AI video with the start flow', await p.getByTestId('live-stage').count() === 1);
 ok('R8 clothing has one way to try it on, so no way-of-wearing choice is shown (and no bag carry choices)', !/손에 들기|어깨에 메기/.test(await p.locator('body').innerText()));

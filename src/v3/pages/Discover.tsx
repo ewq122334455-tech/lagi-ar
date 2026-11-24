@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CATEGORY_LABEL, useRealProducts } from '../data';
+import { CATEGORY_EN, useRealProducts } from '../data';
 import { ProductCard } from '../ProductCard';
 
 /** The shop: every product as a card (clean front view, real photo on hover), a lot of air between them. Filter by ?c=. */
@@ -21,7 +21,7 @@ export default function Discover() {
       <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="분류">
         {[null, ...categories].map((c) => (
           <button key={c ?? 'all'} type="button" onClick={() => setParams(c ? { c } : {})} aria-pressed={active === c} className="chip">
-            {c ? CATEGORY_LABEL[c] ?? c : '전체'}
+            {c ? CATEGORY_EN[c] ?? c : 'All'}
           </button>
         ))}
       </div>
