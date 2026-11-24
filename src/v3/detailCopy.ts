@@ -5,6 +5,7 @@
 export type DetailCopy = { hook: [string, string] };
 
 export const DETAIL_COPY: Record<string, DetailCopy> = {
+  'daily-tote': { hook: ['일상 스타일링의', '새로운 포인트'] },
   'daily-pouch-bag': { hook: ['가볍게 메는', '작은 포인트'] },
   'origami-picnic-bag': { hook: ['펼치면 돗자리,', '접으면 가방'] },
   'plano-bag': { hook: ['번호판으로 만든', '단 하나의 가방'] },
