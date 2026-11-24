@@ -52,6 +52,10 @@ export default function Again() {
   const [kindPick, setKindPick] = useState<string | null>(null);
   // A new product or a new way (photo / video) opens on that product's kind again.
   useEffect(() => setKindPick(null), [productId, mode]);
+  // Opening AGAIN without a product: the first one is chosen, so the big screen shows something to try on right away.
+  useEffect(() => {
+    if (!productId && pickable.length) setParams({ p: pickable[0].id, m: mode }, { replace: true });
+  }, [productId, pickable, mode, setParams]);
   const productKind = products.find((p) => p.id === productId)?.category.value ?? null;
   const kind = kinds.length < 2 ? null : kindPick && kinds.includes(kindPick) ? kindPick : productKind && kinds.includes(productKind) ? productKind : kinds[0];
   const shown = kind ? pickable.filter((p) => p.category.value === kind) : pickable;
@@ -382,7 +386,7 @@ export default function Again() {
                   <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
                   <circle cx="12" cy="13" r="3.5" />
                 </svg>
-                카메라로 촬영
+                카메라
               </button>
             </div>
           </section>
