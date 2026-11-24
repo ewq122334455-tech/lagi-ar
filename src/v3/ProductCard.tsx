@@ -7,7 +7,7 @@ import { responsive } from './img';
 // eslint-disable-next-line react-refresh/only-export-components
 export const cleanImage = (p: Product) => p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0];
 
-/** Product card: clean front view, the real photo on hover; name and price under it. */
+/** Product card: clean front view, the real photo on hover; the price under it (the picture names the product). */
 export function ProductCard({ p, eager }: { p: Product; eager?: boolean }) {
   const clean = cleanImage(p);
   const photo = p.images[0];
@@ -19,8 +19,7 @@ export function ProductCard({ p, eager }: { p: Product; eager?: boolean }) {
           <img {...responsive(photo, '(max-width: 767px) 62vw, (max-width: 1023px) 33vw, 25vw')} src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-[opacity,transform] duration-700 group-hover:scale-[1.03] group-hover:opacity-100" />
         )}
       </div>
-      <p className="t-caption kr mt-5 font-medium">{p.name.value}</p>
-      <p className="t-caption kr tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</p>
+      <p className="t-caption mt-4 tabular-nums">{price(p.price.value)}</p>
     </Link>
   );
 }

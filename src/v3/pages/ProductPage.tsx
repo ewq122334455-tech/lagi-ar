@@ -4,14 +4,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '@/commerce/CartContext';
 import { aiTryOnEnabled } from '@/tryon/aiTryOn';
 import { paymentsEnabled } from '@/commerce/payments';
-import { isPublished } from '@/utils/contentStatus';
-import { ProductViews } from '../ProductViews';
 import { ProductInfo } from '../ProductInfo';
 import { ProductCard } from '../ProductCard';
 import { Reviews } from '../Reviews';
 import { fetchReviews } from '../reviewsApi';
-import { WHY_LAGI } from '@/content/whyLagi';
-import { CATEGORY_LABEL, isClothing, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
+import { OFFICIAL_LINKS, price, useRealProducts } from '../data';
 import { responsive } from '../img';
 import { usePageMeta } from '../usePageMeta';
 
@@ -104,26 +101,6 @@ function useArrivedFromGallery(id: string | undefined) {
   return arrived;
 }
 
-/** One collapsible row of the buy panel (DESCRIPTION / SIZE / … in the reference). */
-function Fold({ title, children, open: initial = false }: { title: string; children: React.ReactNode; open?: boolean }) {
-  const [open, setOpen] = useState(initial);
-  return (
-    <div className="border-b border-black/10">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between py-3.5 text-left">
-        <span className="t-caption kr font-semibold">{title}</span>
-        <span aria-hidden="true" className={`text-lg leading-none transition-transform duration-300 ${open ? 'rotate-45' : ''}`}>
-          +
-        </span>
-      </button>
-      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-        <div className="overflow-hidden">
-          <div className="t-caption kr pb-4 text-[#3a3a3a]">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 type Tab = 'detail' | 'review' | 'qna';
 
 /**
@@ -171,23 +148,15 @@ export default function ProductPage() {
     );
 
   const d = p.dimensions;
-  const size = d.widthCm ? `${d.widthCm} × ${d.heightCm ?? '—'} × ${d.depthCm ?? '—'} cm` : null;
-  const maker = makerOf(p.brandLabel);
-  const catKey = p.category.value ?? '';
-  const category = CATEGORY_LABEL[catKey] ?? catKey;
   const hero = p.images[0];
   const storeUrl = p.shopUrl.value ?? OFFICIAL_LINKS.store;
   // Products that are only on this website (not on the smart store yet): nothing on the page sends the visitor to the store, and there is nothing to buy yet.
   const onStore = p.storeListed !== false;
-  const care = isPublished(p.care) ? p.care.value : null;
-  const materials = p.materials.filter((m) => isPublished(m.name));
-  const materialText = materials.length ? materials.map((m) => m.name.value).join(', ') : null;
-  const shipping = p.shipping ? shippingText(p.shipping) : null;
 
   // Photos for the gallery: the real photo, the views of the reference sheet, then styling shots.
   const shots = [
     ...(hero ? [{ src: hero, label: p.views?.main ?? '실제 사진', fit: 'cover' as const, note: null as string | null }] : []),
-    ...(p.drawings ?? []).filter((x) => x.group !== 'detail').map((x) => ({ src: x.src, label: x.label, fit: 'contain' as const, note: '제품 도면(렌더링)' })),
+    ...(p.drawings ?? []).filter((x) => x.group !== 'detail').map((x) => ({ src: x.src, label: x.label, fit: 'contain' as const, note: null })),
     ...(p.styledImages ?? []).map((src) => ({ src, label: '착용 연출', fit: 'cover' as const, note: 'AI 연출 이미지 · 실제와 다를 수 있음' })),
   ];
   const current = shots[Math.min(shot, shots.length - 1)];
@@ -217,23 +186,6 @@ export default function ProductPage() {
       {/* 1 · Photos + buy panel */}
       <div className="grid grid-cols-1 gap-x-[calc(var(--gap)*2)] gap-y-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <nav aria-label="현재 위치" className="t-caption kr mb-3 flex gap-2 text-[var(--c-mute)]">
-            <Link to="/" className="hit hover:text-[var(--c-ink)]">
-              홈
-            </Link>
-            <span aria-hidden="true">/</span>
-            <Link to="/discover" className="hit hover:text-[var(--c-ink)]">
-              제품
-            </Link>
-            {category && (
-              <>
-                <span aria-hidden="true">/</span>
-                <Link to={`/discover?c=${encodeURIComponent(catKey)}`} className="hit hover:text-[var(--c-ink)]">
-                  {category}
-                </Link>
-              </>
-            )}
-          </nav>
           {current && (
             <figure>
               <div className={`relative aspect-square overflow-hidden rounded-[var(--radius-card)] ${current.fit === 'contain' ? 'bg-white ring-1 ring-black/5' : 'bg-[var(--c-gray)]'}`}>
@@ -247,7 +199,6 @@ export default function ProductPage() {
                 />
                 {current.note && <span className="t-label kr absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1">{current.note}</span>}
               </div>
-              <figcaption className="t-caption kr mt-2 text-[var(--c-mute)]">{current.label}</figcaption>
             </figure>
           )}
           {shots.length > 1 && (
@@ -271,26 +222,16 @@ export default function ProductPage() {
 
         <aside className="lg:col-span-5" aria-label="구매">
           <div className="lg:sticky lg:top-[80px]">
-            <h1 className="t-h1 kr !font-bold">{p.name.value}</h1>
+            <h1 className="t-h1 t-mark !font-bold">{p.nameEn ?? p.name.value}</h1>
             {p.setItems && p.setItems.length > 0 && (
               <p className="t-caption kr mt-4 text-[var(--c-mute)]" data-testid="set-items">
                 {p.setItems.join(' + ')}
               </p>
             )}
-            <p className="t-h2 kr mt-8 tabular-nums">{price(p.price.value)}</p>
+            <p className="t-h2 mt-6 tabular-nums">{price(p.price.value)}</p>
 
-            {/* Everything a buyer must know, folded into one line that opens on request. */}
-            <div className="mt-12 border-t border-black/10">
-              <Fold title="정보">
-                {size && <p>크기 {size}</p>}
-                {materialText && <p className={size ? 'mt-2' : ''}>소재 {materialText}</p>}
-                {care && <p className="mt-2">{care}</p>}
-                {shipping && <p className="mt-2">배송 {shipping}</p>}
-                <p className="mt-2">교환 · 반품은 라기 공식 스마트스토어 기준을 따릅니다.</p>
-              </Fold>
-            </div>
 
-            <div className="mt-8 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-4">
+            <div className="mt-10 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-4">
               <div className="flex items-center justify-between gap-4">
                 <p className="t-caption kr text-[var(--c-mute)]">수량</p>
                 <div className="inline-flex items-center rounded-full border border-black/15 bg-white">
@@ -345,13 +286,6 @@ export default function ProductPage() {
               )}
             </div>
             <div className="t-caption kr mt-3 flex flex-wrap items-center justify-between gap-2">
-              {onStore ? (
-                <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-4 hover:text-[var(--c-blue)]">
-                  스마트스토어에서 구매 ↗
-                </a>
-              ) : (
-                <span className="text-[var(--c-mute)]">온라인 판매를 준비하고 있어요.</span>
-              )}
               {added && (
                 <Link to="/cart" className="font-semibold underline underline-offset-4">
                   장바구니 보기 →
@@ -386,13 +320,7 @@ export default function ProductPage() {
         <div role="tabpanel" aria-label="상세정보">
           <ProductInfo p={p} />
 
-          {!isClothing(p) && (p.views || p.drawings?.length) && hero && (
-            <div className="mt-[var(--section)]">
-              <ProductViews src={hero} name={p.name.value ?? ''} product={p} />
-            </div>
-          )}
 
-          {maker && <p className="t-caption kr mt-[var(--section)] text-center text-[var(--c-mute)]">협업 브랜드 {maker} · 제품은 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.</p>}
         </div>
       )}
 
@@ -417,58 +345,6 @@ export default function ProductPage() {
         </div>
       )}
 
-      {/* About LAGI — three designed bands under the product (what LAGI is, why, wear it again) */}
-      <div className="-mx-[var(--page-x)] mt-[var(--section)]" data-testid="about-lagi">
-        <section className="bg-[var(--c-blue)] px-page py-[clamp(72px,10vw,160px)] text-white" aria-label="LAGI">
-          <p className="t-label t-mark">ABOUT</p>
-          <p className="t-mark mt-6 text-[clamp(72px,17vw,300px)] font-medium leading-[0.85] tracking-[-0.02em]">LAGI</p>
-          <p className="t-mark mt-10 max-w-[22ch] text-[clamp(22px,2.8vw,44px)] font-light leading-[1.15]">Products worth seeing again.</p>
-          <p className="kr mt-5 max-w-[30rem] text-[15px] leading-[1.8] text-white/85">제품은 각 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.</p>
-          <ul className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-white/60 pt-6 md:grid-cols-4">
-            {[
-              ['01', 'DISCOVER', '발견'],
-              ['02', 'SELECT', '선별'],
-              ['03', 'INTRODUCE', '소개'],
-              ['04', 'CONNECT', '연결'],
-            ].map(([n, en, ko]) => (
-              <li key={n}>
-                <p className="t-label t-mark">{n}</p>
-                <p className="t-mark mt-2 text-[clamp(18px,1.8vw,26px)]">{en}</p>
-                <p className="kr mt-1 text-[14px] text-white/80">{ko}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="bg-[#e9eff8] px-page py-[clamp(64px,8vw,120px)] text-[var(--c-blue)]" aria-label="WHY LAGI">
-          <p className="t-label t-mark flex justify-between"><span>WHY LAGI</span><span>(4)</span></p>
-          <ol className="mt-10 grid grid-cols-1 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-4">
-            {WHY_LAGI.map((c, i) => (
-              <li key={c.key} className="border-t border-[var(--c-blue)] pt-4">
-                <p className="t-mark text-[clamp(32px,3.4vw,52px)] font-light leading-none">{String(i + 1).padStart(2, '0')}</p>
-                <p className="t-mark mt-4 text-[clamp(16px,1.5vw,22px)] font-medium leading-tight">{c.key}</p>
-                <p className="kr mt-3 text-[14px] leading-[1.75] text-[var(--c-blue)]/85">{c.question}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="bg-white px-page py-[clamp(72px,10vw,160px)] text-[var(--c-blue)]" aria-label="WEAR IT AGAIN">
-          <p className="t-mark text-[clamp(44px,9vw,160px)] font-medium uppercase leading-[0.92] tracking-[-0.01em]">
-            Wear it
-            <br />
-            again.
-          </p>
-          <div className="mt-8 flex items-center justify-between border-t border-[var(--c-blue)] pt-3">
-            <span className="t-label t-mark">LAGI</span>
-            {aiTryOnEnabled(p) && (
-              <Link to={`/again?p=${p.id}`} className="t-label t-mark hit underline underline-offset-4">
-                AI FITTING →
-              </Link>
-            )}
-          </div>
-        </section>
-      </div>
 
       {/* 3 · Other products */}
       {related.length > 0 && (
@@ -486,7 +362,7 @@ export default function ProductPage() {
       {/* Mobile buy bar */}
       <MobileBuyBar>
         <span className="min-w-0 flex-1">
-          <span className="t-caption kr block truncate text-[var(--c-mute)]">{p.name.value}</span>
+          <span className="t-caption block truncate text-[var(--c-mute)]">{p.nameEn ?? p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
         </span>
         {!onStore ? (

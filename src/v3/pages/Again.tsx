@@ -31,7 +31,6 @@ const TIMEOUT_MS = 120_000;
 /** Server-side hiccups (no image this time, busy, 5xx) are retried once quietly before the visitor sees anything. */
 const RETRIES = 1;
 
-const pad = (n: number) => String(n).padStart(2, '0');
 
 /**
  * AGAIN EXPERIENCE — AI image compositing. The visitor picks a product, adds a photo (upload or
@@ -211,12 +210,9 @@ export default function Again() {
 
   return (
     <div className="px-page pb-32 pt-page">
-      <header className="text-center">
-        <h1 className="t-mark text-[clamp(30px,3.6vw,52px)] font-bold leading-none tracking-[-0.01em]">AGAIN</h1>
-        <p className="t-caption kr mt-4 text-[var(--c-mute)]">결과는 AI가 만든 이미지이며 실제 제품 사진이 아닙니다.</p>
-      </header>
+      <h1 className="sr-only">Again</h1>
 
-      <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
+      <div className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl bg-[var(--c-gray)] p-1.5" role="tablist" aria-label="체험 방식">
         {(
           [
             ['map', '3D 착용', '내 손·몸을 따라가는 3D 제품 · 무료'],
@@ -244,14 +240,15 @@ export default function Again() {
         {loading ? (
           <p className="t-caption kr mt-4">불러오는 중…</p>
         ) : (
-          <Strip>
+          <ul className="mx-auto grid max-w-5xl grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10" data-testid="product-strip">
             {pickable.map((p) => (
-              <li key={p.id} className="w-[22vw] shrink-0 snap-start sm:w-24">
+              <li key={p.id}>
                 <button
                   type="button"
                   aria-pressed={p.id === productId}
                   onClick={() => choose(p)}
                   className="group block w-full text-left"
+                  aria-label={p.name.value ?? ''}
                 >
                   <span className={`relative block aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 transition ${p.id === productId ? 'ring-2 ring-[var(--c-ink)]' : 'ring-black/10 group-hover:ring-black/40'}`}>
                     <img {...responsive(cleanImage(p), '160px')} src={cleanImage(p)} alt="" className="h-full w-full object-contain p-2" />
@@ -261,11 +258,10 @@ export default function Again() {
                       </span>
                     )}
                   </span>
-                  <span className="t-label kr mt-1.5 block truncate px-0.5">{p.name.value}</span>
                 </button>
               </li>
             ))}
-          </Strip>
+          </ul>
         )}
       </section>
 
@@ -370,7 +366,7 @@ export default function Again() {
         <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
           <section aria-labelledby="s2">
             <h2 id="s2" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">02</span> 사진
+              사진
             </h2>
             <input ref={albumRef} type="file" accept="image/*" className="hidden" onChange={onPick} data-testid="photo-input" />
             <input ref={captureRef} type="file" accept="image/*" capture="user" className="hidden" onChange={onPick} />
@@ -407,14 +403,14 @@ export default function Again() {
 
           <section aria-labelledby="s3">
             <h2 id="s3" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">03</span> 착용 방식
+              착용 방식
             </h2>
             {chips}
           </section>
 
           <section aria-labelledby="s4">
             <h2 id="s4" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">04</span> 합성
+              합성
             </h2>
             <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
               <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -450,7 +446,7 @@ export default function Again() {
           {result && (
             <section aria-labelledby="s5">
               <h2 id="s5" className="t-h3 kr">
-                <span className="t-mark text-[var(--c-mute)]">05</span> 저장 또는 다시
+                저장 또는 다시
               </h2>
               {resultIssues.length > 0 && (
                 <ul className="t-caption kr mt-3 space-y-1 text-[var(--c-blue)]" data-testid="result-issues">
@@ -656,45 +652,5 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
       </div>
     </div>,
     document.body,
-  );
-}
-
-/** Product row that scrolls sideways: edge fades + arrows show there is more to see. */
-function Strip({ children }: { children: React.ReactNode }) {
-  const row = useRef<HTMLUListElement>(null);
-  const [edge, setEdge] = useState({ left: false, right: false });
-  useEffect(() => {
-    const el = row.current;
-    if (!el) return;
-    const update = () => setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
-    ro?.observe(el);
-    return () => {
-      el.removeEventListener('scroll', update);
-      ro?.disconnect();
-    };
-  }, [children]);
-  const go = (dir: number) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: 'smooth' });
-  const arrow = 'absolute top-[calc(50%-1.25rem)] z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-lg shadow-md ring-1 ring-black/10 transition hover:bg-[var(--c-ink)] hover:text-white md:flex';
-  return (
-    <div className="relative" data-testid="product-strip">
-      <ul ref={row} className="no-scrollbar flex snap-x justify-[safe_center] gap-3 overflow-x-auto pb-2">
-        {children}
-      </ul>
-      <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[var(--c-white)] to-transparent transition-opacity ${edge.left ? 'opacity-100' : 'opacity-0'}`} />
-      <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[var(--c-white)] to-transparent transition-opacity ${edge.right ? 'opacity-100' : 'opacity-0'}`} />
-      {edge.left && (
-        <button type="button" aria-label="이전 제품" className={`${arrow} left-1`} onClick={() => go(-1)} data-testid="strip-prev">
-          ‹
-        </button>
-      )}
-      {edge.right && (
-        <button type="button" aria-label="다음 제품" className={`${arrow} right-1`} onClick={() => go(1)} data-testid="strip-next">
-          ›
-        </button>
-      )}
-    </div>
   );
 }

@@ -1129,7 +1129,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
       <div className="mx-auto w-full max-w-xl space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-12 lg:p-7">
         <section aria-labelledby="m2">
           <h2 id="m2" className="t-h3 kr">
-            <span className="t-mark text-[var(--c-mute)]">02</span> 착용 방식
+            착용 방식
           </h2>
           {styleChips}
         </section>
@@ -1137,7 +1137,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
         {product?.model3d && (
           <section aria-labelledby="m25">
             <h2 id="m25" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">03</span> 손으로 돌려 보기
+              손으로 돌려 보기
             </h2>
             <p className="t-caption kr mt-2 text-[var(--c-mute)]">
               ‘손에 들기’로 손바닥이 보이게 들고, 손을 천천히 돌려 보세요. 손바닥 → 옆 → 손등으로 돌리면 가방도 정면 → 옆면 → 뒷면으로 같이 돌아갑니다.
@@ -1152,7 +1152,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
         {product?.model3d && (
           <section aria-labelledby="m26">
             <h2 id="m26" className="t-h3 kr">
-              <span className="t-mark text-[var(--c-mute)]">04</span> AI 실사 보정 · 20초
+              AI 실사 보정 · 20초
             </h2>
             <p className="t-caption kr mt-2 text-[var(--c-mute)]">내 손을 따라가는 3D 가방을 AI가 실사 영상처럼 다시 그립니다. 가방 부분은 실제 제품 디자인으로 고정하고 AI의 조명·그림자만 입혀서, 무늬·글자·형태가 바뀌지 않아요.</p>
             <button type="button" className="btn btn-blue mt-3 w-full" disabled={!live || aiOn || aiState.busy} onClick={startAi} data-testid="ai-refine">

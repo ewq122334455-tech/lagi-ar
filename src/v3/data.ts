@@ -46,7 +46,7 @@ export const OFFICIAL_LINKS = {
   instagram: 'https://www.instagram.com/lagi.official/',
 } as const;
 
-export const price = (n: number | null | undefined) => (n == null ? '' : `${n.toLocaleString('ko-KR')}원`);
+export const price = (n: number | null | undefined) => (n == null ? '' : n.toLocaleString('ko-KR'));
 
 export function shippingText(s: { fee: number; freeOver?: number }) {
   if (s.fee === 0) return '무료배송';

@@ -241,8 +241,8 @@ const live = (p) => p.waitForFunction(() => document.querySelector('[data-testid
   ok('P5 the countdown moves down', t2 < t1, `${t1} -> ${t2}`); await p.context().close(); }
 // Q. camera quality and the size of the AGAIN title
 { const p = await open({ seconds: 20 }); await p.goto('http://localhost:4195/#/again?p=zz-test-top&m=live&debug=1'); await p.reload(); await p.waitForSelector('[data-testid=live-stage]');
-  const fs = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('h1')).fontSize));
-  ok('Q1 the AGAIN title is much smaller than before (it was about 70-92 px; now at most 52 px)', fs <= 52 && fs >= 28, fs + 'px');
+  const shown = await p.evaluate(() => { const h = document.querySelector('h1'); return h ? h.getBoundingClientRect().width > 2 : false; });
+  ok('Q1 no visible AGAIN page title (the menu already says AGAIN; the heading stays for screen readers only)', !shown && (await p.locator('h1').count()) === 1);
   await start(p); await live(p);
   const gum = await p.evaluate(() => window.__gum);
   ok('Q2 the camera is asked for the best picture: ideal 1920x1080 (the browser picks the closest the device has)', gum?.video?.width?.ideal === 1920 && gum?.video?.height?.ideal === 1080, JSON.stringify(gum?.video).slice(0, 160));

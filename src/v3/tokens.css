@@ -2,10 +2,10 @@
 .v3 {
   --c-white: #ffffff;
   --c-gray: #f1f1f1;
-  --c-ink: #0f0f0f;
+  --c-ink: #1d5198; /* text and accents are brand blue — no black on the site */
   --c-blue: #1d5198; /* the brand colour (the emblem's own blue): used wherever black used to be a background */
   --c-blue-deep: #14407a;
-  --c-line: #000000;
+  --c-line: #1d5198;
   --c-mute: #626262; /* 5.9:1 on white, 5.1:1 on #f1f1f1 (WCAG AA) */
   --c-label: rgb(230, 230, 230);
 
@@ -22,9 +22,9 @@
    * Fluid scale (clamp between 375px and 1440px wide): one loud size (display) against a quiet,
    * tight set below it. Mid sizes stay small — Hangul reads larger than Latin at the same px.
    */
-  --t-display: clamp(48px, 30px + 4.3vw, 92px);
+  --t-display: clamp(36px, 24px + 3vw, 64px);
   --t-h1: clamp(22px, 19px + 0.75vw, 30px);
-  --t-h2: clamp(26px, 22px + 1vw, 36px);
+  --t-h2: clamp(22px, 19px + 0.8vw, 30px);
   --t-h3: clamp(17px, 16px + 0.3vw, 20px);
   --t-lead: clamp(17px, 16.3px + 0.2vw, 19px);
   --t-body: clamp(15px, 14.6px + 0.15vw, 17px);

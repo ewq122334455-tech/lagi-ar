@@ -35,8 +35,8 @@ function geometry(): Geometry {
   const vh = window.innerHeight;
   const mobile = vw < 810;
   return mobile
-    ? { vw, vh, mobile, frontW: Math.min(vw * 0.78, vh * 0.46), cx: vw * 0.46, cy: vh * 0.5, spanX: vw * 0.62, spanY: vh * 0.42 }
-    : { vw, vh, mobile, frontW: Math.min(vw * 0.34, vh * 0.58), cx: vw * 0.45, cy: vh * 0.45, spanX: vw * 0.62, spanY: vh * 0.42 };
+    ? { vw, vh, mobile, frontW: Math.min(vw * 0.6, vh * 0.36), cx: vw * 0.46, cy: vh * 0.5, spanX: vw * 0.62, spanY: vh * 0.42 }
+    : { vw, vh, mobile, frontW: Math.min(vw * 0.24, vh * 0.42), cx: vw * 0.45, cy: vh * 0.45, spanX: vw * 0.62, spanY: vh * 0.42 };
 }
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -345,11 +345,7 @@ export function CurvedGallery({
               : 'left-[var(--page-x)] top-20 max-md:bg-[rgba(241,241,241,0.92)] max-md:p-2 md:left-auto md:right-[var(--page-x)] md:top-auto md:bottom-6 md:text-right'
           }`}
         >
-          <p className="t-caption tabular-nums text-[var(--c-mute)]">
-            {String(front + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}
-          </p>
-          <p className="t-value kr mt-1">{current.name.value}</p>
-          <p className="t-caption kr tabular-nums">{price(current.price.value)}</p>
+          <p className="t-caption tabular-nums">{price(current.price.value)}</p>
           <div className={`pointer-events-auto mt-3 flex gap-1 t-nav ${scrollMode ? 'justify-end' : 'md:justify-end'}`}>
             <button type="button" className="tag" onClick={() => step(-1)} aria-label="이전 제품">
               ←
@@ -358,7 +354,7 @@ export function CurvedGallery({
               →
             </button>
             <button type="button" className="tag tag-ink kr ml-2 whitespace-nowrap" onClick={() => open(front)}>
-              자세히 보기 →
+              View →
             </button>
           </div>
         </div>
@@ -371,9 +367,7 @@ export function CurvedGallery({
     <section ref={sectionRef} aria-label="DISCOVER" className="relative bg-[var(--c-gray)]" style={{ height: `${Math.max(2, n) * 55 + 100}svh` }}>
       <div className="sticky top-0 h-[100svh] overflow-hidden">
         <div className="pointer-events-none absolute left-[var(--page-x)] top-20 z-[125] bg-[rgba(241,241,241,0.92)] p-2 pl-0 lg:top-24">
-          <p className="t-label t-mark text-[var(--c-mute)]">02</p>
-          <h2 className="t-h2 t-mark mt-1">DISCOVER</h2>
-          <p className="t-caption kr mt-2 max-w-[18rem] text-[var(--c-mute)]">스크롤하면 제품이 차례로 앞으로 나옵니다. 사진을 누르면 상세 페이지로 들어갑니다.</p>
+          <h2 className="t-h2 t-mark">DISCOVER</h2>
         </div>
         {stage}
       </div>

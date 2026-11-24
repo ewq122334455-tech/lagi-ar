@@ -10,7 +10,6 @@ const TITLES: [RegExp, string][] = [
   [/^\/$/, DEFAULT_TITLE],
   [/^\/discover/, '전체 제품'],
   [/^\/why/, 'Why LAGI · 라기가 제품을 고르는 기준'],
-  [/^\/about/, 'About · 브랜드'],
   [/^\/contact/, '문의'],
   [/^\/cart/, '장바구니'],
   [/^\/checkout\/success/, '결제 완료'],

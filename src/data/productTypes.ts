@@ -147,6 +147,8 @@ export interface Product {
   brandLabel?: string;
   shipping?: ShippingInfo;
   name: VerifiableField<string>;
+  /** English display name — shown as the product title instead of the Korean one. */
+  nameEn?: string;
   category: VerifiableField<string>;
   price: VerifiableField<number>;
   currency: 'KRW';
