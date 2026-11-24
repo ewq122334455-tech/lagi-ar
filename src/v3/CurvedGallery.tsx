@@ -97,6 +97,9 @@ export function CurvedGallery({
   // Opening a product: the chain first brings it to the front, then it grows into the page.
   const opening = useRef<{ i: number; phase: 'travel' | 'zoom'; t: number; done?: boolean } | null>(null);
   const [zooming, setZooming] = useState(false);
+  // Idle drift: the chain keeps turning slowly on its own; any touch, drag, wheel or key pauses it for a while.
+  const touched = useRef(0);
+  const hovering = useRef(false);
 
   useLayoutEffect(() => {
     const update = () => setG(geometry());
@@ -134,7 +137,15 @@ export function CurvedGallery({
     if (!g || n === 0) return;
     let raf = 0;
     let lastFront = -1;
+    let lastT = performance.now();
     const paint = () => {
+      const t = performance.now();
+      const dt = Math.min(0.1, (t - lastT) / 1000);
+      lastT = t;
+      // About one product every 7 seconds, only while nobody is using the gallery.
+      if (!scrollMode && !reduced && !drag.current && !opening.current && !hovering.current && t - touched.current > 2500 && document.visibilityState === 'visible') {
+        target.current += dt * 0.14;
+      }
       const sec = sectionRef.current;
       if (scrollMode && sec && !opening.current) {
         const r = sec.getBoundingClientRect();
@@ -218,6 +229,7 @@ export function CurvedGallery({
     const onWheel = (e: WheelEvent) => {
       if (pageScroll && Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // let the page scroll
       e.preventDefault();
+      touched.current = performance.now();
       if (opening.current) return;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
       const delta = (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * unit;
@@ -235,6 +247,7 @@ export function CurvedGallery({
   // Drag (mouse) and swipe (touch/pen) through pointer events.
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || opening.current || scrollMode) return;
+    touched.current = performance.now();
     drag.current = { x: e.clientX, y: e.clientY, start: target.current, moved: false, lastX: e.clientX, lastY: e.clientY, lastT: performance.now(), v: 0 };
     window.clearTimeout(snapTimer.current);
   };
@@ -272,6 +285,7 @@ export function CurvedGallery({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    touched.current = performance.now();
     if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
       step(1);
@@ -311,6 +325,12 @@ export function CurvedGallery({
               cardRefs.current[i] = el;
             }}
             draggable={false}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') hovering.current = true;
+            }}
+            onPointerLeave={() => {
+              hovering.current = false;
+            }}
             onFocus={() => (scrollMode ? undefined : bringToFront(i))}
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // new tab / window: leave it to the browser
