@@ -889,8 +889,12 @@ export function LiveTryOn({
         <div className={`${STAGE} bg-[var(--c-blue)]`} data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && !mapOn ? '' : 'opacity-0'}`} />
           <canvas ref={mapped} aria-hidden="true" className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && mapOn ? '' : 'hidden'}`} data-testid="mapped-canvas" />
+          {!live && phase !== 'starting' && product && (
+            // Before starting: the piece that will be put on, large, on the blue screen.
+            <img src={product.fitting?.image ?? product.images[0]} alt={product.name.value ?? ''} className="absolute inset-0 m-auto h-[72%] w-[72%] object-contain" data-testid="stage-product" />
+          )}
           {(!live || waiting) && (
-            <p className="t-body kr relative max-w-xs px-6 text-center text-white/80" data-testid="live-status">
+            <p className={`t-body kr relative max-w-xs px-6 text-center text-white/80 ${!live && phase !== 'starting' && product ? 'mt-auto mb-4 !text-[13px]' : ''}`} data-testid="live-status">
               {live ? waiting : phase === 'starting' ? '카메라와 AI를 연결하고 있습니다…' : phase === 'ended' ? '체험이 끝났습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면 위에 제품이 실시간으로 입혀집니다.'}
             </p>
           )}
