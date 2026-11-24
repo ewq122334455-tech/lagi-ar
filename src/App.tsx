@@ -21,7 +21,6 @@ const V3Home = lazy(() => import('@/v3/pages/Home'));
 const V3Discover = lazy(() => import('@/v3/pages/Discover'));
 const V3Product = lazy(() => import('@/v3/pages/ProductPage'));
 const V3Why = lazy(() => import('@/v3/pages/Why'));
-const V3About = lazy(() => import('@/v3/pages/About'));
 const V3Contact = lazy(() => import('@/v3/pages/Contact'));
 const V3Cart = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CartPage })));
 const V3Checkout = lazy(() => import('@/v3/pages/Commerce').then((m) => ({ default: m.CheckoutPage })));
@@ -68,7 +67,7 @@ export default function App() {
             <Route path="/discover" element={<V3Discover />} />
             <Route path="/product/:id" element={<V3Product />} />
             <Route path="/why" element={<V3Why />} />
-            <Route path="/about" element={<V3About />} />
+            <Route path="/about" element={<Navigate to="/" replace />} />
             <Route path="/contact" element={<V3Contact />} />
             <Route path="/cart" element={<V3Cart />} />
             <Route path="/checkout" element={<V3Checkout />} />
@@ -88,8 +87,8 @@ export default function App() {
           </Route>
           {/* Old addresses that were shared before the rebuild. */}
           <Route path="/products" element={<Navigate to="/discover" replace />} />
-          <Route path="/materials" element={<Navigate to="/about" replace />} />
-          <Route path="/story" element={<Navigate to="/about" replace />} />
+          <Route path="/materials" element={<Navigate to="/" replace />} />
+          <Route path="/story" element={<Navigate to="/" replace />} />
           <Route path="/v2" element={<Navigate to="/" replace />} />
           <Route path="/try-on/:id" element={<TryOnRedirect />} />
 

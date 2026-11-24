@@ -16,9 +16,9 @@ export default function Discover() {
 
   return (
     <div className="px-page pb-[var(--section)] pt-page">
-      <h1 className="t-label t-mark text-center">Shop</h1>
+      <h1 className="sr-only">Shop</h1>
 
-      <div className="mt-16 flex flex-wrap justify-center gap-2" role="group" aria-label="분류">
+      <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="분류">
         {[null, ...categories].map((c) => (
           <button key={c ?? 'all'} type="button" onClick={() => setParams(c ? { c } : {})} aria-pressed={active === c} className="chip">
             {c ? CATEGORY_LABEL[c] ?? c : '전체'}

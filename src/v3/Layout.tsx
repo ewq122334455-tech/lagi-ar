@@ -13,7 +13,6 @@ export const NAV = [
   { to: '/discover', label: 'Shop', kr: '제품' },
   { to: '/why', label: 'Why LAGI', kr: '선정 기준' },
   { to: '/review', label: 'Review', kr: '구매평' },
-  { to: '/about', label: 'About', kr: '브랜드' },
   { to: '/again', label: 'Again', kr: 'AI 피팅' },
 ] as const;
 
@@ -368,10 +367,10 @@ function HelpButton() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="도움말 열기"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-[0_4px_18px_rgba(0,0,0,0.16)] transition-transform hover:scale-105 md:h-14 md:w-14"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0_4px_18px_rgba(0,0,0,0.12)] transition-transform hover:scale-105"
         data-testid="help-button"
       >
-        <LagiLogo className="h-8 w-auto text-[var(--c-blue)] md:h-9" title="" />
+        <LagiLogo className="h-6 w-auto text-[var(--c-blue)]" title="" />
       </button>
     </div>
   );
@@ -421,31 +420,21 @@ const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
     <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-blue)] px-page text-[var(--c-white)]">
       {/* Lifted above the phone buy bar on product pages. A transform, not padding: it does not
           re-lay out the page when the bar appears (no layout shift). */}
-      <div className="relative flex min-h-[64svh] flex-col justify-between pb-8 pt-24 lg:min-h-[72svh] lg:pt-32" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
-        <div className="text-center">
-          <p className="t-h1 t-mark">LAGI in AGAIN</p>
-        </div>
-        {/* Phones: the emblem sits below the links (in flow); wider screens: large and behind, cropped by the edge. */}
-        <span aria-hidden="true" className="pointer-events-none order-last -mb-16 mt-10 block h-40 self-center md:absolute md:bottom-[-16%] md:left-1/2 md:mb-0 md:mt-0 md:h-[40%] md:-translate-x-1/2 lg:h-[52%]">
-          <LagiLogo className="h-full w-auto text-[var(--c-white)]" title="" />
-        </span>
-        <div className="relative mt-14 md:mt-0">
-          <div className="t-caption kr flex flex-wrap items-end justify-between gap-8 border-t border-white/20 pt-6">
-            <p className="flex flex-wrap gap-x-6">
-              <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
-                네이버 스마트스토어
-              </a>
-              <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
-                인스타그램
-              </a>
-              <Link to="/contact" className="tap opacity-80 hover:opacity-100">
-                문의
-              </Link>
-            </p>
-            <p className="t-mark font-bold text-white">© LAGI</p>
-          </div>
-          <LegalFooter />
-        </div>
+      <div className="relative flex flex-col items-center gap-6 pb-10 pt-14 text-center" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
+        <LagiLogo className="h-12 w-auto text-[var(--c-white)]" title="" />
+        <p className="t-caption kr flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
+            Smart Store
+          </a>
+          <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
+            Instagram
+          </a>
+          <Link to="/contact" className="tap opacity-80 hover:opacity-100">
+            Contact
+          </Link>
+        </p>
+        <p className="t-label t-mark opacity-70">© LAGI</p>
+        <LegalFooter />
       </div>
     </footer>
   );

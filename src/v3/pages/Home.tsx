@@ -55,7 +55,7 @@ export default function Home() {
       </section>
 
       {/* 2 · New — the products as cards, clean front view first, the real photo on hover */}
-      <section className="px-page pt-[var(--section)]" aria-labelledby="new-title">
+      <section className="px-page py-[var(--section)]" aria-labelledby="new-title">
         <div id="new-title">
           <SectionTitle en="New" to="/discover" />
         </div>
@@ -68,12 +68,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3 · One quiet line, then space. */}
-      <section className="px-page py-[var(--section)] text-center" aria-label="Instagram">
-        <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hit t-label t-mark underline underline-offset-4 hover:text-[var(--c-blue)]">
-          @lagi.official
-        </a>
-      </section>
     </div>
   );
 }

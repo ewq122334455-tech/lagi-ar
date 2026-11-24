@@ -24,9 +24,9 @@ export function CartPage() {
   const { lines, setQuantity, remove, subtotal, count } = useCart();
   return (
     <div className="px-page pb-[var(--section)] pt-page">
-      <h1 className="t-label t-mark text-center">Cart</h1>
+      <h1 className="sr-only">Cart</h1>
       {lines.length === 0 ? (
-        <div className="mt-24 flex min-h-[40svh] flex-col items-center justify-center text-center">
+        <div className="flex min-h-[40svh] flex-col items-center justify-center text-center">
           <p className="t-h3 kr">장바구니가 비어 있어요</p>
           <Link to="/discover" className="btn btn-primary mt-8" data-testid="cart-empty-shop">
             제품 보러 가기
@@ -34,15 +34,14 @@ export function CartPage() {
         </div>
       ) : (
         <>
-          <ul className="mt-24 border-t border-black/10">
+          <ul className="border-t border-[var(--c-blue)]/15">
             {lines.map((l) => (
               <li key={lineKey(l)} className="grid grid-cols-[88px_1fr_auto] items-center gap-4 border-b border-[var(--c-ink)]/15 py-5 lg:grid-cols-[120px_1fr_auto_auto]">
-                {l.image ? <img {...responsive(l.image, '120px')} src={l.image} alt="" className="aspect-square w-full rounded-[var(--radius-card)] object-cover" /> : <span />}
+                <Link to={`/product/${l.productId}`} aria-label={l.name ?? ''}>
+                  {l.image ? <img {...responsive(l.image, '120px')} src={l.image} alt="" className="aspect-square w-full rounded-[var(--radius-card)] object-cover" /> : <span />}
+                </Link>
                 <div>
-                  <Link to={`/product/${l.productId}`} className="t-value kr hover:text-[var(--c-blue)]">
-                    {l.name}
-                  </Link>
-                  <div className="t-caption mt-2 inline-flex items-center gap-1">
+                  <div className="t-caption inline-flex items-center gap-1">
                     <button type="button" className="h-9 w-9 rounded-full border border-black/15 hover:bg-[var(--c-label)]" aria-label="수량 줄이기" onClick={() => setQuantity(lineKey(l), l.quantity - 1)}>
                       −
                     </button>

@@ -1,93 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
 import { WHY_LAGI } from '@/content/whyLagi';
 
-/**
- * WHY LAGI (reference: Method). On wide screens the four criteria travel sideways as the page
- * scrolls, joined by a dashed line; on phones they stack. Only the title and the four criteria are left: the space does the talking.
- */
+/** WHY LAGI: the four criteria, side by side. No title (the menu already says it), no numbers, no scrolling tricks. */
 export default function Why() {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
-  const [wide, setWide] = useState(() => window.innerWidth >= 1200 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const [height, setHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    const onResize = () => setWide(window.innerWidth >= 1200 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    if (!wide) return;
-    const wrap = wrapRef.current;
-    const track = trackRef.current;
-    if (!wrap || !track) return;
-    const distance = () => track.scrollWidth - window.innerWidth;
-    setHeight(distance() + window.innerHeight);
-    let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const r = wrap.getBoundingClientRect();
-        const p = Math.min(1, Math.max(0, -r.top / (r.height - window.innerHeight)));
-        track.style.transform = `translate3d(${(-p * distance()).toFixed(1)}px,0,0)`;
-        if (barRef.current) barRef.current.style.width = `${(p * 100).toFixed(1)}%`;
-      });
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      cancelAnimationFrame(raf);
-    };
-  }, [wide]);
-
-  const intro = (
-    <div className="w-full shrink-0 lg:w-[34vw]">
-      <h1 className="t-display t-mark">WHY LAGI</h1>
-    </div>
-  );
-
-  const steps = WHY_LAGI.map((c, i) => (
-    <section key={c.key} className="relative w-full shrink-0 border-t border-[var(--c-ink)] pt-5 lg:w-[38vw] lg:border-0 lg:pt-0" style={wide ? { marginTop: `${[18, 2, 26, 8][i]}vh` } : undefined}>
-      <p className="t-h3 t-mark text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}.</p>
-      <h2 className="t-h2 t-mark mt-2">{c.key}</h2>
-      <p className="t-body kr mt-6 max-w-sm text-[var(--c-mute)]">{c.question}</p>
-    </section>
-  ));
-
-  if (!wide)
-    return (
-      <>
-        <div className="px-page pt-page">
-          {intro}
-          <div className="mt-32 space-y-32">{steps}</div>
-        </div>
-      </>
-    );
-
   return (
-    <>
-    <div ref={wrapRef} style={{ height: height ?? '300vh' }} className="relative">
-      <div className="sticky top-0 h-[100svh] overflow-hidden">
-        <div ref={trackRef} className="flex h-full items-start gap-[8vw] px-page pt-page will-change-transform" style={{ width: 'max-content' }}>
-          {intro}
-          {steps}
-          <div className="w-[10vw] shrink-0" />
-        </div>
-        {/* A progress line and a cue: the four criteria travel sideways as the page scrolls. */}
-        <div className="pointer-events-none absolute inset-x-[var(--page-x)] bottom-[7vh] flex items-center gap-4" aria-hidden="true">
-          <span className="t-label t-mark shrink-0">Scroll ↓</span>
-          <div className="h-px flex-1 bg-black/15">
-            <div ref={barRef} className="h-px bg-[var(--c-blue)]" style={{ width: '0%' }} />
-          </div>
-        </div>
-        <svg className="pointer-events-none absolute inset-x-0 bottom-[14vh] h-24 w-full" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 70 C 150 10, 300 90, 450 50 S 750 10, 1000 60" fill="none" stroke="var(--c-ink)" strokeWidth="1" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" />
-        </svg>
+    <div className="px-page pb-[var(--section)] pt-page">
+      <h1 className="sr-only">Why LAGI</h1>
+      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-x-[var(--gap)] gap-y-16 sm:grid-cols-2" data-testid="why-list">
+        {WHY_LAGI.map((c) => (
+          <section key={c.key} className="border-t border-[var(--c-blue)] pt-5">
+            <h2 className="t-h3 t-mark">{c.key}</h2>
+            <p className="t-body kr mt-3 text-[var(--c-mute)]">{c.question}</p>
+          </section>
+        ))}
       </div>
     </div>
-    </>
   );
 }

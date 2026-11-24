@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { LagiLogo } from '@/components/LagiLogo';
 import { lookupOrder, myOrders, type OrderSummary } from '../reviewsApi';
 import { price } from '../data';
 import { PRIVACY_POLICY, TERMS } from '@/content/legal';
@@ -26,9 +25,7 @@ function Card({ children, title, en }: { children: React.ReactNode; title: strin
     <div className="flex justify-center px-page pb-32 pt-page">
       <div className="w-full max-w-[420px]">
         <div className="flex flex-col items-center text-center">
-          <LagiLogo className="h-16 w-auto text-[var(--c-blue)]" title="LAGI" />
-          <p className="t-label t-mark mt-6 text-[var(--c-mute)]">{en}</p>
-          <h1 className="t-h1 kr mt-1 !font-bold">{title}</h1>
+          <h1 className="t-h3 t-mark" aria-label={title}>{en}</h1>
         </div>
         <div className="mt-10">{children}</div>
       </div>
