@@ -8,7 +8,7 @@ const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.pu
 const B = 'http://localhost:4195/#/';
 await p.goto(B + 'discover'); await p.waitForTimeout(1500);
 const t = await p.locator('body').innerText(); const alts = (await p.locator('[data-testid=product-card] img[alt]').evaluateAll((a) => a.map((i) => i.alt))).join('|');
-ok('R1 clothing appears in the product list (named on the picture, not as text under it) with English category filters', /테스트 상의 블랙/.test(alts) && /테스트 스웻 세트 블랙/.test(alts) && !/테스트 상의 블랙/.test(t) && /\bTop\b/.test(t) && /\bSet\b/.test(t) && /\bAll\b/.test(t));
+ok('R1 clothing appears in the product list with its name under the picture (English name when there is one) and English category filters', /테스트 상의 블랙/.test(alts) && /테스트 스웻 세트 블랙/.test(t) && /PLANO BAG/.test(t) && /\bTop\b/.test(t) && /\bSet\b/.test(t) && /\bAll\b/.test(t));
 await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);
 ok('R2 set page: the exact set name and the contents are shown', /테스트 스웻 세트 블랙/.test(await p.locator('h1').innerText()) && /테스트 후드 \+ 테스트 팬츠/.test(await p.getByTestId('set-items').innerText()));
 ok('R3 the product page for clothing has no page errors', errs.length === 0, errs.join('|'));
@@ -44,6 +44,6 @@ await p.goto(B + 'product/plano-bag'); await p.waitForTimeout(1500);
   ok('R17 bags get the same written sections with the 가방 notice items (종류, 소재, 크기 …) and the real size from the product data', /종류/.test(t) && /크기/.test(t) && /MATERIAL/i.test(t) && /14/.test(await p.getByTestId('size-chart').innerText()));
   ok('R18 example values are labelled "예시 정보 · 확인 전" (never shown as checked facts)', (await p.locator('[data-draft=true]').count()) > 0); }
 await p.goto(B + 'product/daily-tote'); await p.waitForTimeout(1500);
-ok('R19 the daily tote shows its 16 ready-made detail page images, in order', (await p.locator('[data-testid=detail-images] img').count()) === 16 && /01\.jpg$/.test(await p.locator('[data-testid=detail-images] img').first().getAttribute('src')));
+ok('R19 the daily tote has a written detail page like the others (no image-only page) with the maker facts from the brand', (await p.locator('[data-testid=detail-images]').count()) === 0 && /STORY/.test(await p.getByTestId('product-info').innerText()) && /UNESCO/.test(await p.getByTestId('product-info').innerText()));
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();
