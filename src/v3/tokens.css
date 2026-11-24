@@ -166,3 +166,8 @@
 @media (prefers-reduced-motion: reduce) {
   .v3.intro-leave { animation: none; opacity: 0; }
 }
+
+/* AGAIN fits one window on computers: a little less space under the header. */
+@media (min-width: 1024px) {
+  .v3 .again-page { padding-top: calc(var(--top) - 28px); }
+}

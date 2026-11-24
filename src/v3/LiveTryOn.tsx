@@ -1046,12 +1046,18 @@ export function LiveTryOn({
 
         <section aria-labelledby="l3">
           <h2 id="l3" className="sr-only">실시간 착용</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(['user', 'environment'] as const).map((f) => (
               <button key={f} type="button" aria-pressed={facing === f} disabled={live || phase === 'starting'} onClick={() => setFacing(f)} className="chip disabled:opacity-40">
                 {f === 'user' ? '앞 카메라' : '뒤 카메라'}
               </button>
             ))}
+            {typeof MediaRecorder !== 'undefined' && (
+              <label className="t-caption kr ml-1 flex items-center gap-1.5">
+                <input type="checkbox" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
+                <span>녹화 (이 기기에만 저장)</span>
+              </label>
+            )}
           </div>
           {devMode && (
           <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
@@ -1062,14 +1068,8 @@ export function LiveTryOn({
             </span>
           </label>
           )}
-          {typeof MediaRecorder !== 'undefined' && (
-            <label className="t-caption kr mt-3 flex items-center gap-2">
-              <input type="checkbox" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
-              <span>영상 녹화 (이 기기에만 저장)</span>
-            </label>
-          )}
-          <label className="t-caption kr mt-3 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
-            <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <label className="kr mt-2 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] px-3 py-2 text-[12px] leading-[1.5]">
+            <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
           </label>
           <button

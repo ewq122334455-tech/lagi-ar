@@ -228,7 +228,7 @@ export default function Again() {
             role="tab"
             aria-selected={mode === m}
             onClick={() => setMode(m)}
-            className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-center text-[14px] transition-all ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-2 text-center text-[14px] transition-all ${mode === m ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]' : 'text-[var(--c-mute)] hover:text-[var(--c-ink)]'}`}
           >
             <span className="kr font-semibold">{label}</span>
           </button>
@@ -249,7 +249,7 @@ export default function Again() {
               ))}
             </div>
           )}
-          <ul className={`grid gap-1.5 sm:grid-cols-8 ${shown.length > 10 ? 'grid-cols-6 lg:grid-cols-6' : 'grid-cols-5 lg:grid-cols-5'}`} data-testid="product-strip">
+          <ul className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-4" data-testid="product-strip">
             {shown.map((p) => (
               <li key={p.id}>
                 <button type="button" aria-pressed={p.id === productId} onClick={() => choose(p)} className="group block w-full" aria-label={p.name.value ?? ''}>
@@ -276,7 +276,7 @@ export default function Again() {
   );
 
   return (
-    <div className="px-page pb-10 pt-page">
+    <div className="again-page px-page pb-6 pt-page lg:pb-2">
       <h1 className="sr-only">Again</h1>
 
       {mode === 'live' && (liveBlocked || (pickable.length === 0 && !loading)) && (
@@ -394,8 +394,8 @@ export default function Again() {
 
           <section aria-labelledby="s4">
 <h2 id="s4" className="sr-only">합성</h2>
-            <label className="t-caption kr flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
-              <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <label className="kr flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] px-3 py-2 text-[12px] leading-[1.5]">
+              <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               <span>
                 합성을 위해 내 사진이 AI 서버(Cloudflare를 거쳐 Google Gemini)로 한 번 전송되는 것에 동의합니다. 라기는 사진과 결과를 저장하지 않습니다.
               </span>
