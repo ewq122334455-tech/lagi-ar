@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { AI_TRYON_URL, requestAiTryOn } from '@/tryon/aiTryOn';
 import { keyMatte } from './productOverlay';
+import { FRAME, LEFT, RIGHT, STAGE } from './againLayout';
 import { createDesignMapper, greenReference, type DesignMapper } from './greenMap';
 
 type Phase = 'idle' | 'starting' | 'live' | 'ended';
@@ -203,10 +204,13 @@ export function LiveTryOn({
   product,
   stylePrompt,
   styleChips,
+  side,
 }: {
   product: Product | undefined;
   stylePrompt: string;
   styleChips: React.ReactNode;
+  /** Shown at the top of the right column (the AGAIN page puts the tabs and the products there). */
+  side?: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
   // Seconds until a new session may start: the server still counts the last one as open until it releases it or its lease runs out.
@@ -879,10 +883,10 @@ export function LiveTryOn({
     : product && consent ? 'ready' : 'before';
 
   return (
-    <div className="mt-16 grid grid-cols-1 gap-x-[var(--gap)] gap-y-16 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        {/* The fitting screen is the biggest thing on the page: edge to edge on phones, wider than the text column on desktop, brand blue (never black) around the picture. */}
-        <div className="relative -mx-[var(--page-x)] flex aspect-[4/5] items-center justify-center overflow-hidden bg-[var(--c-blue)] md:mx-0 md:aspect-video md:rounded-[var(--radius-card)] lg:-mx-[6vw]" data-testid="live-stage">
+    <div className={FRAME}>
+      <div className={`${LEFT} lg:overflow-y-auto`}>
+        {/* The fitting screen fills the left column (one window high on computers), brand blue around the picture. */}
+        <div className={`${STAGE} bg-[var(--c-blue)]`} data-testid="live-stage">
           <video ref={out} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && !mapOn ? '' : 'opacity-0'}`} />
           <canvas ref={mapped} aria-hidden="true" className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && mapOn ? '' : 'hidden'}`} data-testid="mapped-canvas" />
           {(!live || waiting) && (
@@ -901,7 +905,7 @@ export function LiveTryOn({
             </>
           )}
         </div>
-        <div className="mt-3" data-testid="live-steps" data-step={step}>
+        <div data-testid="live-steps" data-step={step}>
           <ol className="flex flex-wrap gap-x-4 gap-y-1" aria-label="진행 단계">
             {STEP_ORDER.filter((k) => k !== 'prefit' || prefitOn).map((k) => {
               const at = STEP_ORDER.indexOf(step);
@@ -920,7 +924,7 @@ export function LiveTryOn({
           </p>
         </div>
         {live && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-primary" onClick={exactPhoto} data-testid="exact-photo">
               이 포즈로 정확한 사진 만들기
             </button>
@@ -1033,13 +1037,12 @@ export function LiveTryOn({
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-xl space-y-8 lg:col-span-12">
+      <div className={RIGHT}>
+        {side}
 
         <section aria-labelledby="l3">
-          <h2 id="l3" className="t-h3 kr">
-            실시간 착용
-          </h2>
-          <div className="mt-3 flex gap-2">
+          <h2 id="l3" className="sr-only">실시간 착용</h2>
+          <div className="flex gap-2">
             {(['user', 'environment'] as const).map((f) => (
               <button key={f} type="button" aria-pressed={facing === f} disabled={live || phase === 'starting'} onClick={() => setFacing(f)} className="chip disabled:opacity-40">
                 {f === 'user' ? '앞 카메라' : '뒤 카메라'}
@@ -1056,15 +1059,12 @@ export function LiveTryOn({
           </label>
           )}
           {typeof MediaRecorder !== 'undefined' && (
-            <label className="t-caption kr mt-4 flex items-start gap-3 rounded-[var(--radius-card)] border border-black/10 p-3">
-              <input type="checkbox" className="mt-1" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
-              <span>
-                <b className="block text-[var(--c-ink)]">영상 녹화</b>
-                이 기기에만 저장됩니다.
-              </span>
+            <label className="t-caption kr mt-3 flex items-center gap-2">
+              <input type="checkbox" checked={recOn} disabled={live || phase === 'starting'} onChange={(e) => setRecOn(e.target.checked)} data-testid="rec-toggle" />
+              <span>영상 녹화 (이 기기에만 저장)</span>
             </label>
           )}
-          <label className="t-caption kr mt-4 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
+          <label className="t-caption kr mt-3 flex items-start gap-2 rounded-[var(--radius-card)] bg-[var(--c-gray)] p-3">
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>카메라 영상이 AI 서버(Decart)로 실시간 전송되는 것에 동의합니다. 라기는 영상을 저장하지 않습니다.</span>
           </label>
@@ -1072,7 +1072,7 @@ export function LiveTryOn({
             type="button"
             onClick={start}
             disabled={!product || !consent || live || phase === 'starting' || wait > 0}
-            className="btn btn-primary mt-5 w-full"
+            className="btn btn-primary mt-3 w-full"
             data-testid="start-button"
           >
             {phase === 'starting' ? '연결 중…' : wait > 0 ? `정리 중 · ${wait}초 후 다시 시작` : phase === 'ended' ? '다시 시작' : '실시간 착용 시작'}

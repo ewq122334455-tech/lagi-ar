@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LagiLogo } from '@/components/LagiLogo';
 import { useCart } from '@/commerce/CartContext';
@@ -25,17 +25,7 @@ export function V3Layout() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
   useRouteMeta(pathname);
-  const footerRef = useRef<HTMLElement>(null);
-  const [footerH, setFooterH] = useState(0);
   const [searching, setSearching] = useState(false);
-
-  useLayoutEffect(() => {
-    const el = footerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setFooterH(el.offsetHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -53,8 +43,7 @@ export function V3Layout() {
           <Outlet />
         </div>
       </main>
-      <div aria-hidden="true" style={{ height: footerH }} />
-      <Footer ref={footerRef} />
+      <LegalFooter />
       <HelpButton />
       {searching && <SearchOverlay onClose={() => setSearching(false)} />}
     </div>
@@ -384,16 +373,16 @@ function LegalFooter() {
   if (!BUSINESS && !PRIVACY_POLICY && !TERMS) return null;
   const b = BUSINESS;
   return (
-    <div className="t-caption kr mt-4 space-y-2 text-white/70" data-testid="legal-footer">
+    <div className="t-caption kr space-y-2 bg-white px-page pb-10 pt-6 text-center text-[var(--c-mute)]" data-testid="legal-footer">
       {(TERMS || PRIVACY_POLICY) && (
         <p className="flex flex-wrap gap-x-4 gap-y-1">
           {TERMS && (
-            <Link to="/terms" className="hit hover:text-white">
+            <Link to="/terms" className="hit hover:text-[var(--c-ink)]">
               이용약관
             </Link>
           )}
           {PRIVACY_POLICY && (
-            <Link to="/privacy" className="hit font-bold text-white">
+            <Link to="/privacy" className="hit font-bold text-[var(--c-ink)]">
               개인정보처리방침
             </Link>
           )}
@@ -402,7 +391,7 @@ function LegalFooter() {
       {b && (
         <p className="leading-relaxed">
           상호 {b.companyName} · 대표 {b.representative} · 사업자등록번호 {b.businessNumber}{' '}
-          <a href={`https://www.ftc.go.kr/bizCommPop.do?wrkr_no=${b.businessNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-white">
+          <a href={`https://www.ftc.go.kr/bizCommPop.do?wrkr_no=${b.businessNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hit underline underline-offset-2 hover:text-[var(--c-ink)]">
             사업자정보 확인
           </a>
           <br />
@@ -415,27 +404,3 @@ function LegalFooter() {
   );
 }
 
-const Footer = forwardRef<HTMLElement>(function Footer(_, ref) {
-  return (
-    <footer ref={ref} className="fixed inset-x-0 bottom-0 z-[1] overflow-hidden bg-[var(--c-blue)] px-page text-[var(--c-white)]">
-      {/* Lifted above the phone buy bar on product pages. A transform, not padding: it does not
-          re-lay out the page when the bar appears (no layout shift). */}
-      <div className="relative flex flex-col items-center gap-6 pb-10 pt-14 text-center" style={{ transform: 'translateY(calc(-1 * var(--buybar-h, 0px)))' }}>
-        <LagiLogo className="h-12 w-auto text-[var(--c-white)]" title="" />
-        <p className="t-caption kr flex flex-wrap justify-center gap-x-6 gap-y-2">
-          <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
-            Smart Store
-          </a>
-          <a href={OFFICIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="tap opacity-80 hover:opacity-100">
-            Instagram
-          </a>
-          <Link to="/contact" className="tap opacity-80 hover:opacity-100">
-            Contact
-          </Link>
-        </p>
-        <p className="t-label t-mark opacity-70">© LAGI</p>
-        <LegalFooter />
-      </div>
-    </footer>
-  );
-});
