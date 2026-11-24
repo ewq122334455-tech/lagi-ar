@@ -1049,10 +1049,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
   }
 
   return (
-    <div className="mt-10 grid grid-cols-1 gap-x-[var(--gap)] gap-y-10 lg:grid-cols-12">
-      <div className="lg:col-span-7">
+    <div className="mt-16 grid grid-cols-1 gap-x-[var(--gap)] gap-y-16 lg:grid-cols-12">
+      <div className="lg:col-span-12">
         <div
-          className={`relative flex aspect-[4/3] touch-pan-y items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-ink)] md:aspect-video ${live && product?.model3d ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`relative -mx-[var(--page-x)] flex aspect-[4/5] touch-pan-y items-center justify-center overflow-hidden bg-[var(--c-blue)] md:mx-0 md:aspect-video md:rounded-[var(--radius-card)] lg:-mx-[6vw] ${live && product?.model3d ? 'cursor-grab active:cursor-grabbing' : ''}`}
           data-testid="map-stage"
           onPointerDown={(e) => {
             if (!product?.model3d) return;
@@ -1073,10 +1073,10 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
           <video ref={aiVideo} playsInline muted className="hidden" />
           <canvas ref={aiOut} aria-hidden="true" className={`pointer-events-none absolute inset-0 h-full w-full object-contain ${live && aiOn ? '' : 'hidden'}`} data-testid="map-ai" />
           {live && aiOn && (
-            <span className="t-label t-mark absolute right-3 top-3 rounded-full bg-[var(--c-blue)] px-2.5 py-1 text-white tabular-nums">AI 실사 · {aiState.left ?? 20}</span>
+            <span className="t-label t-mark absolute right-3 top-3 rounded-full bg-white px-2.5 py-1 text-[var(--c-blue)] tabular-nums">AI 실사 · {aiState.left ?? 20}</span>
           )}
           {!live && (
-            <p className="t-body kr max-w-xs px-6 text-center text-white/80" data-testid="map-status">
+            <p className="t-body kr max-w-xs px-6 text-center text-white" data-testid="map-status">
               {status ?? (phase === 'ended' ? '착용을 끝냈습니다. 다시 시작할 수 있습니다.' : '시작을 누르면 카메라 화면에 실제 제품 이미지가 몸을 따라 입혀집니다.')}
             </p>
           )}
@@ -1126,7 +1126,7 @@ export function MapTryOn({ product, styleKey, stylePrompt, styleChips, lab }: { 
         )}
       </div>
 
-      <div className="space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-5 lg:self-start lg:p-7">
+      <div className="mx-auto w-full max-w-xl space-y-8 rounded-[calc(var(--radius-card)*2)] border border-black/10 p-5 lg:col-span-12 lg:p-7">
         <section aria-labelledby="m2">
           <h2 id="m2" className="t-h3 kr">
             <span className="t-mark text-[var(--c-mute)]">02</span> 착용 방식
