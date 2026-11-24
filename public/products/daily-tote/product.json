@@ -317,5 +317,71 @@
       "status": "AI_DRAFT",
       "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
     }
-  }
+  },
+  "detailImages": [
+    {
+      "src": "products/daily-tote/images/detail/01.jpg",
+      "alt": "일상 스타일링의 새로운 포인트"
+    },
+    {
+      "src": "products/daily-tote/images/detail/02.jpg",
+      "alt": "밀가루 포대 소재의 데일리 토트"
+    },
+    {
+      "src": "products/daily-tote/images/detail/03.jpg",
+      "alt": "브랜드 수상 이력"
+    },
+    {
+      "src": "products/daily-tote/images/detail/04.jpg",
+      "alt": "단색 토트백과 다른 디자인"
+    },
+    {
+      "src": "products/daily-tote/images/detail/05.jpg",
+      "alt": "한눈에 보는 포인트"
+    },
+    {
+      "src": "products/daily-tote/images/detail/06.jpg",
+      "alt": "그래픽이 살아난 포인트"
+    },
+    {
+      "src": "products/daily-tote/images/detail/07.jpg",
+      "alt": "일상에 자연스럽게 어울리는 토트백"
+    },
+    {
+      "src": "products/daily-tote/images/detail/08.jpg",
+      "alt": "소재가 만든 개성"
+    },
+    {
+      "src": "products/daily-tote/images/detail/09.jpg",
+      "alt": "다시 쓰임을 얻은 소재"
+    },
+    {
+      "src": "products/daily-tote/images/detail/10.jpg",
+      "alt": "LAGI의 업사이클링 선택"
+    },
+    {
+      "src": "products/daily-tote/images/detail/11.jpg",
+      "alt": "밀가루 포대 업사이클링 방식"
+    },
+    {
+      "src": "products/daily-tote/images/detail/12.jpg",
+      "alt": "구성 및 제품 정보"
+    },
+    {
+      "src": "products/daily-tote/images/detail/13.jpg",
+      "alt": "사용 및 관리 안내"
+    },
+    {
+      "src": "products/daily-tote/images/detail/14.jpg",
+      "alt": "이런 분께 추천해요"
+    },
+    {
+      "src": "products/daily-tote/images/detail/15.jpg",
+      "alt": "배송 안내"
+    },
+    {
+      "src": "products/daily-tote/images/detail/16.jpg",
+      "alt": "교환·반품 및 고지"
+    }
+  ]
 }

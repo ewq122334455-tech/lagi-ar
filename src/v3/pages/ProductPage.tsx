@@ -12,7 +12,7 @@ import { Reviews } from '../Reviews';
 import { fetchReviews } from '../reviewsApi';
 import { WHY_LAGI } from '@/content/whyLagi';
 import { CATEGORY_LABEL, isClothing, OFFICIAL_LINKS, makerOf, price, shippingText, useRealProducts } from '../data';
-import { largeCopy, responsive } from '../img';
+import { responsive } from '../img';
 import { usePageMeta } from '../usePageMeta';
 
 
@@ -384,46 +384,13 @@ export default function ProductPage() {
 
       {tab === 'detail' && (
         <div role="tabpanel" aria-label="상세정보">
-          {isClothing(p) && hero ? (
-            // Clothing: close-ups cut from the real photo (the same pixels, never generated), like a lookbook page.
-            <section className="mt-[var(--section)]" aria-label="디테일" data-testid="detail-mosaic">
-              <div className="grid grid-cols-6 gap-3 md:gap-5">
-                {[
-                  { y: 6, x: 50, zoom: 2.2, span: 'col-span-6 md:col-span-3', ratio: 'aspect-[4/3]' },
-                  { y: 55, x: 50, zoom: 2.4, span: 'col-span-3 md:col-span-3', ratio: 'aspect-[4/5] md:aspect-[4/3]' },
-                  { y: 96, x: 50, zoom: 2.2, span: 'col-span-3 md:col-span-2', ratio: 'aspect-[4/5]' },
-                  { y: 32, x: 50, zoom: 2.0, span: 'col-span-6 md:col-span-4', ratio: 'aspect-[16/9]' },
-                ].map((c, i) => (
-                  <figure key={i} className={c.span}>
-                    <div
-                      className={`${c.ratio} w-full bg-[var(--c-gray)] bg-no-repeat`}
-                      style={{ backgroundImage: `url(${largeCopy(hero)})`, backgroundSize: `${c.zoom * 100}%`, backgroundPosition: `${c.x}% ${c.y}%` }}
-                      role="img"
-                      aria-label={`${p.name.value ?? ''} 디테일 ${i + 1}`}
-                    />
-                    <figcaption className="t-label t-mark mt-1.5 text-[var(--c-blue)]">{String(i + 1).padStart(2, '0')}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            </section>
-          ) : (
-            (p.views || p.drawings?.length) && hero && <ProductViews src={hero} name={p.name.value ?? ''} product={p} />
-          )}
-
-          {!!p.styledImages?.length && (
-            <section className="mt-[var(--section)]" aria-label="착용 연출 (AI 이미지)">
-              <div className="grid grid-cols-1 items-start gap-[var(--gap)] md:grid-cols-3">
-                {p.styledImages.map((src) => (
-                  <figure key={src} className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--c-gray)]" data-testid="styled-image">
-                    <img {...responsive(src, '(max-width: 767px) 100vw, 50vw')} src={src} alt={`AI 연출 이미지 — ${p.name.value ?? '제품'} 착용 모습`} loading="lazy" className="block h-auto w-full" />
-                    <figcaption className="t-label kr absolute left-2 top-2 rounded-full bg-[var(--c-ink)] px-2.5 py-1 text-[var(--c-white)]">AI 연출 이미지 · 실제와 다를 수 있음</figcaption>
-                  </figure>
-                ))}
-              </div>
-            </section>
-          )}
-
           <ProductInfo p={p} />
+
+          {!isClothing(p) && (p.views || p.drawings?.length) && hero && (
+            <div className="mt-[var(--section)]">
+              <ProductViews src={hero} name={p.name.value ?? ''} product={p} />
+            </div>
+          )}
 
           {maker && <p className="t-caption kr mt-[var(--section)] text-center text-[var(--c-mute)]">협업 브랜드 {maker} · 제품은 제작사가 만들고, 라기는 발견하고 선별해 소개합니다.</p>}
         </div>
