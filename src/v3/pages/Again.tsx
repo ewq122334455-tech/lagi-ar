@@ -244,7 +244,7 @@ export default function Again() {
         {loading ? (
           <p className="t-caption kr mt-4">불러오는 중…</p>
         ) : (
-          <ul className="no-scrollbar flex snap-x gap-3 overflow-x-auto pb-2 md:justify-center">
+          <Strip>
             {pickable.map((p) => (
               <li key={p.id} className="w-[22vw] shrink-0 snap-start sm:w-24">
                 <button
@@ -265,7 +265,7 @@ export default function Again() {
                 </button>
               </li>
             ))}
-          </ul>
+          </Strip>
         )}
       </section>
 
@@ -656,5 +656,45 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** Product row that scrolls sideways: edge fades + arrows show there is more to see. */
+function Strip({ children }: { children: React.ReactNode }) {
+  const row = useRef<HTMLUListElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const update = () => setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro?.disconnect();
+    };
+  }, [children]);
+  const go = (dir: number) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: 'smooth' });
+  const arrow = 'absolute top-[calc(50%-1.25rem)] z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-lg shadow-md ring-1 ring-black/10 transition hover:bg-[var(--c-ink)] hover:text-white md:flex';
+  return (
+    <div className="relative" data-testid="product-strip">
+      <ul ref={row} className="no-scrollbar flex snap-x justify-[safe_center] gap-3 overflow-x-auto pb-2">
+        {children}
+      </ul>
+      <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[var(--c-white)] to-transparent transition-opacity ${edge.left ? 'opacity-100' : 'opacity-0'}`} />
+      <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[var(--c-white)] to-transparent transition-opacity ${edge.right ? 'opacity-100' : 'opacity-0'}`} />
+      {edge.left && (
+        <button type="button" aria-label="이전 제품" className={`${arrow} left-1`} onClick={() => go(-1)} data-testid="strip-prev">
+          ‹
+        </button>
+      )}
+      {edge.right && (
+        <button type="button" aria-label="다음 제품" className={`${arrow} right-1`} onClick={() => go(1)} data-testid="strip-next">
+          ›
+        </button>
+      )}
+    </div>
   );
 }
