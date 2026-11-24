@@ -255,6 +255,8 @@ export interface Product {
   fitting?: { image: string; part: 'top' | 'bottom' | 'set' | 'outer' | 'dress'; description: string };
   /** Sets only: the bottom piece alone (plain background) and its exact description, for trying the bottoms on in the live fitting. */
   fittingBottom?: { image: string; part: 'bottom'; description: string };
+  /** Ready-made long detail page images (top to bottom). When present they replace the coded detail page. */
+  detailImages?: { src: string; alt: string }[];
   /** Set products only: the exact names of the pieces the set contains. */
   setItems?: string[];
 
