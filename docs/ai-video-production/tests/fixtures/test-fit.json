@@ -7,9 +7,9 @@
     "테스트 상의",
     "테스트 하의"
   ],
-  "main": "public/products/lagi-again-tee-black/images/main.jpg",
+  "main": "docs/ai-video-production/tests/fixtures/img-tee.jpg",
   "fitting": {
-    "image": "public/products/lagi-again-tee-black/images/main.jpg",
+    "image": "docs/ai-video-production/tests/fixtures/img-tee.jpg",
     "part": "top",
     "description": "a black oversized short-sleeve cotton tee with a yellow abstract logo and the word AGAIN across the chest"
   }

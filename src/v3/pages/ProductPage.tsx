@@ -225,7 +225,7 @@ export default function ProductPage() {
             <h1 className="t-h1 t-mark !font-bold">{p.nameEn ?? p.name.value}</h1>
             {p.setItems && p.setItems.length > 0 && (
               <p className="t-caption kr mt-4 text-[var(--c-mute)]" data-testid="set-items">
-                {p.setItems.join(' + ')}
+                {(p.setItemsEn ?? p.setItems).join(' + ')}
               </p>
             )}
             <p className="t-h2 mt-6 tabular-nums">{price(p.price.value)}</p>

@@ -200,19 +200,18 @@ function Header({ onSearch }: { onSearch: () => void }) {
             <span className="w-10" />
           </div>
           <nav className="mt-10 flex flex-col items-start gap-5" aria-label="모바일 메뉴">
-            {[{ to: '/', label: 'Home', kr: '홈' }, ...NAV].map((n) => (
-              <Link key={n.to} to={n.to} className="flex items-baseline gap-3">
-                <span className="t-h2 t-mark">{n.label}</span>
-                <span className="t-caption kr text-[var(--c-mute)]">{n.kr}</span>
+            {[{ to: '/', label: 'Home' }, ...NAV].map((n) => (
+              <Link key={n.to} to={n.to} className="t-h2 t-mark">
+                {n.label}
               </Link>
             ))}
           </nav>
-          <div className="t-caption kr mt-auto flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--c-ink)] pt-5">
-            <Link to={user ? '/account' : '/login'}>{user ? user.name : '로그인'}</Link>
-            <Link to="/cart">장바구니 {count}</Link>
-            <Link to="/order">주문 조회</Link>
+          <div className="t-caption t-mark mt-auto flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--c-ink)] pt-5">
+            <Link to={user ? '/account' : '/login'}>{user ? user.name : 'Log in'}</Link>
+            <Link to="/cart">Cart {count}</Link>
+            <Link to="/order">Order</Link>
             <a href={OFFICIAL_LINKS.store} target="_blank" rel="noopener noreferrer">
-              스마트스토어 ↗
+              Smart Store ↗
             </a>
           </div>
         </div>

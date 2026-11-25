@@ -7,7 +7,7 @@
     "테스트 후드",
     "테스트 팬츠"
   ],
-  "main": "public/products/lagi-cargo-pants/images/main.jpg",
+  "main": "docs/ai-video-production/tests/fixtures/img-pants.jpg",
   "sizes": [
     "M",
     "L"

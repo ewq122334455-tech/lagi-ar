@@ -11,7 +11,7 @@
     "M",
     "L"
   ],
-  "main": "public/products/lagi-again-tee-black/images/main.jpg",
+  "main": "docs/ai-video-production/tests/fixtures/img-tee.jpg",
   "materials": [
     {
       "name": "코튼 100%",
