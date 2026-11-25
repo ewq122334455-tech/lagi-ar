@@ -309,7 +309,7 @@ export default function Again() {
               <img src={photo} alt="올린 사진" className="h-full w-full object-contain" />
             ) : product ? (
               // Before a photo: the chosen product, large, so it is easy to see what will be put on.
-              <img {...responsive(cleanImage(product), '(max-width: 1023px) 90vw, 60vw')} src={cleanImage(product)} alt={product.name.value ?? ''} className="h-full w-full object-contain p-[8%]" data-testid="stage-product" />
+              <img {...responsive(cleanImage(product), '(max-width: 1023px) 90vw, 60vw')} src={cleanImage(product)} alt={product.name.value ?? ''} className="absolute inset-0 m-auto h-[50%] w-[50%] lg:h-[56%] lg:w-[56%] rounded-[var(--radius-card)] bg-white object-contain p-[5%] shadow-[0_10px_40px_rgba(0,0,0,0.18)]" data-testid="stage-product" />
             ) : (
               <p className="t-body kr px-8 text-center text-white/80">제품을 고르세요.</p>
             )}
