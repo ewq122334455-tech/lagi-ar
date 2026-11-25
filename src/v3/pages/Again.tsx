@@ -286,9 +286,9 @@ export default function Again() {
       {mode === 'live' && (liveBlocked || (pickable.length === 0 && !loading)) && (
         <div className={FRAME}>
           <div className={LEFT}>
-            <div className={`${STAGE} flex-col bg-[var(--c-gray)] px-6 text-center`} data-testid={liveBlocked ? 'live-clothing-only' : 'live-no-clothes'}>
+            <div className={`${STAGE} flex-col bg-[var(--c-blue)] px-6 text-center text-white`} data-testid={liveBlocked ? 'live-clothing-only' : 'live-no-clothes'}>
               <p className="t-value kr">{liveBlocked ? '실시간 AI 피팅은 옷만 가능해요.' : '입어 볼 수 있는 옷을 준비하고 있어요.'}</p>
-              <button type="button" className="btn btn-primary mt-5" onClick={() => setMode('photo')}>
+              <button type="button" className="btn mt-5 bg-white text-[var(--c-blue)]" onClick={() => setMode('photo')}>
                 사진 합성으로 보기
               </button>
             </div>
@@ -302,7 +302,7 @@ export default function Again() {
       <div className={FRAME}>
         {/* Preview */}
         <div className={LEFT} ref={resultRef}>
-          <div className={`${STAGE} bg-[var(--c-gray)]`}>
+          <div className={`${STAGE} bg-[var(--c-blue)]`}>
             {result && !before ? (
               <img src={result} alt="AI가 합성한 이미지" className="h-full w-full object-contain" data-testid="ai-result" />
             ) : photo ? (
@@ -311,13 +311,13 @@ export default function Again() {
               // Before a photo: the chosen product, large, so it is easy to see what will be put on.
               <img {...responsive(cleanImage(product), '(max-width: 1023px) 90vw, 60vw')} src={cleanImage(product)} alt={product.name.value ?? ''} className="h-full w-full object-contain p-[8%]" data-testid="stage-product" />
             ) : (
-              <p className="t-body kr px-8 text-center text-[var(--c-mute)]">제품을 고르세요.</p>
+              <p className="t-body kr px-8 text-center text-white/80">제품을 고르세요.</p>
             )}
             {photo && product && !busy && (
               <img {...responsive(cleanImage(product), '96px')} src={cleanImage(product)} alt="" className="absolute right-3 top-3 h-20 w-20 rounded-[6px] bg-white object-contain p-1 shadow-[0_2px_10px_rgba(0,0,0,0.12)] lg:h-24 lg:w-24" />
             )}
             {result && (
-              <span className="t-label t-mark absolute left-3 top-3 bg-[var(--c-blue)] px-2 py-1 text-[var(--c-white)]">
+              <span className="t-label t-mark absolute left-3 top-3 bg-white px-2 py-1 text-[var(--c-blue)]">
                 {before ? 'Original photo' : 'AI generated'}
               </span>
             )}
