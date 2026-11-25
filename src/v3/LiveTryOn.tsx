@@ -891,7 +891,7 @@ export function LiveTryOn({
           <canvas ref={mapped} aria-hidden="true" className={`absolute inset-0 h-full w-full object-contain ${live && !waiting && mapOn ? '' : 'hidden'}`} data-testid="mapped-canvas" />
           {!live && phase !== 'starting' && product && (
             // Before starting: the piece that will be put on, large, on the blue screen.
-            <img src={product.fitting?.image ?? product.images[0]} alt={product.name.value ?? ''} className="absolute inset-0 m-auto h-[72%] w-[72%] object-contain" data-testid="stage-product" />
+            <img src={product.fitting?.image ?? product.images[0]} alt={product.name.value ?? ''} className="absolute inset-0 m-auto h-[50%] w-[50%] lg:h-[56%] lg:w-[56%] rounded-[var(--radius-card)] bg-white object-contain p-[5%] shadow-[0_10px_40px_rgba(0,0,0,0.18)]" data-testid="stage-product" />
           )}
           {(!live || waiting) && (
             <p className={`t-body kr relative max-w-xs px-6 text-center text-white/80 ${!live && phase !== 'starting' && product ? 'mt-auto mb-4 !text-[13px]' : ''}`} data-testid="live-status">
