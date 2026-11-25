@@ -45,5 +45,11 @@ await p.goto(B + 'product/plano-bag'); await p.waitForTimeout(1500);
   ok('R18 example values are labelled "예시 정보 · 확인 전" (never shown as checked facts)', (await p.locator('[data-draft=true]').count()) > 0); }
 await p.goto(B + 'product/daily-tote'); await p.waitForTimeout(1500);
 ok('R19 the daily tote has a written detail page like the others (no image-only page) with the maker facts from the brand', (await p.locator('[data-testid=detail-images]').count()) === 0 && /STORY/.test(await p.getByTestId('product-info').innerText()) && /UNESCO/.test(await p.getByTestId('product-info').innerText()));
+await p.goto(B + 'again?p=plano-bag&m=photo'); await p.waitForTimeout(1200);
+await p.getByRole('button', { name: '카메라', exact: true }).click(); await p.waitForSelector('[data-testid=camera-shoot]:not([disabled])', { timeout: 8000 }).catch(() => {});
+{ const btn = p.getByTestId('camera-shoot'); const label = await btn.innerText().catch(() => '');
+  await btn.click().catch(() => {}); await p.waitForTimeout(1200); const counting = await p.getByTestId('camera-count').count();
+  await p.waitForTimeout(3200);
+  ok('R20 photo camera: one "3초 후 촬영" button, a countdown on screen, then the photo is taken and the camera closes', /3초 후 촬영/.test(label) && counting === 1 && (await p.getByTestId('camera').count()) === 0 && (await p.locator('img[alt="올린 사진"]').count()) === 1, `label=${label} countdown=${counting}`); }
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();
