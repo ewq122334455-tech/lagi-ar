@@ -38,7 +38,7 @@ for (const file of files) {
     const out = path.join(OUT, `${rel}-${w}.webp`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     // Never enlarge: a photo narrower than w is written at its own width under the same name.
-    await sharp(file).rotate().resize({ width: Math.min(w, width), withoutEnlargement: true }).webp({ quality: 78 }).toFile(out);
+    await sharp(file).rotate().resize({ width: Math.min(w, width), withoutEnlargement: true }).webp({ quality: 90 }).toFile(out);
     if (w === 960) after += fs.statSync(out).size;
     made++;
   }
