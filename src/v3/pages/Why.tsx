@@ -15,7 +15,7 @@ export default function Why() {
       <figure className="-mx-[var(--page-x)] overflow-hidden" data-testid="why-photo">
         <img
           src="media/why-lagi.jpg"
-          srcSet="media/why-lagi-1000.jpg 1000w, media/why-lagi.jpg 2000w"
+          srcSet="media/why-lagi-1000.jpg 1000w, media/why-lagi.jpg 2000w, media/why-lagi-4000.jpg 4000w"
           sizes="100vw"
           alt="LAGI 명함과 카드 — LOOK AGAIN, FIND ANOTHER REASON"
           className="block h-[42svh] w-full object-cover object-[50%_55%] md:h-[58svh]"

@@ -179,6 +179,11 @@
   },
   "drawings": [
     {
+      "src": "products/daily-tote/images/drawings/back.jpg",
+      "label": "뒷면",
+      "group": "view"
+    },
+    {
       "src": "products/daily-tote/images/drawings/front.jpg",
       "label": "정면",
       "group": "view"
@@ -186,11 +191,6 @@
     {
       "src": "products/daily-tote/images/drawings/side.jpg",
       "label": "측면",
-      "group": "view"
-    },
-    {
-      "src": "products/daily-tote/images/drawings/back.jpg",
-      "label": "뒷면",
       "group": "view"
     },
     {

@@ -518,8 +518,10 @@ async function labelled(dataUrl: string): Promise<Blob> {
 function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void; onClose: () => void; onPick: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
-  const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  const facing = 'user' as const;
   const [problem, setProblem] = useState<string | null>(null);
+  // One button: press it, a 3-2-1 countdown runs on the picture, then the photo is taken.
+  const [count, setCount] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -559,7 +561,18 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
     };
   }, [facing, attempt]);
 
-  const mirrored = facing === 'user';
+  const mirrored = true;
+  useEffect(() => {
+    if (count === null) return;
+    if (count === 0) {
+      setCount(null);
+      shoot();
+      return;
+    }
+    const t = window.setTimeout(() => setCount((n) => (n === null ? null : n - 1)), 1000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count]);
   function shoot() {
     const v = video.current;
     if (!v || !v.videoWidth) return;
@@ -602,39 +615,32 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
           </div>
         </div>
       ) : (
-        <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] ${mirrored ? '-scale-x-100' : ''}`} />
+        <div className="relative flex max-h-full max-w-full items-center justify-center">
+          <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] ${mirrored ? '-scale-x-100' : ''}`} />
+          {count !== null && count > 0 && (
+            <span className="t-mark pointer-events-none absolute inset-0 flex items-center justify-center text-[min(28vw,200px)] font-bold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" aria-live="assertive" data-testid="camera-count">
+              {count}
+            </span>
+          )}
+        </div>
       )}
       </div>
-      {/* Close · shutter · flip, like a phone camera */}
-      <div className="grid w-full max-w-sm grid-cols-3 items-center text-[var(--c-white)]">
-        <button type="button" className="justify-self-start rounded-full px-4 py-2.5 text-sm font-semibold hover:bg-white/10" onClick={onClose}>
+      {/* One button takes the photo (after 3 seconds, so there is time to step back); 닫기 closes the camera. */}
+      <div className="flex w-full max-w-sm flex-col items-center gap-3 text-[var(--c-white)]">
+        {!problem && (
+          <button
+            type="button"
+            className="btn w-full bg-white !min-h-[56px] text-[17px] font-bold text-[var(--c-blue)] disabled:opacity-60"
+            disabled={!ready || count !== null}
+            onClick={() => setCount(3)}
+            data-testid="camera-shoot"
+          >
+            {!ready ? '카메라 준비 중…' : count !== null ? `${count}초 후 촬영…` : '3초 후 촬영'}
+          </button>
+        )}
+        <button type="button" className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-white/10" onClick={onClose}>
           닫기
         </button>
-        {!problem ? (
-          <>
-            <button
-              type="button"
-              aria-label="촬영"
-              className="justify-self-center rounded-full border-[3px] border-white p-1 transition-transform active:scale-95 disabled:opacity-40"
-              disabled={!ready}
-              onClick={shoot}
-            >
-              <span className="block h-14 w-14 rounded-full bg-white" />
-            </button>
-            <button
-              type="button"
-              aria-label="카메라 전환"
-              className="flex h-11 w-11 items-center justify-center justify-self-end rounded-full bg-white/15 hover:bg-white/25"
-              onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5" />
-              </svg>
-            </button>
-          </>
-        ) : (
-          <span />
-        )}
       </div>
     </div>,
     document.body,
