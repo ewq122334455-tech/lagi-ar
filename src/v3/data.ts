@@ -42,6 +42,8 @@ export const CATEGORY_EN: Record<string, string> = { Bag: 'Bag', 'Acc.': 'Acc', 
 /** Clothing categories. The realtime AI fitting (video) works for these only; bags and small goods keep the 3D try-on and the photo compositing. */
 export const CLOTHING_CATEGORIES = ['Top', 'Bottom', 'Set', 'Outer', 'Dress'];
 export const isClothing = (p: Pick<Product, 'category'> | undefined) => !!p && CLOTHING_CATEGORIES.includes(p.category.value ?? '');
+/** What the live AI video can put on a person: clothes, and caps (worn on the head). */
+export const isWearable = (p: Pick<Product, 'category'> | undefined) => isClothing(p) || p?.category.value === 'Cap';
 
 export const OFFICIAL_LINKS = {
   store: 'https://smartstore.naver.com/lagi_official',

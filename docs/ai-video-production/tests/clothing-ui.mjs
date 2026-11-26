@@ -16,7 +16,7 @@ await p.goto(B + 'product/zz-test-top'); await p.waitForTimeout(1200);
 ok('R4 top page renders (name, price)', /테스트 상의 블랙/.test(await p.locator('h1').innerText()) && /39,000/.test(await p.locator('body').innerText()));
 // AI video tab: clothing only
 await p.goto(B + 'again?p=plano-bag&m=live'); await p.waitForTimeout(1500);
-ok('R5 live tab with a bag selected says realtime fitting is clothing only and offers 3D / photo', await p.getByTestId('live-clothing-only').count() === 1 && /옷만 가능/.test(await p.getByTestId('live-clothing-only').innerText()));
+ok('R5 live tab with a bag selected says realtime fitting is for clothes and caps only and offers photo compositing', await p.getByTestId('live-clothing-only').count() === 1 && /옷과 모자만 가능/.test(await p.getByTestId('live-clothing-only').innerText()));
 { const labels = async () => (await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|');
   let picks = await labels(); const kinds = await p.locator('[data-testid^=kind-]').all();
   for (const k of kinds) { await k.click(); await p.waitForTimeout(150); picks += '|' + (await labels()); }
@@ -64,5 +64,8 @@ await p.goto(B + 'why'); await p.waitForTimeout(1200);
 ok('R25 WHY LAGI shows the four selection points as cards', (await p.getByTestId('why-card').count()) === 4);
 await p.goto(B + 'discover'); await p.waitForTimeout(1200);
 ok('R26 product names are bold', (await p.locator('[data-testid=product-card] .pname').first().evaluate((e) => Number(getComputedStyle(e).fontWeight))) >= 700);
+await p.goto(B + 'again?p=lagi-brown-cap&m=live'); await p.waitForTimeout(1500);
+{ const picks = (await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|');
+  ok('R27 a cap now opens in the AI video (no "clothes only" screen) and the live picker lists the caps', (await p.getByTestId('live-stage').count()) === 1 && (await p.getByTestId('live-clothing-only').count()) === 0 && /Cap|모자|캡/i.test(picks + (await p.locator('[data-testid=kind-Cap]').count())), picks.slice(0, 80)); }
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();

@@ -29,16 +29,17 @@ const TABLE: Record<PipeId, { reference: Reference; model: RealtimeModel }> = {
   DC: { reference: 'prefit', model: 'lucy-2.6' },
 };
 
-export function parsePipeline(flags: string, clothing = false): Pipeline {
+export function parsePipeline(flags: string, clothing = false, cap = false): Pipeline {
   const pipe = /[?&]pipe=(A|B|C|DC|D)(&|$)/i.exec(flags)?.[1]?.toUpperCase() as PipeId | undefined;
   // Default B for everything (the original clean photo, nothing redrawn). C (checked reference picture of the visitor already wearing it) is opt-in with `&pipe=C` until real runs prove it.
-  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) ? 'C' : 'B');
+  // A cap: Decart's virtual try-on models are made for clothes, so a cap uses the general editor model (D) unless an address flag says otherwise.
+  const id: PipeId = pipe ?? (/[?&]prefit=1(&|$)/.test(flags) ? 'C' : cap ? 'D' : 'B');
   const model = (/[?&]model=(lucy-vton-3\.6|lucy-vton-3\.5|lucy-2\.6)(&|$)/.exec(flags)?.[1] as RealtimeModel | undefined) ?? TABLE[id].model;
   const provider = /[?&]provider=(fal|gemini)(&|$)/.exec(flags)?.[1] as 'fal' | 'gemini' | undefined;
   return { id, reference: TABLE[id].reference, model, provider };
 }
 
-export type Garment = 'top' | 'bottom' | 'set' | 'outer' | 'dress' | 'bag' | 'item';
+export type Garment = 'top' | 'bottom' | 'set' | 'outer' | 'dress' | 'cap' | 'bag' | 'item';
 /** What kind of thing a product is, from the store's category value (Top, Bottom, Set, Outer, Dress, Bag …). */
 export function garmentOf(category: string | null | undefined): Garment {
   const c = (category ?? '').toLowerCase();
@@ -47,6 +48,7 @@ export function garmentOf(category: string | null | undefined): Garment {
   if (c === 'set') return 'set';
   if (c === 'outer') return 'outer';
   if (c === 'dress') return 'dress';
+  if (c === 'cap') return 'cap';
   return c.includes('bag') ? 'bag' : 'item';
 }
 export const isGarment = (g: Garment) => g === 'top' || g === 'bottom' || g === 'set' || g === 'outer' || g === 'dress';
@@ -63,6 +65,11 @@ export function carryOf(stylePrompt: string): 'hand' | 'shoulder' {
  */
 export function realtimePrompt(opts: { model: RealtimeModel; carry: 'hand' | 'shoulder'; kind: string; description?: string; prefit: boolean; garment?: Garment }): string {
   const { model, carry, kind, description, prefit, garment } = opts;
+  if (garment === 'cap') {
+    // A cap sits on the head. One action, only what the reference shows.
+    const what = description ? description.slice(0, 380) : 'the cap shown in the reference image';
+    return `The person wears the cap from the reference image on their head, the visor facing forward, in place of any hat. It is ${what} It must look identical to the reference image: the same colours, panels, embroidery, logo and lettering and their positions. Do not add other logos or text. Keep the wearer's face, hair, clothes, body and the background unchanged.`;
+  }
   if (garment && isGarment(garment)) {
     // Clothing — what the VTON models were made for. Decart's two patterns: "Substitute the current <part> with …" (20-30 words: colour, material, pattern, fit).
     const part = garment === 'top' ? 'top' : garment === 'bottom' ? 'bottoms' : garment === 'outer' ? 'top layer' : 'outfit';
