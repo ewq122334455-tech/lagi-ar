@@ -14,13 +14,13 @@ export default function Why() {
 
       <figure className="-mx-[var(--page-x)] overflow-hidden" data-testid="why-photo">
         <img
-          src="media/why-lagi-4000.jpg"
-          srcSet="media/why-lagi-1000.jpg 1000w, media/why-lagi-4000.jpg 4000w"
+          src="media/why-strip-4000.jpg"
+          srcSet="media/why-strip-1600.jpg 1600w, media/why-strip-4000.jpg 4000w"
           sizes="100vw"
-          alt="LAGI 명함과 카드 — LOOK AGAIN, FIND ANOTHER REASON"
-          className="block h-[42svh] w-full object-cover object-[50%_55%] md:h-[58svh]"
-          width={2000}
-          height={1125}
+          alt="LAGI 제품을 입은 모습 — 토트백, 그래픽 티, 점퍼"
+          className="block h-[42svh] w-full object-cover object-center md:h-[50svh]"
+          width={4000}
+          height={1600}
         />
       </figure>
 
