@@ -170,7 +170,7 @@ export default function ProductPage() {
     : { href: storeUrl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': '스마트스토어에서 바로 구매 (새 창)' };
 
   function addToCart(go?: boolean) {
-    add({ productId: p.id, variantId: null, size: null, color: null, quantity: qty, unitPrice: p.price.value, name: p.name.value, image: hero ?? null });
+    add({ productId: p.id, variantId: null, size: null, color: null, quantity: qty, unitPrice: p.price.value, name: p.nameEn ?? p.name.value, image: hero ?? null });
     setAdded(true);
     if (go) navigate('/checkout');
   }
@@ -221,8 +221,8 @@ export default function ProductPage() {
         </div>
 
         <aside className="lg:col-span-5" aria-label="구매">
-          <div className="lg:sticky lg:top-[80px]">
-            <h1 className="t-h1 t-mark !font-bold">{p.nameEn ?? p.name.value}</h1>
+          <div className="lg:sticky lg:top-[112px]">
+            <h1 className="t-h1 t-mark pname">{p.nameEn ?? p.name.value}</h1>
             {p.setItems && p.setItems.length > 0 && (
               <p className="t-caption kr mt-4 text-[var(--c-mute)]" data-testid="set-items">
                 {(p.setItemsEn ?? p.setItems).join(' + ')}
@@ -297,7 +297,7 @@ export default function ProductPage() {
       </div>
 
       {/* 2 · Tabs */}
-      <div className="sticky top-16 z-20 mt-[var(--section)] border-b border-black/10 bg-white lg:top-14" role="tablist" aria-label="제품 정보">
+      <div className="sticky top-16 z-20 mt-[var(--section)] border-b border-black/10 bg-white lg:top-[88px]" role="tablist" aria-label="제품 정보">
         <div className="grid grid-cols-3">
           {tabs.map((t) => (
             <button
@@ -362,7 +362,7 @@ export default function ProductPage() {
       {/* Mobile buy bar */}
       <MobileBuyBar>
         <span className="min-w-0 flex-1">
-          <span className="t-caption block truncate text-[var(--c-mute)]">{p.nameEn ?? p.name.value}</span>
+          <span className="t-caption t-mark pname block truncate">{p.nameEn ?? p.name.value}</span>
           <span className="t-value kr block tabular-nums">{price(p.price.value)}</span>
         </span>
         {!onStore ? (

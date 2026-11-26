@@ -51,5 +51,20 @@ await p.getByRole('button', { name: '카메라', exact: true }).click(); await p
   await btn.click().catch(() => {}); await p.waitForTimeout(1200); const counting = await p.getByTestId('camera-count').count();
   await p.waitForTimeout(3200);
   ok('R20 photo camera: one "3초 후 촬영" button, a countdown on screen, then the photo is taken and the camera closes', /3초 후 촬영/.test(label) && counting === 1 && (await p.getByTestId('camera').count()) === 0 && (await p.locator('img[alt="올린 사진"]').count()) === 1, `label=${label} countdown=${counting}`); }
+await p.goto(B + ''); await p.waitForTimeout(1200);
+{ const nav = await p.locator('header nav a').first().boundingBox(); const bag = await p.locator('header a[href="#/cart"]').boundingBox(); const logo = await p.locator('header a[aria-label="LAGI home"]').first().boundingBox();
+  ok('R21 header is one row: menu on the left, logo in the middle, film / search / account / cart on the right', nav.x < logo.x && logo.x < bag.x && Math.abs(nav.y - bag.y) < 20 && (await p.getByTestId('film-open').count()) === 1);
+  ok('R22 the home page no longer has its own brand-film button', (await p.locator('main').getByText('Brand film', { exact: false }).count()) === 0);
+  await p.getByTestId('film-open').click(); await p.waitForTimeout(800);
+  const dlg = p.getByRole('dialog', { name: 'Brand film' }); const x = p.getByTestId('film-close');
+  ok('R23 the brand film opens from the header and leaves with an X button (also Esc)', (await dlg.count()) === 1 && (await x.getAttribute('aria-label')) === '닫기' && !/Close/i.test(await x.innerText()));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
+await p.goto(B + 'review'); await p.waitForTimeout(1200);
+{ const n = await p.getByTestId('sample-review').count(); const labelled = await p.locator('[data-testid=sample-review]:has-text("예시")').count();
+  ok('R24 the review page is full of example reviews, every card labelled "예시" and a page note says they are not real', n >= 12 && labelled === n && /실제 구매자 후기가 아닙니다/.test(await p.getByTestId('review-sample-note').innerText()) && !/구매 확인/.test(await p.getByTestId('sample-reviews').innerText()), `${n} reviews`); }
+await p.goto(B + 'why'); await p.waitForTimeout(1200);
+ok('R25 WHY LAGI shows the four selection points as cards', (await p.getByTestId('why-card').count()) === 4);
+await p.goto(B + 'discover'); await p.waitForTimeout(1200);
+ok('R26 product names are bold', (await p.locator('[data-testid=product-card] .pname').first().evaluate((e) => Number(getComputedStyle(e).fontWeight))) >= 700);
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();

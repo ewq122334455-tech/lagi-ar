@@ -345,7 +345,7 @@ export function CheckoutPage() {
               {(order?.lines ?? lines.map((l) => ({ productId: l.productId, name: l.name ?? '', unitPrice: l.unitPrice ?? 0, quantity: l.quantity }))).map((l) => (
                 <li key={l.productId} className="t-caption kr flex justify-between gap-4">
                   <span>
-                    {l.name} × {l.quantity}
+                    <b className="pname">{l.name}</b> × {l.quantity}
                   </span>
                   <span className="tabular-nums">{price(l.unitPrice * l.quantity)}</span>
                 </li>

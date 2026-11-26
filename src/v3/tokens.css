@@ -44,12 +44,11 @@
   font-family: 'posterama-2001', 'Posterama 2001', 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   --font-kr: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
   color: var(--c-ink);
-  background: var(--c-white);
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
 }
 @media (min-width: 1024px) {
-  .v3 { --top: 188px; }
+  .v3 { --top: 120px; }
 }
 @media (min-width: 1200px) {
   .v3 {
@@ -98,10 +97,6 @@
 .v3 :focus-visible { outline: 2px solid var(--c-blue); outline-offset: 3px; }
 
 /* Header: two rows on wide screens; the logo row folds away on scroll and a small logo appears. */
-.v3 .header-top { height: 100px; transition: height var(--dur-std) var(--ease-out), opacity var(--dur-fast) linear; overflow: hidden; }
-.v3 .site-header[data-folded] .header-top { height: 0; opacity: 0; }
-.v3 .header-mini { opacity: 0; pointer-events: none; transition: opacity var(--dur-std) var(--ease-out); }
-.v3 .site-header[data-folded] .header-mini { opacity: 1; pointer-events: auto; }
 :where(.v3 .icon-btn) { display: inline-flex; }
 .v3 .icon-btn { align-items: center; gap: 6px; min-height: 40px; min-width: 40px; justify-content: center; padding: 0 6px; border-radius: 999px; transition: background-color var(--dur-fast) linear; }
 .v3 .icon-btn:hover { background: var(--c-label); }
@@ -171,3 +166,6 @@
 @media (min-width: 1024px) {
   .v3 .again-page { padding-top: calc(var(--top) - 28px); }
 }
+
+/* Every product name on the site is bold. */
+.v3 .pname { font-weight: 800 !important; }

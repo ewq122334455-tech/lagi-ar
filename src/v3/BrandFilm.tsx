@@ -84,13 +84,15 @@ export function BrandFilmOverlay({ onClose }: { onClose: () => void }) {
   }, [f.ref, onClose]);
   // Rendered at the top of the document (inside a .v3 wrapper for the tokens) so it covers the site header.
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="Brand film" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-blue)] px-page pb-5 pt-5">
+    <div role="dialog" aria-modal="true" aria-label="Brand film" className="v3 fixed inset-0 z-[200] flex flex-col bg-[var(--c-blue)] px-5 pb-5 pt-5 md:px-10">
       <div className="flex items-center justify-between">
         <p className="t-label t-mark text-[var(--c-white)]">LAGI FILM</p>
-        <div className="flex gap-3 text-[var(--c-white)]">
+        <div className="flex items-center gap-3 text-[var(--c-white)]">
           <Controls {...f} />
-          <button type="button" onClick={onClose} className="t-nav t-mark tag tag-ink text-[var(--c-white)]" autoFocus>
-            Close
+          <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 hover:bg-white/25" aria-label="닫기" data-testid="film-close" autoFocus>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M5 5l14 14M19 5 5 19" />
+            </svg>
           </button>
         </div>
       </div>
