@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { Product } from '@/data/productTypes';
 import { CARRY_PROMPTS, photoToDataUrl, requestAiTryOn } from '@/tryon/aiTryOn';
 import { PHOTO_ISSUE_TEXT, RESULT_ISSUE_TEXT, checkPhoto, compareResult, loadGrey, type PhotoIssue, type ResultIssue } from '@/tryon/fitCheck';
-import { CATEGORY_EN, isClothing, useRealProducts } from '../data';
+import { CATEGORY_EN, isClothing, isWearable, useRealProducts } from '../data';
 import { LiveTryOn } from '../LiveTryOn';
 import { cleanImage } from '../ProductCard';
 import { FRAME, LEFT, RIGHT, STAGE } from '../againLayout';
@@ -49,7 +49,7 @@ export default function Again() {
   const mode: Mode = params.get('m') === 'live' ? 'live' : 'photo';
   const product = products.find((p) => p.id === productId);
   // The realtime AI fitting (video) is for clothing only; the other two ways keep every product.
-  const pickable = mode === 'live' ? products.filter(isClothing) : products;
+  const pickable = mode === 'live' ? products.filter(isWearable) : products;
   // Products are shown one kind at a time (bags / goods / sets), so each picture can be bigger.
   const kinds = [...new Set(pickable.map((p) => p.category.value).filter(Boolean))] as string[];
   const [kindPick, setKindPick] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function Again() {
   const [part, setPart] = useState<'top' | 'bottom'>('top');
   useEffect(() => setPart('top'), [productId]);
   const liveProduct = product && part === 'bottom' && product.fittingBottom ? { ...product, fitting: product.fittingBottom } : product;
-  const liveBlocked = mode === 'live' && !!product && !isClothing(product);
+  const liveBlocked = mode === 'live' && !!product && !isWearable(product);
   const styles = stylesFor(product);
   const [style, setStyle] = useState<string>(styles[0].key);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -290,7 +290,7 @@ export default function Again() {
         <div className={FRAME}>
           <div className={LEFT}>
             <div className={`${STAGE} flex-col bg-[var(--c-blue)] px-6 text-center text-white`} data-testid={liveBlocked ? 'live-clothing-only' : 'live-no-clothes'}>
-              <p className="t-value kr">{liveBlocked ? '실시간 AI 피팅은 옷만 가능해요.' : '입어 볼 수 있는 옷을 준비하고 있어요.'}</p>
+              <p className="t-value kr">{liveBlocked ? '실시간 AI 피팅은 옷과 모자만 가능해요.' : '입어 볼 수 있는 옷을 준비하고 있어요.'}</p>
               <button type="button" className="btn mt-5 bg-white text-[var(--c-blue)]" onClick={() => setMode('photo')}>
                 사진 합성으로 보기
               </button>

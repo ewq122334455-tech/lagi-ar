@@ -254,7 +254,7 @@ export interface Product {
   /** false = only on this website, not on the smart store: the page shows no store links and no buy buttons yet. Default true. */
   storeListed?: boolean;
   /** What the realtime AI fitting uses for this product: ONE piece on a plain background and an exact English description of it. Optional. */
-  fitting?: { image: string; part: 'top' | 'bottom' | 'set' | 'outer' | 'dress'; description: string };
+  fitting?: { image: string; part: 'top' | 'bottom' | 'set' | 'outer' | 'dress' | 'cap'; description: string };
   /** Sets only: the bottom piece alone (plain background) and its exact description, for trying the bottoms on in the live fitting. */
   fittingBottom?: { image: string; part: 'bottom'; description: string };
   /** Ready-made long detail page images (top to bottom). When present they replace the coded detail page. */

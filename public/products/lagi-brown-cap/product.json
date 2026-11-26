@@ -184,5 +184,10 @@
       "status": "AI_DRAFT",
       "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
     }
+  },
+  "fitting": {
+    "image": "products/lagi-brown-cap/images/fitting.jpg",
+    "part": "cap",
+    "description": "a washed brown cotton six-panel baseball cap with a curved visor, small eyelets on the crown, a cream embroidered \"LAGI\" wordmark with a small circle mark on the front panel, the words \"SELECT DISCOVER EXPRESS\" in small cream letters on the left panel and \"LOOK AGAIN\" on the right panel"
   }
 }

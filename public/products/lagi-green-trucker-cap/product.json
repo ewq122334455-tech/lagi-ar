@@ -184,5 +184,10 @@
       "status": "AI_DRAFT",
       "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
     }
+  },
+  "fitting": {
+    "image": "products/lagi-green-trucker-cap/images/fitting.jpg",
+    "part": "cap",
+    "description": "a trucker cap with a cream-white front panel and dark forest-green back, side panels and visor, a large royal-blue chenille-embroidered house-shaped LAGI logo with a small orange \"AGAIN\" above it centered on the front panel, and a curved visor with stitched rows"
   }
 }
