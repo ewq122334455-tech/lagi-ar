@@ -1,0 +1,254 @@
+{
+  "id": "lagi-blue-sweatpants",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "블루 워시드 스웨트팬츠",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Pants_Final_4, 2026-11-26)"
+  },
+  "nameEn": "Blue Washed Sweatpants",
+  "category": {
+    "value": "Bottom",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Pants_Final_4, 2026-11-26)"
+  },
+  "price": {
+    "value": 82000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Pants_Final_4, 2026-11-26)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "바랜 듯한 블루 워시드 스웨트팬츠",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "description": {
+    "value": "자연스럽게 바랜 듯한 워싱을 넣은 블루 스웨트팬츠예요. 무릎에 곡선 패널을 대 바나나 핏으로 떨어지고, 허리는 고무줄이며, 정면 허벅지에 LAGI 하우스 로고를 크게 넣었습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "images": [
+    "products/lagi-blue-sweatpants/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [
+    {
+      "id": "lagi-blue-sweatpants-s",
+      "size": "S",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-blue-sweatpants-m",
+      "size": "M",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-blue-sweatpants-l",
+      "size": "L",
+      "color": null,
+      "stock": null
+    }
+  ],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [
+    {
+      "name": {
+        "value": "코튼 기모",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "characteristics": {
+        "value": "안쪽이 보송한 기모 면 원단, 워싱 가공",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "productLocation": {
+        "value": "전체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "reasonForUse": {
+        "value": "소재의 질감과 색을 살리기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      }
+    }
+  ],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": "오래 입은 스웨트팬츠의 편안한 색감을 처음부터 담았어요. 라기의 블루를 부드럽게 바랜 색으로 표현했습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "lagiSelectionReason": {
+    "value": "곡선 패널이 만든 모양과 바랜 블루가 함께 있는 바지라서요. 집에서도 밖에서도 가장 손이 가는 바지입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "care": {
+    "value": "뒤집어 찬물에 단독 세탁하고, 그늘에서 말려 주세요. 워싱 제품이라 색이 조금씩 다를 수 있습니다.",
+    "status": "AI_DRAFT",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+  },
+  "making": {
+    "country": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "maker": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "how": {
+      "value": "원단을 재단하고 봉제한 뒤 로고를 넣어 한 장씩 검수해 완성합니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-blue-sweatpants/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "storeListed": false,
+  "featured": false,
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "fitting": {
+    "image": "products/lagi-blue-sweatpants/images/fitting.jpg",
+    "part": "bottom",
+    "description": "washed faded-blue cotton fleece sweatpants with an elastic waistband, slanted side pockets, curved knee panels giving a banana (barrel) silhouette, tapered ankles and a large white house-shaped \"LAGI\" logo on the front right thigh"
+  },
+  "notice": {
+    "제품 소재": {
+      "value": "면 혼방",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "색상": {
+      "value": "워시드 블루",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "치수": {
+      "value": "S, M, L (사이즈표 참고)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조자 / 수입자": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조국": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "세탁방법 및 취급시 주의사항": {
+      "value": "뒤집어 찬물에 단독 세탁하고, 그늘에서 말려 주세요. 워싱 제품이라 색이 조금씩 다를 수 있습니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조연월": {
+      "value": "2026년 11월",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "품질보증기준": {
+      "value": "관련 법 및 소비자분쟁해결기준에 따라 교환·환불·보상해 드립니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "A/S 책임자와 전화번호": {
+      "value": "라기(LAGI) 고객 문의 · 인스타그램 @lagi.official DM",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "sizeChart": {
+    "unit": "cm",
+    "columns": [
+      "총장",
+      "허리단면",
+      "엉덩이단면",
+      "허벅지단면",
+      "밑위",
+      "밑단단면"
+    ],
+    "rows": [
+      {
+        "size": "S",
+        "values": [
+          96,
+          34,
+          60,
+          34,
+          32,
+          22
+        ]
+      },
+      {
+        "size": "M",
+        "values": [
+          98,
+          36,
+          62,
+          35,
+          33,
+          23
+        ]
+      },
+      {
+        "size": "L",
+        "values": [
+          100,
+          38,
+          64,
+          36,
+          34,
+          24
+        ]
+      }
+    ],
+    "note": "예시 치수입니다. 단면 기준이며 재는 방법에 따라 1~3cm 차이가 있을 수 있습니다.",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요",
+    "status": "AI_DRAFT"
+  }
+}
