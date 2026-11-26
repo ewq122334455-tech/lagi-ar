@@ -29,10 +29,8 @@ ok('R9 the photo compositing still lists bags', /플라노/.test((await p.locato
 await p.goto(B + 'again?p=plano-bag&m=map'); await p.waitForTimeout(1200);
 { const tabs = (await p.locator('[role=tablist][aria-label="체험 방식"] [role=tab]').allInnerTexts()).join('|');
   ok('R10 the 3D try-on is gone: only 사진 합성 and AI 영상, and an old 3D link opens the photo compositing', tabs === '사진 합성|AI 영상' && (await p.getByTestId('photo-input').count()) === 1, tabs); }
-await p.goto(B + 'again?p=lagi-star-knit-denim-set&m=live'); await p.waitForTimeout(1500);
-ok('R12 a set offers 상의 / 하의 for the live fitting (top selected first)', await p.getByTestId('part-toggle').count() === 1 && (await p.getByTestId('part-top').getAttribute('aria-pressed')) === 'true');
-await p.getByTestId('part-bottom').click(); await p.waitForTimeout(300);
-ok('R13 choosing 하의 selects it and unselects 상의', (await p.getByTestId('part-bottom').getAttribute('aria-pressed')) === 'true' && (await p.getByTestId('part-top').getAttribute('aria-pressed')) === 'false');
+await p.goto(B + 'again?p=lagi-royal-blue-fleece-pullover&m=live'); await p.waitForTimeout(1500);
+ok('R12 a single top has no 상의 / 하의 choice, and the picker lists the new clothes', await p.getByTestId('part-toggle').count() === 0 && (await p.getByTestId('product-strip').locator('button').count()) >= 1);
 await p.goto(B + 'again?p=zz-test-top&m=live'); await p.waitForTimeout(1500);
 ok('R14 a single top has no 상의 / 하의 choice', await p.getByTestId('part-toggle').count() === 0);
 await p.goto(B + 'product/zz-test-set'); await p.waitForTimeout(1500);

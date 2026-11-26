@@ -140,7 +140,7 @@ function Header({ onSearch, onFilm }: { onSearch: () => void; onFilm: () => void
     <div className="flex items-center gap-1">
       <button type="button" onClick={onFilm} className="icon-btn" aria-label="브랜드 필름 보기" data-testid="film-open">
         {Icon.play}
-        <span className="t-nav t-mark hidden xl:inline">Film</span>
+        <span className="t-nav t-mark hidden md:inline">Brand Film</span>
       </button>
       <button type="button" onClick={onSearch} className="icon-btn" aria-label="검색">
         {Icon.search}
