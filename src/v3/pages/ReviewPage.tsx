@@ -8,7 +8,7 @@ import { responsive } from '../img';
 const average = SAMPLE_REVIEWS.reduce((n, r) => n + r.rating, 0) / SAMPLE_REVIEWS.length;
 
 /**
- * Reviews. The page is full of example reviews (clearly marked "예시") so it never looks empty; real customer
+ * Reviews. The page is full of example reviews so it never looks empty (one quiet note under the rating says so); real customer
  * reviews, when there are any, are listed under them.
  */
 export default function ReviewPage() {
@@ -27,12 +27,13 @@ export default function ReviewPage() {
               <p className="t-caption kr mt-1 tabular-nums">{SAMPLE_REVIEWS.length}개</p>
             </div>
           </div>
-          <p className="t-caption kr rounded-full border border-[var(--c-blue)]/30 px-3 py-1" data-testid="review-sample-note">
-            예시 구매평 · 실제 구매자 후기가 아닙니다
-          </p>
         </div>
 
-        <ul className="mt-10 gap-4 [column-fill:_balance] md:columns-2 md:gap-5 lg:columns-3" data-testid="sample-reviews">
+        <p className="t-caption kr mt-4 text-[var(--c-mute)]" data-testid="review-sample-note">
+          화면 구성을 위한 예시 구매평이며 실제 구매자 후기가 아닙니다.
+        </p>
+
+        <ul className="mt-8 gap-4 [column-fill:_balance] md:columns-2 md:gap-5 lg:columns-3" data-testid="sample-reviews">
           {SAMPLE_REVIEWS.map((r, i) => {
             const p = byId.get(r.productId);
             if (!p) return null;
@@ -51,11 +52,8 @@ export default function ReviewPage() {
                   </div>
                 </div>
                 <p className="kr mt-4 text-[15px] leading-[1.8]">{r.text}</p>
-                <p className="t-caption kr mt-4 flex items-center justify-between gap-2 text-[var(--c-mute)]">
-                  <span>
-                    {r.author} · {r.date}
-                  </span>
-                  <span className="rounded-full border border-[var(--c-blue)]/30 px-2 py-0.5 text-[11px] text-[var(--c-blue)]">예시</span>
+                <p className="t-caption kr mt-4 text-[var(--c-mute)]">
+                  {r.author} · {r.date}
                 </p>
               </li>
             );

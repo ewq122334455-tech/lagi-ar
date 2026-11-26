@@ -1,6 +1,6 @@
 /**
  * Example reviews that fill the review page until real customers write theirs. They are NOT real customer reviews:
- * every card and the top of the page say "예시", and none of them carries a "구매 확인" mark.
+ * the page says so in one quiet line under the rating, and none of them carries a "구매 확인" mark.
  */
 export interface SampleReview {
   productId: string;

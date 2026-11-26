@@ -61,7 +61,7 @@ await p.goto(B + ''); await p.waitForTimeout(1200);
   await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
 await p.goto(B + 'review'); await p.waitForTimeout(1200);
 { const n = await p.getByTestId('sample-review').count(); const labelled = await p.locator('[data-testid=sample-review]:has-text("예시")').count();
-  ok('R24 the review page is full of example reviews, every card labelled "예시" and a page note says they are not real', n >= 12 && labelled === n && /실제 구매자 후기가 아닙니다/.test(await p.getByTestId('review-sample-note').innerText()) && !/구매 확인/.test(await p.getByTestId('sample-reviews').innerText()), `${n} reviews`); }
+  ok('R24 the review page is full of example reviews (no badge on each card) with one quiet note under the rating saying they are not real customer reviews', n >= 12 && labelled === 0 && /실제 구매자 후기가 아닙니다/.test(await p.getByTestId('review-sample-note').innerText()) && !/구매 확인/.test(await p.getByTestId('sample-reviews').innerText()), `${n} reviews`); }
 await p.goto(B + 'why'); await p.waitForTimeout(1200);
 ok('R25 WHY LAGI shows the four selection points as cards', (await p.getByTestId('why-card').count()) === 4);
 await p.goto(B + 'discover'); await p.waitForTimeout(1200);
