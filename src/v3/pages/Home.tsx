@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CurvedGallery } from '../CurvedGallery';
-import { BrandFilmOverlay } from '../BrandFilm';
 import { IntroMotion, introSeen } from '../IntroMotion';
 import { OFFICIAL_LINKS, useImageRatios, useRealProducts } from '../data';
 import { ProductCard, cleanImage } from '../ProductCard';
@@ -28,7 +27,6 @@ export default function Home() {
   const { products, error } = useRealProducts();
   const ratios = useImageRatios(products);
   const ready = products.length > 0 && products.every((p) => ratios[p.id]);
-  const [film, setFilm] = useState(false);
   // The brand motion plays once per visit before the home page.
   const [intro, setIntro] = useState(() => !introSeen());
   const byId = (id: string) => products.find((p) => p.id === id);
@@ -40,10 +38,6 @@ export default function Home() {
       <section className="relative h-[100svh] overflow-hidden bg-[var(--c-gray)]" aria-label="LAGI 제품 갤러리">
         {ready && <CurvedGallery products={products} ratios={ratios} pageScroll />}
         {error && <p className="t-caption kr absolute left-[var(--page-x)] top-24">{error}</p>}
-        <button type="button" onClick={() => setFilm(true)} className="t-nav tag tag-ink t-mark absolute right-[var(--page-x)] top-24 z-[160] max-md:!bg-[rgba(241,241,241,0.92)] max-md:!px-2 max-md:py-1 lg:top-[176px]">
-          ▶ Brand film
-        </button>
-        {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}
         {/* Phones: on a light panel and above the floating help button, so it never sits on a photo. */}
         <div className="pointer-events-none absolute bottom-6 left-[var(--page-x)] z-[150] max-md:bottom-[84px] max-md:bg-[rgba(241,241,241,0.92)] max-md:px-2 max-md:pt-2">
           <h1 className="t-display t-mark text-[var(--c-ink)]">

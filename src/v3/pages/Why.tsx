@@ -1,11 +1,11 @@
 import { WHY_LAGI } from '@/content/whyLagi';
 
-/** One dot of colour per criterion, taken from LAGI's printed cards (the photo): blue, orange, lilac, green. */
-const DOT = ['#1d5198', '#d9652a', '#a97fa3', '#6c8e3d'];
+/** One colour per criterion, taken from LAGI's printed cards: blue, orange, lilac, green. */
+const COLOR = ['#1d5198', '#d9652a', '#a97fa3', '#6c8e3d'];
 
 /**
- * WHY LAGI, kept empty on purpose: the brand card photo, the line printed on those cards, and the four selection
- * criteria as plain text. Nothing else.
+ * WHY LAGI: a wide photo strip, the line from LAGI's cards, and the four selection criteria as four cards
+ * (a colour bar, the criterion, the question). Nothing else.
  */
 export default function Why() {
   return (
@@ -24,16 +24,20 @@ export default function Why() {
         />
       </figure>
 
-      <p className="t-mark mt-[clamp(72px,10vw,144px)] text-center text-[clamp(18px,1.8vw,24px)] font-bold">Look again, find another reason.</p>
+      <p className="t-mark mt-[clamp(64px,9vw,128px)] text-center text-[clamp(18px,1.8vw,24px)] font-bold">Look again, find another reason.</p>
 
-      <ul className="mx-auto mt-[clamp(56px,8vw,112px)] grid max-w-4xl grid-cols-1 gap-x-16 gap-y-12 sm:grid-cols-2" data-testid="why-list">
+      <ul className="mx-auto mt-[clamp(40px,6vw,80px)] grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5" data-testid="why-list">
         {WHY_LAGI.map((c, i) => (
-          <li key={c.key}>
-            <h2 className="t-mark flex items-center gap-2.5 text-[15px] font-bold">
-              <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: DOT[i % DOT.length] }} />
+          <li
+            key={c.key}
+            className="relative flex min-h-[180px] flex-col justify-between overflow-hidden rounded-[var(--radius-card)] border border-black/10 bg-white p-6 shadow-[0_8px_28px_rgba(29,81,152,0.07)] transition-transform duration-300 hover:-translate-y-1 md:min-h-[220px] md:p-8"
+            data-testid="why-card"
+          >
+            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5" style={{ background: COLOR[i % COLOR.length] }} />
+            <h2 className="t-mark text-[clamp(18px,1.7vw,22px)] font-bold" style={{ color: COLOR[i % COLOR.length] }}>
               {c.key}
             </h2>
-            <p className="kr mt-3 text-[15px] leading-[1.8] text-[var(--c-mute)]">{c.question}</p>
+            <p className="kr mt-8 text-[16px] font-medium leading-[1.75]">{c.question}</p>
           </li>
         ))}
       </ul>

@@ -19,7 +19,7 @@ export function ProductCard({ p, eager }: { p: Product; eager?: boolean }) {
           <img {...responsive(photo, '(max-width: 767px) 62vw, (max-width: 1023px) 33vw, 25vw')} src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-[opacity,transform] duration-700 group-hover:scale-[1.03] group-hover:opacity-100" />
         )}
       </div>
-      <p className="t-caption t-mark mt-4 font-bold">{p.nameEn ?? p.name.value}</p>
+      <p className="t-caption t-mark pname mt-4">{p.nameEn ?? p.name.value}</p>
       <p className="t-caption tabular-nums">{price(p.price.value)}</p>
     </Link>
   );

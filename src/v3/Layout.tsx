@@ -8,6 +8,7 @@ import './tokens.css';
 import { responsive } from './img';
 import { useRouteMeta } from './usePageMeta';
 import { BUSINESS, PRIVACY_POLICY, TERMS } from '@/content/legal';
+import { BrandFilmOverlay } from './BrandFilm';
 
 export const NAV = [
   { to: '/discover', label: 'Shop', kr: '제품' },
@@ -26,6 +27,7 @@ export function V3Layout() {
   const isHome = pathname === '/';
   useRouteMeta(pathname);
   const [searching, setSearching] = useState(false);
+  const [film, setFilm] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -37,7 +39,7 @@ export function V3Layout() {
       <a href="#main" className="skip-link">
         본문으로 건너뛰기
       </a>
-      <Header onSearch={() => setSearching(true)} />
+      <Header onSearch={() => setSearching(true)} onFilm={() => setFilm(true)} />
       <main id="main" className="sheet">
         <div key={pathname} className={isHome ? '' : 'enter'}>
           <Outlet />
@@ -46,6 +48,7 @@ export function V3Layout() {
       <LegalFooter />
       <HelpButton />
       {searching && <SearchOverlay onClose={() => setSearching(false)} />}
+      {film && <BrandFilmOverlay onClose={() => setFilm(false)} />}
     </div>
   );
 }
@@ -74,6 +77,11 @@ const Icon = {
       <path d="M4 7h16M4 12h16M4 17h16" />
     </svg>
   ),
+  play: (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.5v13a.8.8 0 0 0 1.2.7l10.4-6.5a.8.8 0 0 0 0-1.4L9.2 4.8A.8.8 0 0 0 8 5.5Z" />
+    </svg>
+  ),
   close: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
       <path d="M6 6l12 12M18 6 6 18" />
@@ -81,19 +89,12 @@ const Icon = {
   ),
 };
 
-function Header({ onSearch }: { onSearch: () => void }) {
+function Header({ onSearch, onFilm }: { onSearch: () => void; onFilm: () => void }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const { count } = useCart();
   const { user } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
   useEffect(() => setOpen(false), [pathname]);
-  useEffect(() => {
-    const on = () => setScrolled(window.scrollY > 40);
-    on();
-    window.addEventListener('scroll', on, { passive: true });
-    return () => window.removeEventListener('scroll', on);
-  }, []);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => {
@@ -137,6 +138,10 @@ function Header({ onSearch }: { onSearch: () => void }) {
 
   const utilities = (
     <div className="flex items-center gap-1">
+      <button type="button" onClick={onFilm} className="icon-btn" aria-label="브랜드 필름 보기" data-testid="film-open">
+        {Icon.play}
+        <span className="t-nav t-mark hidden xl:inline">Film</span>
+      </button>
       <button type="button" onClick={onSearch} className="icon-btn" aria-label="검색">
         {Icon.search}
         <span className="t-nav t-mark hidden xl:inline">Search</span>
@@ -156,37 +161,26 @@ function Header({ onSearch }: { onSearch: () => void }) {
   return (
     <>
       <header
-        data-folded={scrolled || undefined}
-        // Always on white (as in the reference), so the icons never sit on top of a photo.
+        // Always on white, so the icons never sit on top of a photo. One row: menu left, logo centre, icons right.
         className="site-header fixed inset-x-0 top-0 z-30 bg-[rgba(255,255,255,0.96)] shadow-[0_1px_0_rgba(0,0,0,0.08)] backdrop-blur"
       >
-        {/* Row 1 (wide screens): the logo, centred. Folds away on scroll. */}
-        <div className="header-top hidden items-center justify-center px-page lg:flex">
-          <Link to="/" aria-label="LAGI home" className="-m-1.5 p-1.5">
-            <LagiLogo className="h-[72px] w-auto text-[var(--c-blue)]" title="LAGI" />
-          </Link>
-        </div>
-        {/* Row 2: menu in the middle, utilities on the right (on phones: menu · logo · utilities). */}
-        <div className="relative flex h-16 items-center justify-between px-page lg:h-14">
-          <div className="flex min-w-[96px] items-center">
+        <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center px-page lg:h-[88px]">
+          <div className="flex min-w-0 items-center">
             <button ref={menuBtn} type="button" className="icon-btn lg:hidden" aria-expanded={open} aria-controls="v3-menu" aria-label="메뉴 열기" onClick={() => setOpen(true)}>
               {Icon.menu}
             </button>
-            <Link to="/" aria-label="LAGI home" className={`header-mini hidden lg:inline-flex`}>
-              <LagiLogo className="h-10 w-auto text-[var(--c-blue)]" title="LAGI" />
-            </Link>
+            <nav aria-label="Main" className="t-nav hidden items-center gap-6 lg:flex xl:gap-10">
+              {NAV.map((n) => (
+                <NavLink key={n.to} to={n.to} className="nav-link t-mark" aria-current={pathname.startsWith(n.to) ? 'page' : undefined}>
+                  {n.label}
+                </NavLink>
+              ))}
+            </nav>
           </div>
-          <Link to="/" aria-label="LAGI home" className="absolute left-1/2 -translate-x-1/2 lg:hidden">
-            <LagiLogo className="h-11 w-auto text-[var(--c-blue)]" title="LAGI" />
+          <Link to="/" aria-label="LAGI home" className="-m-1.5 p-1.5">
+            <LagiLogo className="h-11 w-auto text-[var(--c-blue)] lg:h-14" title="LAGI" />
           </Link>
-          <nav aria-label="Main" className="t-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex xl:gap-10">
-            {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} className="nav-link t-mark" aria-current={pathname.startsWith(n.to) ? 'page' : undefined}>
-                {n.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="flex min-w-[96px] justify-end">{utilities}</div>
+          <div className="flex min-w-0 justify-end">{utilities}</div>
         </div>
       </header>
 
@@ -294,7 +288,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
                 <div className="aspect-square overflow-hidden rounded-[var(--radius-card)] bg-white">
                   <img {...responsive(p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0], '(max-width: 639px) 50vw, 33vw')} src={p.drawings?.find((d) => d.group === 'view')?.src ?? p.images[0]} alt="" className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-[1.04]" />
                 </div>
-                <p className="t-value kr mt-3">{p.name.value}</p>
+                <p className="t-caption t-mark pname mt-3">{p.nameEn ?? p.name.value}</p>
                 <p className="t-caption kr tabular-nums text-[var(--c-mute)]">{price(p.price.value)}</p>
               </Link>
             </li>
