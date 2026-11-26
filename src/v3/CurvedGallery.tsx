@@ -345,7 +345,7 @@ export function CurvedGallery({
               {...responsive(p.images[0], '(max-width: 767px) 70vw, 40vw')} src={p.images[0]}
               alt=""
               draggable={false}
-              className="block w-full bg-[var(--c-white)] object-cover"
+              className="block w-full bg-[var(--c-white)] object-cover shadow-[0_10px_34px_rgba(29,81,152,0.10)]"
               style={{ aspectRatio: ratios[p.id] ?? 1 }}
             />
           </Link>

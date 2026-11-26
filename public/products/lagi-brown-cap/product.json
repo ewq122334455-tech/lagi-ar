@@ -1,0 +1,188 @@
+{
+  "id": "lagi-brown-cap",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "브라운 워시드 캡",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "nameEn": "Brown Washed Cap",
+  "category": {
+    "value": "Cap",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "price": {
+    "value": 39000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "워싱 브라운 6패널 캡 · 자수 LAGI 로고",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "description": {
+    "value": "부드럽게 워싱한 브라운 컬러의 6패널 볼캡이에요. 앞면에는 LAGI 로고 자수를, 양옆에는 SELECT · DISCOVER · EXPRESS와 LOOK AGAIN 문구를 작게 넣었습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "images": [
+    "products/lagi-brown-cap/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [
+    {
+      "id": "lagi-brown-cap-free",
+      "size": "FREE",
+      "color": null,
+      "stock": null
+    }
+  ],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [
+    {
+      "name": {
+        "value": "코튼",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "characteristics": {
+        "value": "워싱 가공한 부드러운 면 원단",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "productLocation": {
+        "value": "전체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "reasonForUse": {
+        "value": "소재의 질감과 색을 살리기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      }
+    }
+  ],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": "라기가 소개하는 방식인 고르고, 발견하고, 표현하는 세 단어를 모자 옆면에 작게 새겼어요. 쓰는 사람만 알아보는 작은 포인트입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "lagiSelectionReason": {
+    "value": "어떤 옷에도 얹기 쉬운 차분한 브라운이라서요. 로고가 튀지 않아 매일 쓰기 좋은 모자입니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "care": {
+    "value": "오염은 물에 적신 천으로 가볍게 닦고, 세탁기 사용은 피해 주세요.",
+    "status": "AI_DRAFT",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+  },
+  "making": {
+    "country": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "maker": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "how": {
+      "value": "원단을 재단하고 봉제한 뒤 로고를 넣어 한 장씩 검수해 완성합니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-brown-cap/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "storeListed": false,
+  "featured": false,
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "notice": {
+    "종류": {
+      "value": "모자",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "소재": {
+      "value": "면 100%",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "색상": {
+      "value": "브라운",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "크기": {
+      "value": "프리 사이즈 (조절 가능)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조자 / 수입자": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조국": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "취급시 주의사항": {
+      "value": "오염은 물에 적신 천으로 가볍게 닦고, 세탁기 사용은 피해 주세요.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "품질보증기준": {
+      "value": "관련 법 및 소비자분쟁해결기준에 따라 교환·환불·보상해 드립니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "A/S 책임자와 전화번호": {
+      "value": "라기(LAGI) 고객 문의 · 인스타그램 @lagi.official DM",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  }
+}

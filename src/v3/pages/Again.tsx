@@ -19,12 +19,15 @@ const STYLES = {
   ],
   // Clothing: there is one way to try it on.
   clothes: [{ key: 'wear', label: '입어 보기', prompt: 'worn naturally' }],
+  // A cap is worn on the head.
+  cap: [{ key: 'wear', label: '써 보기', prompt: 'worn naturally on the head, the visor facing forward' }],
   acc: [
     { key: 'hand', label: '손에 들기', prompt: 'held naturally in one hand in front of the body' },
     { key: 'show', label: '들어 보이기', prompt: 'held up near the face with one hand, showing it to the camera' },
   ],
 };
-const stylesFor = (p: Product | undefined) => (isClothing(p) ? STYLES.clothes : (p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc);
+const stylesFor = (p: Product | undefined) =>
+  isClothing(p) ? STYLES.clothes : (p?.category.value ?? '') === 'Cap' ? STYLES.cap : (p?.category.value ?? '').toLowerCase().includes('bag') ? STYLES.bag : STYLES.acc;
 
 const MAX_INPUT_BYTES = 15 * 1024 * 1024;
 const TIMEOUT_MS = 120_000;

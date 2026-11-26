@@ -1,0 +1,246 @@
+{
+  "id": "lagi-faded-blue-denim-jacket",
+  "brandLabel": "LAGI",
+  "name": {
+    "value": "페이디드 블루 데님 재킷",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "nameEn": "Faded Blue Denim Jacket",
+  "category": {
+    "value": "Outer",
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "price": {
+    "value": 128000,
+    "status": "VERIFIED",
+    "source": "사용자 제공 이미지 (LAGI_Apparel_Final_10_PNG, 2026-11-26)"
+  },
+  "currency": "KRW",
+  "shortDescription": {
+    "value": "위쪽이 옅게 바랜 블루 데님 재킷",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "description": {
+    "value": "위쪽은 옅고 아래로 갈수록 짙어지는 그라데이션 워싱의 블루 데님 재킷이에요. 가슴 포켓 위에 오렌지색 LAGI 자수를 포인트로 넣었습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "images": [
+    "products/lagi-faded-blue-denim-jacket/images/main.jpg"
+  ],
+  "gallery": [],
+  "colors": [],
+  "variants": [
+    {
+      "id": "lagi-faded-blue-denim-jacket-s",
+      "size": "S",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-faded-blue-denim-jacket-m",
+      "size": "M",
+      "color": null,
+      "stock": null
+    },
+    {
+      "id": "lagi-faded-blue-denim-jacket-l",
+      "size": "L",
+      "color": null,
+      "stock": null
+    }
+  ],
+  "dimensions": {},
+  "shipping": {
+    "fee": 3000,
+    "freeOver": 50000
+  },
+  "materials": [
+    {
+      "name": {
+        "value": "코튼 데님",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "characteristics": {
+        "value": "그라데이션 워싱 가공한 면 데님",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "productLocation": {
+        "value": "전체",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      },
+      "reasonForUse": {
+        "value": "소재의 질감과 색을 살리기 위해",
+        "status": "BRAND_COPY",
+        "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+      }
+    }
+  ],
+  "process": [],
+  "details": [],
+  "story": {
+    "value": "오래 입은 듯 자연스럽게 바랜 색을 처음부터 담았어요. 오렌지 자수 하나가 블루 위에서 눈에 띕니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "lagiSelectionReason": {
+    "value": "워싱이 만든 색의 깊이와 작은 오렌지 포인트가 잘 어울리는 옷이라서요. 어떤 이너에도 편하게 걸치기 좋습니다.",
+    "status": "BRAND_COPY",
+    "source": "라기 작성 — 제품 사진을 보고 쓴 소개 (2026-11-26)"
+  },
+  "care": {
+    "value": "단독으로 뒤집어 찬물에 세탁하고 첫 세탁 시 이염에 주의해 주세요. 건조기 사용은 피해 주세요.",
+    "status": "AI_DRAFT",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+  },
+  "making": {
+    "country": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "maker": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "how": {
+      "value": "원단을 재단하고 봉제한 뒤 로고를 넣어 한 장씩 검수해 완성합니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "drawings": [
+    {
+      "src": "products/lagi-faded-blue-denim-jacket/images/drawings/front.jpg",
+      "label": "정면",
+      "group": "view"
+    }
+  ],
+  "storeListed": false,
+  "featured": false,
+  "model3D": "",
+  "animations": [],
+  "arTarget": "",
+  "arSettings": {
+    "scale": 1,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "hotspots": [],
+  "shopUrl": {
+    "value": "https://smartstore.naver.com/lagi_official",
+    "status": "VERIFIED",
+    "source": "Official LAGI Smart Store"
+  },
+  "instagramUrl": "https://www.instagram.com/lagi.official/",
+  "arAvailable": false,
+  "threeDAvailable": false,
+  "fitting": {
+    "image": "products/lagi-faded-blue-denim-jacket/images/fitting.jpg",
+    "part": "outer",
+    "description": "a boxy light-to-mid blue washed cotton denim trucker jacket, faded lighter at the top and deeper blue toward the hem, with a pointed collar, a white woven label inside the back collar, silver buttons, two chest flap pockets and a small orange \"LAGI\" embroidered above the right pocket"
+  },
+  "notice": {
+    "제품 소재": {
+      "value": "면 100% (데님)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "색상": {
+      "value": "라이트 블루 → 미드 블루",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "치수": {
+      "value": "S, M, L (사이즈표 참고)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조자 / 수입자": {
+      "value": "라기(LAGI)",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조국": {
+      "value": "대한민국",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "세탁방법 및 취급시 주의사항": {
+      "value": "단독으로 뒤집어 찬물에 세탁하고 첫 세탁 시 이염에 주의해 주세요. 건조기 사용은 피해 주세요.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "제조연월": {
+      "value": "2026년 11월",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "품질보증기준": {
+      "value": "관련 법 및 소비자분쟁해결기준에 따라 교환·환불·보상해 드립니다.",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    },
+    "A/S 책임자와 전화번호": {
+      "value": "라기(LAGI) 고객 문의 · 인스타그램 @lagi.official DM",
+      "status": "AI_DRAFT",
+      "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요"
+    }
+  },
+  "sizeChart": {
+    "unit": "cm",
+    "columns": [
+      "총장",
+      "어깨너비",
+      "가슴단면",
+      "소매길이"
+    ],
+    "rows": [
+      {
+        "size": "S",
+        "values": [
+          58,
+          56,
+          60,
+          58
+        ]
+      },
+      {
+        "size": "M",
+        "values": [
+          60,
+          58,
+          62,
+          59
+        ]
+      },
+      {
+        "size": "L",
+        "values": [
+          62,
+          60,
+          64,
+          60
+        ]
+      }
+    ],
+    "note": "예시 치수입니다. 단면 기준이며 재는 방법에 따라 1~3cm 차이가 있을 수 있습니다.",
+    "source": "예시 정보 (확인 전) — 실제 정보로 교체 필요",
+    "status": "AI_DRAFT"
+  }
+}

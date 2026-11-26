@@ -31,12 +31,12 @@ const f = await p.evaluate(() => { const v = document.querySelector('#film video
 ok('V6 ABOUT shows the new 43-second film', !!f && f.dur > 40 && f.dur < 46, JSON.stringify(f));
 await p.screenshot({ path: '/tmp/lagi-brand-about.png' });
 // footer blue + buttons blue
-await p.goto(B + 'product/lagi-star-knit-denim-set'); await p.waitForTimeout(1500);
+await p.goto(B + 'product/lagi-royal-blue-fleece-pullover'); await p.waitForTimeout(1500);
 const col = await p.evaluate(() => { const bg = (el) => getComputedStyle(el).backgroundColor; return { page: bg(document.querySelector('.v3')), footer: bg(document.querySelector('footer')), fit: bg(document.querySelector('[data-testid=fit-button]')) }; });
 ok('V7 page background and footer are the brand blue (rgb 29,81,152), not black', col.page === 'rgb(29, 81, 152)' && col.footer === 'rgb(29, 81, 152)', JSON.stringify(col));
 await p.screenshot({ path: '/tmp/lagi-brand-product.png', fullPage: true });
 // fitting screen: big and blue
-await p.goto(B + 'again?p=lagi-star-knit-denim-set&m=live'); await p.waitForTimeout(1800);
+await p.goto(B + 'again?p=lagi-royal-blue-fleece-pullover&m=live'); await p.waitForTimeout(1800);
 const stage = await p.evaluate(() => { const e = document.querySelector('[data-testid=live-stage]'); const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), bg: getComputedStyle(e).backgroundColor, vw: innerWidth }; });
 ok('V8 the fitting stage is brand blue, not black', stage.bg === 'rgb(29, 81, 152)', JSON.stringify(stage));
 ok('V9 the fitting stage is much wider than before (before: under half of the page, now about 90%)', stage.w / stage.vw > 0.85, `${stage.w}px of ${stage.vw}px`);
