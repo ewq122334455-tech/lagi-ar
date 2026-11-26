@@ -21,6 +21,10 @@ export const DETAIL_COPY: Record<string, DetailCopy> = {
   'lagi-royal-blue-fleece-pullover': { hook: ['라기의 블루를', '한 벌 가득'] },
   'lagi-grey-ringer-tee': { hook: ['회색 위에 크게', '올린 하우스 로고'] },
   'lagi-painter-pants': { hook: ['물감이 튄 듯', '작품 같은 바지'] },
+  'lagi-pink-work-pants': { hook: ['작업복의 모양에', '라기의 색을 입히다'] },
+  'lagi-teal-shorts': { hook: ['가볍게 입는', '틸 그린 쇼츠'] },
+  'lagi-stripe-track-pants': { hook: ['옆선을 따라 이어지는', '노란 스트라이프'] },
+  'lagi-blue-sweatpants': { hook: ['바랜 듯 부드러운', '라기의 블루'] },
   'lagi-teal-fleece-sweatpants': { hook: ['부드럽게 떨어지는', '틸 그린 플리스'] },
 };
 
