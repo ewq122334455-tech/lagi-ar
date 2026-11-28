@@ -14,7 +14,9 @@ import sharp from 'sharp';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SRC = path.join(ROOT, 'public', 'products');
-const OUT = path.join(ROOT, 'dist', '_img', 'products');
+// `--out <folder>` builds the copies into another output folder (the offline build uses dist-offline); default: dist.
+const outArg = process.argv.indexOf('--out');
+const OUT = path.join(ROOT, outArg > 0 ? process.argv[outArg + 1] : 'dist', '_img', 'products');
 export const WIDTHS = [480, 960, 1600];
 
 const files = [];

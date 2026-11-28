@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/build-images.mjs && node scripts/preload-images.mjs",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build:offline": "tsc -b && vite build --config vite.offline.config.ts && node scripts/build-images.mjs --out dist-offline && node scripts/make-offline.mjs"
   },
   "dependencies": {
     "@decartai/sdk": "^0.2.14",

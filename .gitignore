@@ -10,3 +10,6 @@ dist-ssr
 # wrangler local dev scratch (real-workerd test harness)
 .wrangler/
 .dev.vars
+
+# offline build output (npm run build:offline)
+dist-offline
