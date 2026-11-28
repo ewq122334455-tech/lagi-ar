@@ -598,11 +598,11 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
       role="dialog"
       aria-modal="true"
       aria-label="카메라로 촬영"
-      className="v3 fixed inset-0 z-[300] flex flex-col items-center gap-4 bg-[var(--c-blue)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
+      className="v3 fixed inset-x-0 top-0 z-[300] flex h-[100dvh] flex-col items-center gap-4 bg-[var(--c-blue)] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]"
       data-testid="camera"
     >
       <p className="t-caption kr self-start text-white/80">정면 전신 또는 상반신이 화면에 들어오게 찍어 주세요.</p>
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+      <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
       {problem ? (
         <div className="max-w-sm text-center text-[var(--c-white)]">
           <p className="t-body kr" role="alert">
@@ -618,8 +618,8 @@ function CameraCapture({ onShot, onClose, onPick }: { onShot: (b: Blob) => void;
           </div>
         </div>
       ) : (
-        <div className="relative flex max-h-full max-w-full items-center justify-center">
-          <video ref={video} playsInline muted autoPlay className={`max-h-full max-w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] ${mirrored ? '-scale-x-100' : ''}`} />
+        <div className="relative flex h-full max-w-full items-center justify-center">
+          <video ref={video} playsInline muted autoPlay className={`h-full max-h-full w-auto max-w-full rounded-[var(--radius-card)] bg-[var(--c-blue)] object-contain ${mirrored ? '-scale-x-100' : ''}`} />
           {count !== null && count > 0 && (
             <span className="t-mark pointer-events-none absolute inset-0 flex items-center justify-center text-[min(28vw,200px)] font-bold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]" aria-live="assertive" data-testid="camera-count">
               {count}

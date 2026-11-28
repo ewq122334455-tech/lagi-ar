@@ -67,5 +67,12 @@ ok('R26 product names are bold', (await p.locator('[data-testid=product-card] .p
 await p.goto(B + 'again?p=lagi-brown-cap&m=live'); await p.waitForTimeout(1500);
 { const picks = (await p.locator('[data-testid=product-strip] button').evaluateAll((a) => a.map((b) => b.getAttribute('aria-label')))).join('|');
   ok('R27 a cap now opens in the AI video (no "clothes only" screen) and the live picker lists the caps', (await p.getByTestId('live-stage').count()) === 1 && (await p.getByTestId('live-clothing-only').count()) === 0 && /Cap|모자|캡/i.test(picks + (await p.locator('[data-testid=kind-Cap]').count())), picks.slice(0, 80)); }
+{ // R28: a tall (square) camera picture on a low window must not cover the button
+  const ctx2 = await b.newContext({ viewport: { width: 1440, height: 700 }, permissions: ['camera'] });
+  await ctx2.addInitScript(() => { sessionStorage.setItem('lagi-intro-seen', '1'); navigator.mediaDevices.getUserMedia = async () => { const c = document.createElement('canvas'); c.width = 1280; c.height = 1280; const g = c.getContext('2d'); setInterval(() => { g.fillStyle = '#667'; g.fillRect(0, 0, 1280, 1280); }, 100); return c.captureStream(15); }; });
+  const q = await ctx2.newPage(); await q.goto(B + 'again?p=plano-bag&m=photo'); await q.waitForTimeout(1200);
+  await q.getByRole('button', { name: '카메라', exact: true }).click(); await q.waitForSelector('[data-testid=camera-shoot]:not([disabled])', { timeout: 8000 }).catch(() => {});
+  const m = await q.evaluate(() => { const v = document.querySelector('[data-testid=camera] video').getBoundingClientRect(); const bt = document.querySelector('[data-testid=camera-shoot]').getBoundingClientRect(); const hit = document.elementFromPoint(bt.left + bt.width / 2, bt.top + bt.height / 2); return { videoBottom: v.bottom, btnTop: bt.top, onTop: hit === document.querySelector('[data-testid=camera-shoot]') || document.querySelector('[data-testid=camera-shoot]').contains(hit), vh: innerHeight, btnBottom: bt.bottom }; });
+  ok('R28 camera screen: the video stays above the "3초 후 촬영" button (never covers it) even for a square camera on a low window', m.onTop && m.videoBottom <= m.btnTop + 1 && m.btnBottom <= m.vh, JSON.stringify(m)); await ctx2.close(); }
 ok('R11 no page errors on any of them', errs.length === 0, errs.join('|'));
 await b.close();
